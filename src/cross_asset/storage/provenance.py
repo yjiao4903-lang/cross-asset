@@ -15,8 +15,16 @@ def _json_default(value):
 
 def source_tree_hash(root='.'):
     root=Path(root); h=hashlib.sha256()
-    excluded={'.git','__pycache__','.venv','.pytest_cache','data','artifacts','.env'}
-    files=sorted((p for p in root.rglob('*') if p.is_file() and not any(part in excluded for part in p.parts)), key=lambda p:p.relative_to(root).as_posix())
+    # Fingerprint executable project sources only.  Scanning the entire worktree
+    # makes identity depend on reports, editor files, and concurrent test output.
+    candidates=[]
+    for directory in ('src', 'scripts'):
+        base=root/directory
+        if base.exists(): candidates.extend(p for p in base.rglob('*') if p.is_file() and '__pycache__' not in p.parts)
+    for name in ('pyproject.toml', 'uv.lock'):
+        path=root/name
+        if path.is_file(): candidates.append(path)
+    files=sorted(candidates,key=lambda p:p.relative_to(root).as_posix())
     for p in files: h.update(p.relative_to(root).as_posix().encode()); h.update(b'\0'); h.update(p.read_bytes()); h.update(b'\0')
     return h.hexdigest()
 
@@ -36,7 +44,10 @@ def config_hash(paths):
 
 def data_snapshot_id(rows):
     # Only information-set identity participates; ordering and dict insertion order do not.
-    keys=('series_id','source','available_at','latest_available_at','vintage_date','raw_hash')
+    keys=(
+        'series_id','source','source_series_id','observation_date','value',
+        'available_at','latest_available_at','vintage_date','raw_hash'
+    )
     out=[]
     for row in rows:
         if isinstance(row, dict):

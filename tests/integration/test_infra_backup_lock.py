@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import duckdb
@@ -14,11 +15,38 @@ def test_backup_verify_corruption_and_isolated_restore(tmp_path):
     (backup/'config/a.yml').write_text('corrupt'); assert not verify_backup(backup)['valid']
 
 
-def test_lock_rejects_second_and_recovers_stale(tmp_path):
-    path=tmp_path/'run.lock'; first=RunLock(path,'a',ttl_seconds=0); first.acquire(); second=RunLock(path,'b')
+class FakeClock:
+    def __init__(self, value):
+        self.value = value
+
+    def __call__(self):
+        return self.value
+
+    def advance(self, seconds):
+        self.value += timedelta(seconds=seconds)
+
+
+def test_lock_rejects_second_and_recovers_at_exact_stale_boundary(tmp_path):
+    clock = FakeClock(datetime(2026, 1, 1, tzinfo=UTC))
+    path = tmp_path / "run.lock"
+    first = RunLock(path, "a", ttl_seconds=10, clock=clock)
+    first.acquire()
+    second = RunLock(path, "b", clock=clock)
     with pytest.raises(RuntimeError): second.acquire()
-    second.recover(); assert not path.exists()
+    with pytest.raises(RuntimeError, match="not stale"):
+        second.recover()
+    clock.advance(10)
+    assert second.recover()
+    assert not path.exists()
     first.release()
+
+
+def test_lock_rejects_naive_injected_clock(tmp_path):
+    lock = RunLock(
+        tmp_path / "run.lock", clock=lambda: datetime.fromisoformat("2026-01-01T00:00:00")
+    )
+    with pytest.raises(ValueError, match="timezone-aware"):
+        lock.acquire()
 
 
 def test_lock_exception_releases(tmp_path):

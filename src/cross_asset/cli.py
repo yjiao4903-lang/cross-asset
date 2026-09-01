@@ -124,6 +124,84 @@ def data_readiness() -> None:
     finally:
         db.close()
 
+
+@app.command("explain-run")
+def explain_run_command(run_id: str = typer.Argument(...)) -> None:
+    """Explain one persisted experiment from snapshot through allocation."""
+    from .storage import explain_run, init_db
+
+    db = init_db(get_settings().database_path)
+    try:
+        typer.echo(json.dumps(explain_run(db.conn, run_id), ensure_ascii=False, default=str, sort_keys=True))
+    finally:
+        db.close()
+
+
+@app.command("current-state")
+def current_state_command(
+    run_tests: bool = typer.Option(False, "--run-tests"),
+    output: str = typer.Option("artifacts/current_state/generated", "--output"),
+) -> None:
+    """Generate canonical Git/DB/run/test state from live project evidence."""
+    from .reports.current_state import generate_current_state
+    from .storage import init_db
+
+    db = init_db(get_settings().database_path)
+    try:
+        result = generate_current_state(db, output=output, run_tests=run_tests)
+        typer.echo(json.dumps(result, ensure_ascii=False, default=str, sort_keys=True))
+    finally:
+        db.close()
+
+
+@app.command("run-wind-evidence-shadow")
+def run_wind_evidence_shadow_command(
+    as_of: str | None = typer.Option(None, "--as-of"),
+    output: str = typer.Option("artifacts/wind_import/WIND_ENGINEERING_SHADOW.json", "--output"),
+) -> None:
+    """Run feature engines on Wind staging with trading and research disabled."""
+    from datetime import datetime
+
+    from .ingestion.evidence_shadow import run_wind_evidence_shadow
+    from .storage import init_db
+
+    db = init_db(get_settings().database_path)
+    try:
+        result = run_wind_evidence_shadow(
+            db.conn,
+            decision_time=datetime.fromisoformat(as_of) if as_of else None,
+            output=output,
+        )
+        typer.echo(json.dumps(result, ensure_ascii=False, default=str, sort_keys=True))
+    finally:
+        db.close()
+
+
+@app.command("run-wind-local-experiment")
+def run_wind_local_experiment_command(
+    as_of: str | None = typer.Option(None, "--as-of"),
+    output: str = typer.Option("artifacts/local_experiment/WIND_LOCAL_EXPERIMENT.json", "--output"),
+) -> None:
+    """Run the local Wind model loop with broker and order paths disabled."""
+    from datetime import datetime
+
+    from .ingestion.evidence_shadow import run_wind_local_experiment
+    from .storage import init_db
+
+    db = init_db(get_settings().database_path)
+    try:
+        result = run_wind_local_experiment(
+            db.conn,
+            decision_time=datetime.fromisoformat(as_of) if as_of else None,
+            output=output,
+            store=db,
+            persist=True,
+            project_root=".",
+        )
+        typer.echo(json.dumps(result, ensure_ascii=False, default=str, sort_keys=True))
+    finally:
+        db.close()
+
 @app.command("calendar-readiness")
 def calendar_readiness() -> None:
     from .reports.calendar_readiness import generate_calendar_readiness
