@@ -1,5 +1,7 @@
 import numpy as np
 
+from .walk_forward import build_turnover_cost_ledger
+
 
 def performance_metrics(returns, allocations=None, periods_per_year=52):
     r = returns.dropna().astype(float)
@@ -13,6 +15,20 @@ def performance_metrics(returns, allocations=None, periods_per_year=52):
         else None
     )
     dd = wealth / wealth.cummax() - 1
+    # One month is four weekly observations under the project's default
+    # weekly cadence (and approximately periods_per_year / 12 otherwise).
+    month_periods = max(1, round(periods_per_year / 12))
+    worst_1m = (
+        float(
+            (
+                (1 + r).rolling(month_periods, min_periods=month_periods).apply(np.prod, raw=True)
+                - 1
+            ).min()
+        )
+        if len(r) >= month_periods
+        else None
+    )
+    recovery = _recovery_periods(wealth)
     turnover = (
         float(allocations.diff().abs().sum(axis=1).mean())
         if allocations is not None and len(allocations) > 1
@@ -24,6 +40,12 @@ def performance_metrics(returns, allocations=None, periods_per_year=52):
         "Sharpe": sharpe,
         "max_drawdown": float(dd.min()) if len(dd) else None,
         "turnover": turnover,
+        "Worst1M": worst_1m,
+        "worst_1m": worst_1m,
+        "Recovery": recovery,
+        "recovery_periods": recovery,
+        "Cost": 0.0,
+        "cost": 0.0,
         "average_allocation": allocations.mean().to_dict()
         if allocations is not None and len(allocations)
         else {},
@@ -31,15 +53,40 @@ def performance_metrics(returns, allocations=None, periods_per_year=52):
 
 
 def compare_costs(gross_returns, allocations=None, cost_bps=0, periods_per_year=52):
-    """Return gross/net metrics; cost is deliberately a research placeholder."""
+    """Return gross/net metrics and a reproducible turnover/cost ledger."""
     gross = performance_metrics(gross_returns, allocations, periods_per_year)
-    if allocations is None or len(allocations) < 2:
-        net_returns = gross_returns.copy()
-    else:
-        turnover = allocations.diff().abs().sum(axis=1).fillna(0)
-        net_returns = gross_returns - turnover * float(cost_bps) / 10000
+    ledger = build_turnover_cost_ledger(gross_returns, allocations, cost_bps=cost_bps)
+    net_returns = ledger["net_return"]
+    gross["Cost"] = float(ledger["cost"].sum())
+    gross["cost"] = gross["Cost"]
+    net = performance_metrics(net_returns, allocations, periods_per_year)
+    net["Cost"] = float(ledger["cost"].sum())
+    net["cost"] = net["Cost"]
     return {
         "gross": gross,
-        "net": performance_metrics(net_returns, allocations, periods_per_year),
+        "net": net,
         "cost_bps": cost_bps,
+        "ledger": ledger,
     }
+
+
+def _recovery_periods(wealth):
+    """Maximum observations needed to recover a prior running high-water mark."""
+    if len(wealth) == 0:
+        return None
+    peak = -np.inf
+    peak_at = 0
+    durations = []
+    for i, value in enumerate(wealth):
+        value = float(value)
+        if value >= peak:
+            peak, peak_at = value, i
+        else:
+            # A recovery is measured from the prior high-water mark to the
+            # first subsequent observation at/above it; unfinished recovery is
+            # measured through the end of the sample.
+            recovered = next((j for j in range(i + 1, len(wealth)) if wealth.iloc[j] >= peak), None)
+            durations.append(
+                (recovered - peak_at) if recovered is not None else (len(wealth) - 1 - peak_at)
+            )
+    return int(max(durations, default=0))

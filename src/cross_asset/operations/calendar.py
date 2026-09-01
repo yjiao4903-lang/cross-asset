@@ -91,3 +91,10 @@ def last_common_session(decision_time: datetime | date, calendars: list[MarketCa
 
 def calendar_status(name: str, day: date, config_path: str | Path = "config/calendars.yml") -> str:
     return MarketCalendar(name, config_path).session_status(day)
+
+
+# Optional real-exchange adapter. Kept as lazy imports so existing configuration
+# calendars and reports remain usable without third-party calendar packages.
+def real_cnhk_weekly_decision_dates(start: date, end: date, *, provider=None) -> list[date]:
+    from .exchange_calendar import weekly_decision_dates
+    return weekly_decision_dates(start, end, provider=provider)

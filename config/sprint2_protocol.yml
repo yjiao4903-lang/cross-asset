@@ -1,0 +1,21 @@
+protocol:
+  universe: [CN_EQ, HK_EQ, CN_BOND, CASH]
+  modes: [expanding, rolling]
+  default_mode: expanding
+  transaction_cost_bps: [0, 5, 10, 20, 30]
+  base_cost_bps: 10
+  benchmarks: [STATIC, TREND_ONLY, MACRO_ONLY, RISK_ONLY, FULL_MODEL]
+  outputs: [decisions.parquet, returns.parquet, scores.parquet, allocations.parquet, turnover.parquet, costs.parquet, summary.md]
+  preliminary: true
+  partial_universe: true
+  research_validated: false
+
+# Wind has no verified official publication timestamps here. Every series is explicit;
+# the +45-day lag is temporary engineering policy and is not a claimed release date.
+availability_policies:
+  - {series_id: CN_PMI, provider: Wind, rule: conservative_lag, lag_days: 45, temporary: true, quality: low, evidence_status: UNKNOWN}
+  - {series_id: CN_CPI, provider: Wind, rule: conservative_lag, lag_days: 45, temporary: true, quality: low, evidence_status: UNKNOWN}
+  - {series_id: CN_PPI, provider: Wind, rule: conservative_lag, lag_days: 45, temporary: true, quality: low, evidence_status: UNKNOWN}
+  - {series_id: CN_M1, provider: Wind, rule: conservative_lag, lag_days: 45, temporary: true, quality: low, evidence_status: UNKNOWN}
+  - {series_id: CN_M2, provider: Wind, rule: conservative_lag, lag_days: 45, temporary: true, quality: low, evidence_status: UNKNOWN}
+  - {series_id: CN_DR007, provider: Wind, rule: conservative_lag, lag_days: 45, temporary: true, quality: low, evidence_status: UNKNOWN}
