@@ -74,7 +74,8 @@ def test_injected_calendar_writes_seven_partial_artifacts(monkeypatch, tmp_path)
         )
         assert result["status"] == "PARTIAL"
         assert result["exit"] is False
-        assert result["gates"]["pit"] is False
+        assert result["gates"]["engineering_cutoff"] is True
+        assert result["gates"]["formal_pit"] is False
         assert result["observations"] == 0
         assert len(result["artifacts"]) == 7
         assert all(

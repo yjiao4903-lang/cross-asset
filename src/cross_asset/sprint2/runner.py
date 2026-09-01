@@ -11,6 +11,9 @@ import pandas as pd
 from cross_asset.backtest.benchmarks import make_benchmark
 from cross_asset.backtest.metrics import performance_metrics
 from cross_asset.backtest.replay import FullModelStrategy
+from cross_asset.engines.allocation import allocate
+from cross_asset.engines.asset_score import score_asset
+from cross_asset.engines.macro import build_macro_state
 from cross_asset.ingestion.evidence_shadow import load_wind_engineering_frame
 from cross_asset.operations.exchange_calendar import CalendarBlockedError, cn_hk_calendar
 from cross_asset.sprint2.artifact import protocol_hash, sha256_file, sha256_frame, write_artifacts
@@ -42,7 +45,8 @@ def _weights(
         weights = full_strategy(frame, pd.Timestamp(decision))
         allocation = full_strategy.last_decision["allocation"]
         available = allocation.status == "ACTIVE"
-        return dict(weights), available, None if available else allocation.freeze_reason
+        reason = None if available else ";".join(allocation.warnings) or "full_model_inputs_unavailable"
+        return dict(weights), available, reason
     trend = {asset: 0.0 for asset in assets}
     mapping = {"CN_EQ": "CN_EQ_LARGE", "HK_EQ": "HK_EQ", "CN_BOND": "CN_BOND_10Y"}
     for asset, series in mapping.items():
@@ -102,6 +106,51 @@ def _realized_return(
             return None
         total += float(weight) * (new / old - 1.0)
     return total
+
+
+def _macro_only_weights(frame: pd.DataFrame, decision) -> tuple[dict[str, float], bool, str | None]:
+    macro_series = ("CN_CPI", "CN_PPI", "CN_M1", "CN_M2", "CN_DR007")
+    macro_config = {
+        "series": {
+            "CN_CPI": {"transform": {"type": "yoy", "direction": "negative"}},
+            "CN_PPI": {"transform": {"type": "yoy", "direction": "negative"}},
+            "CN_M1": {"transform": {"type": "yoy", "direction": "positive"}},
+            "CN_M2": {"transform": {"type": "yoy", "direction": "positive"}},
+            "CN_DR007": {"transform": {"type": "level", "direction": "negative"}},
+        },
+        "dimensions": {
+            "INFLATION": ["CN_CPI", "CN_PPI"],
+            "LIQUIDITY": ["CN_DR007", "CN_M1", "CN_M2"],
+        },
+    }
+    rows = frame[frame.series_id.isin(macro_series)].to_dict("records")
+    state = build_macro_state(rows, pd.Timestamp(decision).to_pydatetime(), macro_config)
+    liquidity = state.dimensions.get("LIQUIDITY")
+    liquidity_score = liquidity.score if liquidity is not None else None
+    components = {
+        "CN_EQ": state.score,
+        "HK_EQ": state.score,
+        "CN_BOND": liquidity_score,
+    }
+    scores = {
+        asset: score_asset(asset, {"macro": value}, data_cutoff=decision)
+        for asset, value in components.items()
+    }
+    scores["CASH"] = score_asset("CASH", {"risk": 0.0}, data_cutoff=decision)
+    result = allocate(
+        scores,
+        _strategic_weights(),
+        max_tilt=0.10,
+        min_weight=0.0,
+        max_weight=0.5,
+        health=all(score.score is not None for score in scores.values()),
+        as_of=decision,
+        data_cutoff=decision,
+        model_version="macro_only_allocation_v0.1",
+    )
+    available = result.status == "ACTIVE"
+    reason = None if available else ";".join(result.warnings) or "macro_inputs_unavailable"
+    return dict(result.weights), available, reason
 
 
 def run_preliminary(
@@ -167,13 +216,16 @@ def run_preliminary(
         )
         for index, decision in enumerate(dates):
             info = frame[pd.to_datetime(frame.available_at, utc=True).dt.date <= decision]
-            weights, available, reason = _weights(
-                benchmark,
-                info,
-                protocol_obj.universe,
-                decision=decision,
-                full_strategy=full_strategy,
-            )
+            if benchmark == "MACRO_ONLY":
+                weights, available, reason = _macro_only_weights(info, decision)
+            else:
+                weights, available, reason = _weights(
+                    benchmark,
+                    info,
+                    protocol_obj.universe,
+                    decision=decision,
+                    full_strategy=full_strategy,
+                )
             if not available:
                 unavailable.append(f"{benchmark}:{decision.isoformat()}:{reason}")
             turnover = (
@@ -276,8 +328,15 @@ def run_preliminary(
             }
         )
     status = "PARTIAL" if unavailable else "PRELIMINARY"
-    gates = {"artifacts": True, "pit": False, "calendar": True, "benchmarks": not unavailable}
-    exit_flag = False
+    gates = {
+        "artifacts": True,
+        "engineering_cutoff": True,
+        "formal_pit": False,
+        "calendar": True,
+        "benchmarks": not unavailable,
+    }
+    required_gates = ("artifacts", "engineering_cutoff", "calendar", "benchmarks")
+    exit_flag = all(gates[name] for name in required_gates)
     metric_lines = [
         "| Benchmark | CAGR | Vol | Sharpe | MaxDD | Turnover | Cost | Worst1M | Recovery |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
@@ -294,7 +353,7 @@ def run_preliminary(
         metric_lines.append("| " + " | ".join(values) + " |")
     summary = (
         "# Sprint 2 Preliminary\n\n"
-        + f"status: {status}\nPRELIMINARY: true\nPARTIAL_UNIVERSE: true\nRESEARCH_VALIDATED: false\nEXIT: false\nobservations: {formal_observations}\ncalendar: {calendar.metadata.provider}\nbenchmarks: {', '.join(protocol_obj.benchmarks)}\nbase_cost_bps: 10\ncost_sensitivity_bps: {list(protocol_obj.transaction_cost_bps)}\nno_tuning_protocol_hash: `{no_tuning}`\nconfig_hash: `{cfg_hash}`\ncode_hash: `{code_hash}`\ndata_hash: `{data_hash}`\nraw_hashes: {', '.join(raw_hashes) or 'none'}\n\ngates: {gates}\n\n## Metrics at 10 bps\n\n"
+        + f"status: {status}\nPRELIMINARY: true\nPARTIAL_UNIVERSE: true\nPRELIMINARY_WALK_FORWARD_READY: {str(exit_flag).lower()}\nRESEARCH_VALIDATED: false\nFORMAL_PIT: false\nEXIT: {str(exit_flag).lower()}\nobservations: {formal_observations}\ncalendar: {calendar.metadata.provider}\nbenchmarks: {', '.join(protocol_obj.benchmarks)}\nbase_cost_bps: 10\ncost_sensitivity_bps: {list(protocol_obj.transaction_cost_bps)}\nno_tuning_protocol_hash: `{no_tuning}`\nconfig_hash: `{cfg_hash}`\ncode_hash: `{code_hash}`\ndata_hash: `{data_hash}`\nraw_hashes: {', '.join(raw_hashes) or 'none'}\n\ngates: {gates}\n\n## Metrics at 10 bps\n\n"
         + "\n".join(metric_lines)
         + "\n\nNo broker/order path; engineering artifact only.\n"
     )
@@ -302,7 +361,7 @@ def run_preliminary(
     gates["artifacts"] = len(result["artifacts"]) == 7 and all(
         Path(path).is_file() for path in result["artifacts"]
     )
-    exit_flag = all(gates.values())
+    exit_flag = all(gates[name] for name in required_gates)
     result.update(
         {
             "status": status,
