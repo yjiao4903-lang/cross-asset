@@ -1,0 +1,36 @@
+version: 0.1
+providers:
+  fred: {enabled: true, tier: A}
+  yahoo: {enabled: true, tier: B}
+  tushare: {enabled: false, tier: A}
+  wind: {enabled: false, tier: A}
+  ifind: {enabled: false, tier: A}
+  manual: {enabled: true, tier: C}
+mappings:
+  - {series_id: US_CPI, provider: fred, source_series_id: CPIAUCSL, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: US_CORE_PCE, provider: fred, source_series_id: PCEPILFE, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: US_UNEMPLOYMENT, provider: fred, source_series_id: UNRATE, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: US_INITIAL_CLAIMS, provider: fred, source_series_id: ICSA, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: US_INDUSTRIAL_PRODUCTION, provider: fred, source_series_id: INDPRO, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: CN_EQ_LARGE, provider: manual, source_series_id: CN_EQ_LARGE, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: CN_EQ_SMALL, provider: manual, source_series_id: CN_EQ_SMALL, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: HK_EQ, provider: yahoo, source_series_id: ^HSI, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: US_EQ, provider: yahoo, source_series_id: ^GSPC, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: CN_BOND_10Y, provider: manual, source_series_id: CN_BOND_10Y, priority: 1, enabled: true, semantic_equivalence: true, notes: "Proxy/manual until entitled source is confirmed"}
+  - {series_id: US_GOV_10Y, provider: fred, source_series_id: DGS10, priority: 1, enabled: true, semantic_equivalence: true}
+  # Yahoo ^TNX is an auxiliary quote (not semantically equivalent to FRED DGS10).
+  - {series_id: US_GOV_10Y, provider: yahoo, source_series_id: ^TNX, priority: 99, enabled: true, semantic_equivalence: false, notes: "auxiliary live diagnostic only"}
+  - {series_id: US_REAL_10Y, provider: fred, source_series_id: DFII10, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: EFFR, provider: fred, source_series_id: EFFR, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
+  - {series_id: DGS2, provider: fred, source_series_id: DGS2, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
+  - {series_id: DGS5, provider: fred, source_series_id: DGS5, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
+  - {series_id: DGS30, provider: fred, source_series_id: DGS30, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
+  - {series_id: CPILFESL, provider: fred, source_series_id: CPILFESL, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
+  - {series_id: PCEPI, provider: fred, source_series_id: PCEPI, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
+  - {series_id: T10YIE, provider: fred, source_series_id: T10YIE, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
+  - {series_id: T5YIE, provider: fred, source_series_id: T5YIE, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
+  - {series_id: GOLD, provider: yahoo, source_series_id: GC=F, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: COPPER, provider: yahoo, source_series_id: HG=F, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: DXY, provider: yahoo, source_series_id: DX-Y.NYB, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: OIL, provider: yahoo, source_series_id: CL=F, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: USDCNH, provider: yahoo, source_series_id: CNH=X, priority: 1, enabled: true, semantic_equivalence: true}

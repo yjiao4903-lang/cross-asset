@@ -1,0 +1,29 @@
+{
+  "attribution": {
+    "A": {
+      "confidence": 0.16666666666666666,
+      "confidence_adjusted_tilt": 0.0019904549755730997,
+      "constraint_adjusted_tilt": 0.0,
+      "raw_tilt": 0.0119427298534386,
+      "score": 0.15000000000000013,
+      "strategic_weight": 0.5
+    },
+    "B": {
+      "confidence": 0.16666666666666666,
+      "confidence_adjusted_tilt": 0.00027583688004103707,
+      "constraint_adjusted_tilt": 0.0,
+      "raw_tilt": 0.0016550212802462225,
+      "score": 0.020689655172413834,
+      "strategic_weight": 0.5
+    }
+  },
+  "data_cutoff": "2025-12-31 00:00:00+00:00",
+  "fixture": true,
+  "model_version": "allocation_v0.1",
+  "prior": "DEVELOPMENT_PRIOR",
+  "status": "ACTIVE",
+  "weights": {
+    "A": 0.5,
+    "B": 0.5
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "as_of": "2025-12-31",
+  "model_version": "market_v0.1",
+  "unavailable": [],
+  "assets": {
+    "US_EQ": {
+      "as_of": "2025-12-31",
+      "available": true,
+      "data_cutoff": "2025-12-31",
+      "trend": {
+        "ret_1m": 0.07526881720430101,
+        "ret_3m": 0.26582278481012667,
+        "ret_6m": 0.7241379310344827,
+        "ret_12m": 5.25
+      },
+      "volatility": {
+        "vol_20d": 0.0011176761630659058,
+        "vol_60d": 0.0038377386167295874,
+        "vol_120d": 0.010049934743237864
+      },
+      "drawdown": {
+        "current_drawdown": 0.0,
+        "high_distance_252d": 0.0,
+        "max_drawdown_252d": 0.0,
+        "rolling_peak": 300.0
+      }
+    }
+  }
+}

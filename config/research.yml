@@ -1,0 +1,22 @@
+version: "0.1"
+status: PLANNING_ONLY
+owner: TBD
+reviewer: TBD
+approved_at: TBD
+windows:
+  train_min_years: 5
+  test_window_months: 12
+  step_months: 3
+  final_holdout: last_20_percent
+coverage_threshold: TBD
+rebalance: weekly
+transaction_cost_bps: [0, 5, 10, 20, 30]
+benchmarks: [STATIC, TREND_ONLY, MACRO_ONLY, RISK_ONLY, FULL_MODEL]
+verdict_rules:
+  accept: "frozen inputs, provenance complete, PIT clean, and predeclared metrics pass"
+  reject: "PIT/lookahead, semantic, provenance, safety, or predeclared failure threshold fails"
+  inconclusive: "coverage, sample length, permission, or statistical power is insufficient"
+data_policy:
+  project_status: DATA_BLOCKED
+  zero_imputation: false
+  decision_cutoff: "available_at <= decision_time"

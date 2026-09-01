@@ -1,0 +1,13 @@
+version: "0.1"
+timezone: Asia/Shanghai
+frequency: weekly
+decision_time:
+  weekday: Saturday
+  local_time: "12:00"
+  effective_from: next_available_session
+  conservative: true
+markets:
+  US: {timezone: America/New_York, cutoff: session_close}
+  CN: {timezone: Asia/Shanghai, cutoff: session_close}
+  HK: {timezone: Asia/Hong_Kong, cutoff: session_close}
+  FX: {timezone: UTC, cutoff: calendar_day_end}

@@ -1,0 +1,22 @@
+version: 0.1
+# Canonical macro definitions. Provider identifiers remain in sources.yml.
+series:
+  US_CPI: {display_name: US CPI, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: negative}}
+  US_CORE_PCE: {display_name: US Core PCE, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: negative}}
+  US_UNEMPLOYMENT: {display_name: US unemployment, frequency: monthly, unit: percent, critical: false, transform: {type: level, direction: negative}}
+  US_INITIAL_CLAIMS: {display_name: US initial claims, frequency: weekly, unit: persons, critical: false, transform: {type: level, direction: negative}}
+  US_INDUSTRIAL_PRODUCTION: {display_name: US industrial production, frequency: monthly, unit: index, critical: false, transform: {type: yoy, direction: positive}}
+  US_REAL_10Y: {display_name: US 10Y real yield, frequency: daily, unit: yield_percent, critical: false, transform: {type: level, direction: negative}}
+  US_GOV_10Y: {display_name: US 10Y Treasury yield, frequency: daily, unit: yield_percent, critical: false, transform: {type: level, direction: negative}}
+  CN_PMI: {display_name: China PMI, frequency: monthly, unit: index, critical: false, transform: {type: level, direction: positive, baseline: 50}}
+  CN_CPI: {display_name: China CPI, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: negative}}
+  CN_PPI: {display_name: China PPI, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: negative}}
+  CN_M1: {display_name: China M1, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: positive}}
+  CN_M2: {display_name: China M2, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: positive}}
+  CN_DR007: {display_name: China DR007, frequency: daily, unit: yield_percent, critical: false, transform: {type: level, direction: negative}}
+dimensions:
+  GROWTH: [US_INDUSTRIAL_PRODUCTION, CN_PMI, US_INITIAL_CLAIMS, US_UNEMPLOYMENT]
+  INFLATION: [US_CPI, US_CORE_PCE, CN_CPI, CN_PPI]
+  LIQUIDITY: [US_REAL_10Y, DXY, CN_DR007, CN_M1]
+  POLICY: [US_GOV_10Y, CN_DR007]
+  RISK_APPETITE: [COPPER, GOLD, DXY]

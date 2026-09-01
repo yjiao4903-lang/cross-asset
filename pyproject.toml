@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cross-asset-engine"
+version = "0.1.0"
+description = "Point-in-time cross-asset allocation decision engine"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "numpy>=2.0",
+  "pandas>=2.2",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.2",
+  "pyyaml>=6.0",
+  "typer>=0.12",
+  "rich>=13.7",
+  "duckdb>=1.0",
+  "yfinance>=1.7",
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.10"]
+
+[project.scripts]
+cross-asset = "cross_asset.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cross_asset"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

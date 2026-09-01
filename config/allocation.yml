@@ -1,0 +1,15 @@
+version: 0.1
+strategic_weights: {CN_EQ: 0.25, HK_EQ: 0.10, US_EQ: 0.20, CN_BOND: 0.20, GOLD: 0.10, COMMODITY: 0.05, CASH: 0.10}
+constraints:
+  min_weight: 0.0
+  max_weight: 0.5
+  max_tactical_tilt: 0.10
+parameter_status: DEVELOPMENT_PRIOR
+asset_signal_map:
+  CN_EQ: {macro: GROWTH, trend: CN_EQ_LARGE}
+  HK_EQ: {macro: GROWTH, trend: HK_EQ}
+  US_EQ: {macro: GROWTH, trend: US_EQ}
+  CN_BOND: {macro: LIQUIDITY, trend: CN_BOND_10Y}
+  GOLD: {macro: LIQUIDITY, trend: GOLD}
+  COMMODITY: {macro: GROWTH, trend: COPPER}
+  CASH: {macro: null, trend: null}

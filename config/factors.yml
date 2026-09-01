@@ -1,0 +1,13 @@
+version: 0.1
+factors:
+  trend: {enabled: true, model_version: market_v0.1}
+  volatility: {enabled: true, model_version: market_v0.1}
+  drawdown: {enabled: true, model_version: market_v0.1}
+  relative_strength: {enabled: true, model_version: market_v0.1}
+  style:
+    model_version: style_v0.1
+    axes:
+      SIZE: {lhs: CN_EQ_SMALL, rhs: CN_EQ_LARGE, semantic_definition: "CN small-cap relative to CN large-cap"}
+      GROWTH: {lhs: null, rhs: null, semantic_definition: null}
+      CYCLICAL: {lhs: null, rhs: null, semantic_definition: null}
+      TECH: {lhs: null, rhs: null, semantic_definition: null}

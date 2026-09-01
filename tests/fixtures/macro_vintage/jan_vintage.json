@@ -1,0 +1,4 @@
+[
+  {"series_id":"TEST_MACRO_JAN","observation_date":"2025-01-31","available_at":"2025-02-10T09:30:00+08:00","value":100,"source":"fixture","source_series_id":"JAN","vintage_date":"2025-02-10","ingested_at":"2025-02-10T10:00:00+08:00","quality":"ok"},
+  {"series_id":"TEST_MACRO_JAN","observation_date":"2025-01-31","available_at":"2025-03-15T09:30:00+08:00","value":102,"source":"fixture","source_series_id":"JAN","vintage_date":"2025-03-15","ingested_at":"2025-03-15T10:00:00+08:00","quality":"ok"}
+]

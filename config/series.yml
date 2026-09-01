@@ -1,0 +1,15 @@
+version: 0.1
+series:
+  - {series_id: CN_EQ_LARGE, display_name: China large-cap equity, frequency: daily, unit: index_points, currency: CNY, critical: true, stale_after_hours: 72}
+  - {series_id: CN_EQ_SMALL, display_name: China small-cap equity, frequency: daily, unit: index_points, currency: CNY, critical: true, stale_after_hours: 72}
+  - {series_id: HK_EQ, display_name: Hong Kong equity, frequency: daily, unit: index_points, currency: HKD, critical: true, stale_after_hours: 48}
+  - {series_id: US_EQ, display_name: US equity, frequency: daily, unit: index_points, currency: USD, critical: true, stale_after_hours: 48}
+  - {series_id: CN_BOND_10Y, display_name: China 10Y government bond proxy, frequency: daily, unit: yield_percent, currency: CNY, critical: true, stale_after_hours: 72}
+  - {series_id: US_GOV_10Y, display_name: US 10Y Treasury yield, frequency: daily, unit: yield_percent, currency: USD, critical: true, stale_after_hours: 48}
+  - {series_id: US_REAL_10Y, display_name: US 10Y real yield, frequency: daily, unit: yield_percent, currency: USD, critical: true, stale_after_hours: 72}
+  - {series_id: GOLD, display_name: Gold spot/futures proxy, frequency: daily, unit: price, currency: USD, critical: true, stale_after_hours: 48}
+  - {series_id: COPPER, display_name: Copper futures proxy, frequency: daily, unit: price, currency: USD, critical: false, stale_after_hours: 72}
+  - {series_id: DXY, display_name: US dollar index proxy, frequency: daily, unit: index_points, currency: USD, critical: false, stale_after_hours: 72}
+  - {series_id: OIL, display_name: Crude oil proxy, frequency: daily, unit: price, currency: USD, critical: false, stale_after_hours: 72}
+  - {series_id: USDCNH, display_name: USD/CNH, frequency: daily, unit: exchange_rate, currency: CNY, critical: false, stale_after_hours: 72}
+# Provider-specific identifiers belong in sources.yml, never in model code.

@@ -1,0 +1,5 @@
+version: 0.1
+timezone: Asia/Shanghai
+jobs:
+  - {name: shadow_daily, frequency: daily, command: shadow-run, enabled: true, local_time: "16:00"}
+  - {name: shadow_weekly, frequency: weekly, day: Friday, command: weekly-shadow-report, enabled: true, local_time: "16:00"}

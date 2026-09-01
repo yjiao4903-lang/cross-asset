@@ -1,0 +1,10 @@
+version: 0.1
+assets:
+  - {asset_id: CN_EQ, display_name: 中国权益, asset_class: CN_EQ}
+  - {asset_id: HK_EQ, display_name: 港股, asset_class: HK_EQ}
+  - {asset_id: US_EQ, display_name: 美国权益, asset_class: US_EQ}
+  - {asset_id: CN_BOND, display_name: 中国国债, asset_class: CN_BOND}
+  - {asset_id: GOLD, display_name: 黄金, asset_class: GOLD}
+  - {asset_id: COMMODITY, display_name: 工业商品, asset_class: COMMODITY}
+  - {asset_id: CASH, display_name: 现金, asset_class: CASH}
+

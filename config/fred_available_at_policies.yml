@@ -1,0 +1,102 @@
+version: "0.1"
+enabled: false
+status: CANDIDATE_ONLY
+reviewer: null
+approved_at: null
+verified_at: "2026-09-01"
+global_rules:
+  decision_timezone: Asia/Shanghai
+  require_available_at_le_decision_time: true
+  no_observation_date_fallback: true
+  historical_release_mapping_required: true
+  unresolved_policy: UNKNOWN
+policies:
+  - series_id: CPIAUCSL
+    canonical: US_CPI
+    provider: BLS
+    policy: release_date_eod
+    timezone: America/New_York
+    scheduled_release_time: "08:30"
+    pit_grade_candidate: C
+    evidence_urls:
+      - https://www.bls.gov/schedule/news_release/cpi.htm
+      - https://www.bls.gov/news.release/cpi.htm
+    evidence_scope: "BLS schedule and release pages establish scheduled date/time; historical first-release mapping and exceptions remain to be tested."
+  - series_id: PCEPILFE
+    canonical: US_CORE_PCE
+    provider: BEA
+    policy: release_date_eod
+    timezone: America/New_York
+    scheduled_release_time: "08:30"
+    pit_grade_candidate: C
+    evidence_urls:
+      - https://www.bea.gov/news/schedule
+      - https://www.bea.gov/news/2026/personal-income-and-outlays-december-2025
+    evidence_scope: "BEA PIO schedule/release establishes scheduled publication time; series-specific first-release and revision mapping remains open."
+  - series_id: UNRATE
+    canonical: US_UNEMPLOYMENT
+    provider: BLS
+    policy: release_date_eod
+    timezone: America/New_York
+    scheduled_release_time: "08:30"
+    pit_grade_candidate: C
+    evidence_urls:
+      - https://www.bls.gov/schedule/news_release/empsit.htm
+      - https://www.bls.gov/schedule/2026/home.htm
+    evidence_scope: "Employment Situation schedule establishes scheduled date/time; holiday/rescheduling and vintage linkage require historical verification."
+  - series_id: ICSA
+    canonical: US_INITIAL_CLAIMS
+    provider: DOL_ETA
+    policy: release_date_eod
+    timezone: America/New_York
+    scheduled_release_time: "08:30"
+    pit_grade_candidate: C
+    evidence_urls:
+      - https://www.dol.gov/newsroom/releases/eta
+      - https://www.dol.gov/newsroom/releases/eta/eta20250710
+    evidence_scope: "DOL ETA release examples establish the weekly release convention; complete historical schedule and ALFRED mapping are not yet verified."
+  - series_id: INDPRO
+    canonical: US_INDUSTRIAL_PRODUCTION
+    provider: Federal_Reserve_Board
+    policy: release_date_eod
+    timezone: America/New_York
+    scheduled_release_time: "09:15"
+    pit_grade_candidate: C
+    evidence_urls:
+      - https://www.federalreserve.gov/releases/g17/
+      - https://www.federalreserve.gov/feeds/g17.html
+    evidence_scope: "G.17 states monthly release time and publishes a schedule; delays/revisions are documented exceptions, so no exact historical mapping is assumed."
+  - series_id: DGS10
+    canonical: US_GOV_10Y
+    provider: Federal_Reserve_Board_H15
+    policy: release_date_eod
+    timezone: America/New_York
+    scheduled_release_time: "16:15"
+    pit_grade_candidate: C
+    evidence_urls:
+      - https://www.federalreserve.gov/releases/h15/default.htm
+      - https://fred.stlouisfed.org/series/DGS10
+      - https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics
+    evidence_scope: "H.15 publication time is official; Treasury/FRED source lineage and historical first-release/vintage mapping still require series-level reconciliation."
+  - series_id: DFII10
+    canonical: US_REAL_10Y
+    provider: U.S._Treasury
+    policy: release_date_eod
+    timezone: America/New_York
+    scheduled_release_time: "16:15"
+    pit_grade_candidate: C
+    evidence_urls:
+      - https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics
+      - https://fred.stlouisfed.org/series/DFII10
+    evidence_scope: "Treasury documents approximately 15:30 ET input quotations, not a universal first-publication timestamp; end-of-release-day is conservative candidate only."
+  - series_id: EFFR
+    canonical: EFFR
+    provider: Federal_Reserve_Bank_of_New_York
+    policy: release_date_eod
+    timezone: America/New_York
+    scheduled_release_time: "09:00"
+    pit_grade_candidate: C
+    evidence_urls:
+      - https://www.newyorkfed.org/markets/reference-rates/additional-information-about-reference-rates
+      - https://www.federalreserve.gov/releases/h15/default.htm
+    evidence_scope: "NY Fed says approximately 09:00 ET and documents possible same-day 14:30 revisions; date-level schedule does not prove each historical first-release instant."
