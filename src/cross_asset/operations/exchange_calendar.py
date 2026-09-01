@@ -56,18 +56,38 @@ class ExchangeCalendarAdapter:
 
     def sessions(self, market: str, start: date, end: date) -> set[date]:
         calendar = self._calendars[market]
+        first = _as_date(calendar.first_session) if hasattr(calendar, "first_session") else start
+        last = _as_date(calendar.last_session) if hasattr(calendar, "last_session") else end
+        bounded_start = max(start, first)
+        bounded_end = min(end, last)
+        if bounded_end < bounded_start:
+            return set()
         if hasattr(calendar, "sessions_in_range"):
-            values = calendar.sessions_in_range(start, end)
+            values = calendar.sessions_in_range(bounded_start, bounded_end)
         elif hasattr(calendar, "schedule"):
-            values = calendar.schedule(start_date=start, end_date=end).index
+            values = calendar.schedule(start_date=bounded_start, end_date=bounded_end).index
         elif hasattr(calendar, "sessions"):
-            values = calendar.sessions(start, end)
+            values = calendar.sessions(bounded_start, bounded_end)
         else:
             raise TypeError(f"calendar {market} has no sessions API")
         return {_as_date(v) for v in values}
 
     def common_sessions(self, start: date, end: date) -> set[date]:
         return self.sessions("XSHG", start, end) & self.sessions("XHKG", start, end)
+
+    def coverage(self) -> dict[str, dict[str, date | None]]:
+        """Return provider-supported session bounds for audit output."""
+        return {
+            market: {
+                "first_session": _as_date(calendar.first_session)
+                if hasattr(calendar, "first_session")
+                else None,
+                "last_session": _as_date(calendar.last_session)
+                if hasattr(calendar, "last_session")
+                else None,
+            }
+            for market, calendar in self._calendars.items()
+        }
 
     def weekly_decision_dates(self, start: date, end: date) -> list[date]:
         if end < start:

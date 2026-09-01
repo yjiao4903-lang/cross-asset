@@ -11,6 +11,7 @@ requires-python = ">=3.12"
 dependencies = [
   "numpy>=2.0",
   "pandas>=2.2",
+  "pandas-market-calendars>=5.4,<6",
   "pydantic>=2.7",
   "pydantic-settings>=2.2",
   "pyyaml>=6.0",

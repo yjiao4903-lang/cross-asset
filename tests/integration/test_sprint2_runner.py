@@ -89,5 +89,19 @@ def test_injected_calendar_writes_seven_partial_artifacts(monkeypatch, tmp_path)
                 "summary.md",
             )
         )
+        import duckdb
+
+        check = duckdb.connect()
+        try:
+            cost_grid = check.execute(
+                "SELECT DISTINCT cost_bps FROM read_parquet(?) ORDER BY 1",
+                [str(tmp_path / "artifacts" / "costs.parquet")],
+            ).fetchall()
+        finally:
+            check.close()
+        assert cost_grid == [(0,), (5,), (10,), (20,), (30,)]
+        summary = (tmp_path / "artifacts" / "summary.md").read_text(encoding="utf-8")
+        assert "Worst1M" in summary
+        assert "cost_sensitivity_bps: [0, 5, 10, 20, 30]" in summary
     finally:
         store.close()

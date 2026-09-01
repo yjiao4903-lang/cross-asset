@@ -45,6 +45,22 @@ def test_provider_metadata_is_retained():
     assert p.metadata.calendars == ("XSHG", "XHKG")
 
 
+def test_provider_bounds_clip_requested_history():
+    class BoundedCalendar(FakeCalendar):
+        first_session = date(2006, 9, 1)
+        last_session = date(2026, 12, 31)
+
+    p = ExchangeCalendarAdapter(
+        BoundedCalendar({date(2006, 9, 1)}),
+        BoundedCalendar({date(2006, 9, 1)}),
+        metadata=CalendarMetadata("fake", "test", "1", ("XSHG", "XHKG")),
+    )
+    assert p.weekly_decision_dates(date(1986, 1, 1), date(2006, 9, 2)) == [
+        date(2006, 9, 1)
+    ]
+    assert p.coverage()["XSHG"]["first_session"] == date(2006, 9, 1)
+
+
 def test_missing_provider_is_blocked(monkeypatch):
     from cross_asset.operations import exchange_calendar as mod
 
