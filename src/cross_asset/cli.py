@@ -419,7 +419,7 @@ def validate_integration_command(
 
     from .integration.marco_provider import MarcoProvider
 
-    when = datetime.fromisoformat(as_of.replace("Z", "+00:00")) if as_of else None
+    when = datetime.fromisoformat(as_of) if as_of else None
     report = MarcoProvider(integration_dir).validate(at=when)
     typer.echo(
         json.dumps(
@@ -460,7 +460,7 @@ def run_daily_command(
     from .integration.contracts import ALLOCATABLE_ASSETS, VIEWABLE_ASSETS
     from .integration.marco_provider import MarcoIntegrationError, MarcoProvider
 
-    when = datetime.fromisoformat(as_of.replace("Z", "+00:00")) if as_of else None
+    when = datetime.fromisoformat(as_of) if as_of else None
     provider = MarcoProvider(integration_dir)
     try:
         bundle = provider.load_bundle(at=when)
