@@ -14,7 +14,8 @@ def test_asset_score_missing_aware_and_bounded():
     result = score_asset("A", {"macro": 99, "trend": None}, confidence=2)
     assert -2 <= result.score <= 2
     assert result.contributions["trend"] is None
-    assert result.confidence == pytest.approx(1 / 3)
+    assert result.confidence == pytest.approx(0.25)
+    assert result.coverage == pytest.approx(0.25)
     assert score_asset("A", {}).score is None
 
 
@@ -32,6 +33,9 @@ def test_allocation_constraints_sum_and_attribution():
     for asset, attr in result.attribution.items():
         assert attr["constraint_adjusted_tilt"] == pytest.approx(
             result.weights[asset] - strategic[asset]
+        )
+        assert attr["projection_adjustment"] == pytest.approx(
+            result.weights[asset] - attr["pre_projection_weight"]
         )
 
 
@@ -70,3 +74,17 @@ def test_bounded_projection_random_feasible_cases():
         projected = bounded_projection(values, 0.05, 0.6)
         assert sum(projected.values()) == pytest.approx(1)
         assert all(0.05 - 1e-10 <= x <= 0.6 + 1e-10 for x in projected.values())
+
+
+
+def test_component_confidence_and_weighted_coverage_reduce_asset_confidence():
+    result = score_asset(
+        "A",
+        {
+            "macro": {"score": 1.0, "confidence": 0.5},
+            "trend": {"score": 1.0, "confidence": 1.0},
+        },
+    )
+    assert result.coverage == pytest.approx(0.55)
+    expected_quality = (0.25 * 0.5 + 0.30 * 1.0) / 0.55
+    assert result.confidence == pytest.approx(0.55 * expected_quality)
