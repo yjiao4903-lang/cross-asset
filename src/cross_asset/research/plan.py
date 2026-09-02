@@ -104,7 +104,7 @@ def build_research_plan(
     if dates.has_duplicates or not dates.is_monotonic_increasing:
         raise ValueError("decision_dates_must_be_strictly_increasing_and_unique")
 
-    holdout_count = max(1, int(math.ceil(len(dates) * protocol.final_holdout_fraction)))
+    holdout_count = max(1, math.ceil(len(dates) * protocol.final_holdout_fraction))
     if holdout_count >= len(dates):
         raise ValueError("holdout_consumes_entire_sample")
     development = dates[:-holdout_count]
