@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -26,23 +28,26 @@ def _git(root: Path) -> dict:
 
 
 def _tests(root: Path) -> dict:
-    basetemp = root / ".tmp" / "current-state-tests"
-    completed = subprocess.run(
-        [
-            str(root / ".venv" / "Scripts" / "python.exe"),
-            "-m",
-            "pytest",
-            "-q",
-            "-p",
-            "no:cacheprovider",
-            "--basetemp",
-            str(basetemp),
-        ],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    with tempfile.TemporaryDirectory(
+        prefix="cross-asset-current-state-",
+        ignore_cleanup_errors=True,
+    ) as basetemp:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                "--basetemp",
+                basetemp,
+            ],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
     tail = (completed.stdout + completed.stderr).strip().splitlines()[-5:]
     return {"exit_code": completed.returncode, "passed": completed.returncode == 0, "tail": tail}
 
