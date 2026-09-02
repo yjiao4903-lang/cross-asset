@@ -1,9 +1,24 @@
-version: 0.1
+version: 0.2
+parameter_status: DEVELOPMENT_PRIOR
 factors:
-  trend: {enabled: true, model_version: market_v0.1}
-  volatility: {enabled: true, model_version: market_v0.1}
-  drawdown: {enabled: true, model_version: market_v0.1}
-  relative_strength: {enabled: true, model_version: market_v0.1}
+  trend:
+    enabled: true
+    model_version: market_v0.2
+    signal_model_version: trend_signal_v0.2
+    method: risk_adjusted_log_move
+    horizons: {ret_1m: 21, ret_3m: 63, ret_6m: 126, ret_12m: 252}
+    horizon_weights: {ret_1m: 1.0, ret_3m: 1.0, ret_6m: 1.0, ret_12m: 1.0}
+    score_clip: 2.0
+  risk:
+    enabled: true
+    model_version: market_v0.2
+    signal_model_version: risk_signal_v0.2
+    source_feature: vol_20d
+    normalization: {method: causal_zscore, min_history: 60, window: 252, clip: 2.0}
+    direction: negative
+  volatility: {enabled: true, model_version: market_v0.2}
+  drawdown: {enabled: true, model_version: market_v0.2}
+  relative_strength: {enabled: true, model_version: market_v0.2}
   style:
     model_version: style_v0.1
     axes:
