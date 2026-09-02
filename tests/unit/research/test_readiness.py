@@ -1,4 +1,7 @@
+import json
 from datetime import UTC, datetime
+
+import pandas as pd
 
 from cross_asset.research.protocol import ResearchProtocol
 from cross_asset.research.readiness import evaluate_research_readiness
@@ -64,5 +67,136 @@ def test_readiness_blocks_empty_formal_store():
         assert result["status"] == "BLOCKED"
         assert "formal_observations_empty" in result["blockers"]
         assert any("registry_pass_research_admissible_required" in item for item in result["blockers"])
+    finally:
+        store.close()
+
+
+
+def _frozen_protocol():
+    raw = json.loads(json.dumps(RAW))
+    raw.update(
+        {
+            "status": "FROZEN",
+            "owner": "owner",
+            "reviewer": "reviewer",
+            "approved_at": "2026-09-02T10:00:00+08:00",
+        }
+    )
+    return ResearchProtocol.from_mapping(raw)
+
+
+def test_readiness_enforces_pit_freshness_coverage_threshold():
+    store = init_db(":memory:")
+    try:
+        now = datetime(2026, 9, 2, tzinfo=UTC)
+        store.conn.execute(
+            """INSERT INTO series_catalog
+               (series_id,display_name,frequency,unit,critical,point_in_time_class,
+                stale_after_hours,created_at,updated_at)
+               VALUES ('A','A','weekly','price',TRUE,'market',96,?,?)""",
+            [now, now],
+        )
+        store.conn.execute(
+            """INSERT INTO data_acceptance_registry
+               (series_id,provider,source_series_id,status,tech_gate,legal_gate,pit_gate,
+                stability_gate,pit_grade,origin,permission_scope,semantic_equivalence,
+                manifest_hash,reviewer,approved_at,evidence_json,updated_at,usage_status)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            [
+                "A",
+                "manual",
+                "A",
+                "PASS",
+                "PASS",
+                "PASS",
+                "PASS",
+                "PASS",
+                "B",
+                "MANUAL",
+                "research",
+                True,
+                "hash",
+                "reviewer",
+                now,
+                "{}",
+                now,
+                "RESEARCH_ADMISSIBLE",
+            ],
+        )
+
+        decisions = pd.date_range(
+            "2026-01-02T16:00:00Z",
+            periods=20,
+            freq="W-FRI",
+        )
+        observations = [
+            {
+                "series_id": "A",
+                "observation_date": datetime(2018, 1, 5, tzinfo=UTC).date(),
+                "available_at": datetime(2018, 1, 5, 16, tzinfo=UTC),
+                "value": 90.0,
+                "source": "manual",
+                "source_series_id": "A",
+                "vintage_date": None,
+                "ingested_at": now,
+                "quality": "ok",
+                "raw_file": "fixture",
+            }
+        ]
+        missing_indices = {5, 15}
+        for index, decision in enumerate(decisions):
+            if index in missing_indices:
+                continue
+            observations.append(
+                {
+                    "series_id": "A",
+                    "observation_date": decision.date(),
+                    "available_at": decision.to_pydatetime(),
+                    "value": 100.0 + index,
+                    "source": "manual",
+                    "source_series_id": "A",
+                    "vintage_date": None,
+                    "ingested_at": now,
+                    "quality": "ok",
+                    "raw_file": "fixture",
+                }
+            )
+        store.insert_observations(observations, run_id="coverage-fixture")
+
+        blocked = evaluate_research_readiness(
+            store.conn,
+            _frozen_protocol(),
+            decision_times=decisions,
+        )
+        assert blocked["status"] == "BLOCKED"
+        assert blocked["series"][0]["pit_coverage"]["coverage"] == 0.9
+        assert any("pit_coverage_below_threshold" in item for item in blocked["blockers"])
+
+        fill_rows = []
+        for index in sorted(missing_indices):
+            decision = decisions[index]
+            fill_rows.append(
+                {
+                    "series_id": "A",
+                    "observation_date": decision.date(),
+                    "available_at": decision.to_pydatetime(),
+                    "value": 100.0 + index,
+                    "source": "manual",
+                    "source_series_id": "A",
+                    "vintage_date": None,
+                    "ingested_at": now,
+                    "quality": "ok",
+                    "raw_file": "fixture",
+                }
+            )
+        store.insert_observations(fill_rows, run_id="coverage-fill")
+
+        ready = evaluate_research_readiness(
+            store.conn,
+            _frozen_protocol(),
+            decision_times=decisions,
+        )
+        assert ready["status"] == "READY_FOR_OOS"
+        assert ready["series"][0]["pit_coverage"]["coverage"] == 1.0
     finally:
         store.close()
