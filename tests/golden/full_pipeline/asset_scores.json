@@ -1,31 +1,31 @@
 {
   "data_cutoff": "2025-12-31 00:00:00+00:00",
   "fixture": true,
-  "model_version": "asset_score_v0.1",
+  "model_version": "asset_score_v0.2",
   "scores": {
     "A": {
-      "confidence": 0.1666666667,
+      "confidence": 0.075,
       "contributions": {
         "carry": null,
         "macro": null,
         "risk": null,
         "structure": null,
-        "trend": 0.15,
+        "trend": 2.0,
         "valuation": null
       },
-      "score": 0.15
+      "score": 2.0
     },
     "B": {
-      "confidence": 0.1666666667,
+      "confidence": 0.075,
       "contributions": {
         "carry": null,
         "macro": null,
         "risk": null,
         "structure": null,
-        "trend": 0.0206896552,
+        "trend": 2.0,
         "valuation": null
       },
-      "score": 0.0206896552
+      "score": 2.0
     }
   },
   "status": "AVAILABLE"
