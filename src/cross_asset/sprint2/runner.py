@@ -279,6 +279,12 @@ def run_preliminary(
                 strategic_weights=_strategic_weights(),
                 asset_series_map=series_mapping,
                 return_specs=return_specs,
+                signal_directions={
+                    asset: (
+                        -1.0 if spec.kind == "yield_duration_proxy" else 1.0
+                    )
+                    for asset, spec in return_specs.items()
+                },
             )
             if benchmark == "FULL_MODEL"
             else None
