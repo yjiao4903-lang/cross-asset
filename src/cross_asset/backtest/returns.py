@@ -1,8 +1,11 @@
 """Explicit asset holding-period return semantics for research backtests."""
 
+from __future__ import annotations
+
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 
 
@@ -32,8 +35,23 @@ class AssetReturnSpec:
                 raise ValueError("yield_scale must be positive")
 
 
-def _date(value):
-    return pd.Timestamp(value).date()
+def _timestamp_utc(value):
+    timestamp = pd.Timestamp(value)
+    return (
+        timestamp.tz_localize("UTC")
+        if timestamp.tzinfo is None
+        else timestamp.tz_convert("UTC")
+    )
+
+
+def _latest_boundary_row(rows, boundary, available_boundary=None):
+    eligible = rows[rows["_date"] <= pd.Timestamp(boundary).date()]
+    if available_boundary is not None and "_available" in rows:
+        eligible = eligible[eligible["_available"] <= _timestamp_utc(available_boundary)]
+    if eligible.empty:
+        return None
+    sort_columns = ["_date"] + (["_available"] if "_available" in eligible else [])
+    return eligible.sort_values(sort_columns).iloc[-1]
 
 
 def period_asset_return(
@@ -43,17 +61,13 @@ def period_asset_return(
     next_decision,
     spec: AssetReturnSpec,
 ) -> float | None:
-    """Return the complete decision-to-next-decision holding-period return.
-
-    Price assets use the latest observation on or before each boundary. Yield
-    assets use an explicit duration approximation instead of treating yields as
-    prices. Missing data is returned as None rather than silently imputed.
-    """
+    """Return the complete PIT-resolved decision-to-next-decision holding return."""
 
     spec.validate()
     if next_decision is None:
-        return 0.0
-    start_boundary, end_boundary = _date(decision), _date(next_decision)
+        return None
+    start_boundary = pd.Timestamp(decision).date()
+    end_boundary = pd.Timestamp(next_decision).date()
     if end_boundary <= start_boundary:
         raise ValueError("next_decision must be after decision")
 
@@ -67,17 +81,18 @@ def period_asset_return(
     if rows.empty:
         return None
     rows["_date"] = pd.to_datetime(rows["observation_date"]).dt.date
-    before = rows[rows["_date"] <= start_boundary].sort_values("_date")
-    through_end = rows[rows["_date"] <= end_boundary].sort_values("_date")
-    if before.empty or through_end.empty:
-        return None
+    if "available_at" in rows:
+        rows["_available"] = pd.to_datetime(rows["available_at"], utc=True)
 
-    start_row = before.iloc[-1]
-    end_row = through_end.iloc[-1]
+    start_row = _latest_boundary_row(rows, decision, decision)
+    end_row = _latest_boundary_row(rows, next_decision, next_decision)
+    if start_row is None or end_row is None:
+        return None
     if end_row["_date"] <= start_row["_date"]:
         return None
-    start_value, end_value = float(start_row["value"]), float(end_row["value"])
 
+    start_value = float(start_row["value"])
+    end_value = float(end_row["value"])
     if spec.kind == "price":
         return None if start_value == 0 else end_value / start_value - 1.0
 
@@ -88,6 +103,42 @@ def period_asset_return(
         -float(spec.duration_years) * (end_yield - start_yield)
         + start_yield * holding_years
     )
+
+
+def return_index_from_series(series: pd.Series, spec: AssetReturnSpec) -> pd.Series:
+    """Convert an observable level/yield history to a price-like return index."""
+
+    spec.validate()
+    values = pd.Series(series, copy=True, dtype=float).dropna()
+    if not values.index.is_monotonic_increasing:
+        values = values.sort_index()
+    values = values[~values.index.duplicated(keep="last")]
+    if values.empty:
+        return values
+    if spec.kind == "price":
+        return values
+    if spec.kind == "cash":
+        raise ValueError("cash return index requires an explicit date grid")
+    if not isinstance(values.index, pd.DatetimeIndex):
+        try:
+            values.index = pd.to_datetime(values.index)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("yield return index requires datetime-like index") from exc
+
+    yields = values / float(spec.yield_scale)
+    days = values.index.to_series().diff().dt.total_seconds().div(86400.0)
+    period_returns = (
+        -float(spec.duration_years) * yields.diff()
+        + yields.shift(1) * days / 365.25
+    )
+    growth = 1.0 + period_returns
+    growth = growth.where(growth > 0)
+    result = pd.Series(index=values.index, dtype=float)
+    result.iloc[0] = 1.0
+    if len(result) > 1:
+        cumulative = growth.iloc[1:].cumprod()
+        result.iloc[1:] = cumulative.to_numpy()
+    return result.replace([np.inf, -np.inf], np.nan).dropna()
 
 
 def portfolio_period_return(
@@ -101,7 +152,7 @@ def portfolio_period_return(
     """Aggregate strict asset returns; missing non-zero legs make the period unavailable."""
 
     if next_decision is None:
-        return 0.0
+        return None
     configured = specs or {}
     total = 0.0
     for asset, weight in allocation.items():
@@ -121,4 +172,9 @@ def portfolio_period_return(
     return total
 
 
-__all__ = ["AssetReturnSpec", "period_asset_return", "portfolio_period_return"]
+__all__ = [
+    "AssetReturnSpec",
+    "period_asset_return",
+    "portfolio_period_return",
+    "return_index_from_series",
+]
