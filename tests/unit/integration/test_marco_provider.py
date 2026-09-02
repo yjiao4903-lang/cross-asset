@@ -1,7 +1,7 @@
 import hashlib
 import json
 import shutil
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -44,7 +44,7 @@ def _seed_market_db(path, *, rows_per_series=80):
         "GOLD": (1800.0, 1.20),
         "COPPER": (4.0, 0.006),
     }
-    start = datetime(2026, 6, 1, 16, 0, 0)
+    start = datetime(2026, 6, 1, 16, 0, 0, tzinfo=UTC)
     rows = []
     for index in range(rows_per_series):
         stamp = start + timedelta(days=index)
@@ -211,7 +211,7 @@ def test_fundamental_score_enters_asset_macro_directly_and_structure_stays_missi
     )
     strategy(
         _single_asset_observations(),
-        datetime(2026, 9, 2, 23, 59, 59),
+        datetime(2026, 9, 2, 23, 59, 59, tzinfo=UTC),
         macro_snapshot=bundle.macro_snapshot,
         fundamental_asset_view=bundle.fundamental_asset_view,
         structural_snapshot=bundle.structural_snapshot,
@@ -253,7 +253,7 @@ def test_unavailable_marco_fundamental_is_missing_not_zero(monkeypatch):
     )
     strategy(
         rows,
-        datetime(2026, 9, 2, 23, 59, 59),
+        datetime(2026, 9, 2, 23, 59, 59, tzinfo=UTC),
         macro_snapshot=bundle.macro_snapshot,
         fundamental_asset_view=bundle.fundamental_asset_view,
         structural_snapshot=bundle.structural_snapshot,
