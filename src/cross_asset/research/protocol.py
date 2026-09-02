@@ -47,6 +47,7 @@ class ResearchProtocol:
     coverage_threshold: float
     rebalance: str
     transaction_cost_bps: tuple[int, ...]
+    base_cost_bps: int
     turnover_convention: str
     charge_initial_trade: bool
     signal_model_version: str
@@ -87,6 +88,7 @@ class ResearchProtocol:
                 coverage_threshold=coverage,
                 rebalance=str(raw["rebalance"]),
                 transaction_cost_bps=tuple(int(value) for value in raw["transaction_cost_bps"]),
+                base_cost_bps=int(raw["base_cost_bps"]),
                 turnover_convention=str(raw["turnover_convention"]),
                 charge_initial_trade=bool(raw["charge_initial_trade"]),
                 signal_model_version=str(raw["signal_model_version"]),
@@ -139,6 +141,8 @@ class ResearchProtocol:
             raise ResearchProtocolError("turnover_convention_invalid")
         if 0 not in self.transaction_cost_bps:
             raise ResearchProtocolError("zero_cost_sensitivity_required")
+        if self.base_cost_bps not in self.transaction_cost_bps:
+            raise ResearchProtocolError("base_cost_must_be_in_sensitivity_grid")
         if "STATIC" not in self.benchmarks or "FULL_MODEL" not in self.benchmarks:
             raise ResearchProtocolError("static_and_full_model_benchmarks_required")
         if self.require_protocol_status not in {"FROZEN", "APPROVED"}:

@@ -69,7 +69,13 @@ def load_decision_dates(path: str | Path) -> pd.DatetimeIndex:
             for line in path.read_text(encoding="utf-8").splitlines()
             if line.strip()
         ]
-    dates = pd.DatetimeIndex(pd.to_datetime(list(values), utc=True))
+    parsed = []
+    for value in list(values):
+        timestamp = pd.Timestamp(value)
+        if timestamp.tzinfo is None:
+            raise ValueError("decision_times_must_be_timezone_aware")
+        parsed.append(timestamp.tz_convert("UTC"))
+    dates = pd.DatetimeIndex(parsed)
     if dates.has_duplicates:
         raise ValueError("decision_dates_must_be_unique")
     if not dates.is_monotonic_increasing:

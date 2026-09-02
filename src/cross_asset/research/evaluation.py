@@ -6,6 +6,8 @@ import math
 
 import pandas as pd
 
+from cross_asset.backtest.walk_forward import portfolio_turnover
+
 
 def stitch_oos_returns(frame: pd.DataFrame, plan: dict) -> pd.DataFrame:
     """Validate fold membership and select one latest-trained observation per date/benchmark."""
@@ -132,3 +134,74 @@ def verdict_from_thresholds(metrics: dict, thresholds: dict) -> dict:
 
 
 __all__ = ["paired_oos_metrics", "stitch_oos_returns", "verdict_from_thresholds"]
+
+
+
+def stitch_oos_path(
+    frame: pd.DataFrame,
+    plan: dict,
+    *,
+    cost_bps: float,
+    turnover_convention: str,
+    charge_initial_trade: bool,
+) -> pd.DataFrame:
+    """Stitch overlapping fold outputs, then recompute one global turnover/cost path."""
+
+    required = {"fold", "decision_date", "benchmark", "gross_return", "weights"}
+    missing = required - set(frame.columns)
+    if missing:
+        raise ValueError(f"oos_path_columns_missing:{sorted(missing)}")
+    if plan.get("holdout_sealed") is not True:
+        raise ValueError("oos_path_requires_sealed_holdout")
+
+    folds = {int(item["fold"]): item for item in plan.get("folds", [])}
+    rows = frame.copy()
+    rows["decision_date"] = pd.to_datetime(rows["decision_date"], utc=True)
+    holdout_start = plan.get("holdout_start")
+    for row in rows.itertuples(index=False):
+        fold = folds.get(int(row.fold))
+        if fold is None:
+            raise ValueError(f"unknown_fold:{row.fold}")
+        when = pd.Timestamp(row.decision_date)
+        if not pd.Timestamp(fold["test_start"]) <= when <= pd.Timestamp(fold["test_end"]):
+            raise ValueError("decision_outside_frozen_test_window")
+        if holdout_start is not None and when >= pd.Timestamp(holdout_start):
+            raise ValueError("sealed_holdout_return_detected")
+
+    rows = rows.sort_values(["decision_date", "benchmark", "fold"])
+    stitched = rows.drop_duplicates(["decision_date", "benchmark"], keep="last").copy()
+    stitched["turnover"] = 0.0
+    stitched["cost"] = 0.0
+    stitched["net_return"] = float("nan")
+
+    for benchmark, indices in stitched.groupby("benchmark").groups.items():
+        previous = None
+        ordered = stitched.loc[list(indices)].sort_values("decision_date")
+        for index, row in ordered.iterrows():
+            weights = row["weights"]
+            if isinstance(weights, str):
+                weights = __import__("json").loads(weights)
+            gross = row["gross_return"]
+            if previous is None:
+                turnover = (
+                    portfolio_turnover(
+                        weights,
+                        {},
+                        convention=turnover_convention,
+                    )
+                    if charge_initial_trade
+                    else 0.0
+                )
+            else:
+                turnover = portfolio_turnover(
+                    weights,
+                    previous,
+                    convention=turnover_convention,
+                )
+            cost = turnover * float(cost_bps) / 10000.0
+            stitched.at[index, "turnover"] = turnover
+            stitched.at[index, "cost"] = cost
+            if pd.notna(gross):
+                stitched.at[index, "net_return"] = float(gross) - cost
+            previous = weights
+    return stitched.sort_values(["decision_date", "benchmark"]).reset_index(drop=True)

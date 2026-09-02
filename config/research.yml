@@ -15,6 +15,7 @@ coverage_threshold: 0.95
 coverage_definition: "for each critical series: eligible decision times with at least one PIT-available observation / eligible decision times"
 rebalance: weekly
 transaction_cost_bps: [0, 5, 10, 20, 30]
+base_cost_bps: 10
 turnover_convention: two_sided_notional
 charge_initial_trade: false
 terminal_period_return: unavailable_without_next_decision
