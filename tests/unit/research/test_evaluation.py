@@ -43,7 +43,7 @@ def test_stitch_prefers_latest_fold_and_rejects_holdout_leak():
 
 def test_paired_metrics_and_predeclared_verdict():
     index = pd.date_range("2025-01-03", periods=60, freq="W-FRI")
-    model = pd.Series([0.01] * 60, index=index)
+    model = pd.Series([0.009, 0.011] * 30, index=index)
     static = pd.Series([0.005] * 60, index=index)
     metrics = paired_oos_metrics(model, static)
     result = verdict_from_thresholds(
