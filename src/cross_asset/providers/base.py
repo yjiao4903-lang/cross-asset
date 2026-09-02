@@ -5,26 +5,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
+from cross_asset.domain.exceptions import ProviderError
 from cross_asset.domain.models import DataRequest, Observation, ProviderCapability
 
 # Public provider contracts are aliases of the canonical domain models.  Keep
 # imports from this module working for adapters and downstream callers.
-
-
-class ProviderError(RuntimeError):
-    def __init__(
-        self, code: str, message: str, *, provider: str = "", details: dict[str, Any] | None = None
-    ):
-        self.code, self.provider, self.details = code, provider, details or {}
-        super().__init__(message)
-
-    def as_dict(self):
-        return {
-            "code": self.code,
-            "provider": self.provider,
-            "message": str(self),
-            "details": self.details,
-        }
 
 
 class BaseProvider(ABC):
