@@ -91,6 +91,8 @@ def test_sprint2_return_model_and_turnover_are_frozen():
     raw = load_sprint2_config()
     protocol, _ = validate_sprint2_config(raw)
     assert protocol.turnover_convention == "two_sided_notional"
+    assert protocol.charge_initial_trade is False
+    assert protocol.signal_model_version == "full_model_v0.2"
     assert protocol.return_model["CN_EQ"]["series_id"] == "CN_EQ_LARGE"
     assert protocol.return_model["CN_BOND"]["kind"] == "yield_duration_proxy"
 
