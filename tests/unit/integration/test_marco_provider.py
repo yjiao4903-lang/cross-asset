@@ -208,6 +208,7 @@ def test_fundamental_score_enters_asset_macro_directly_and_structure_stays_missi
         asset_signal_map={
             "CN_EQ": {"macro": "SHOULD_NOT_BE_USED"}
         },
+        allocation_config={"constraints": {"max_weight": 1.0}},
     )
     strategy(
         _single_asset_observations(),
@@ -250,6 +251,7 @@ def test_unavailable_marco_fundamental_is_missing_not_zero(monkeypatch):
     strategy = FullModelStrategy(
         ["US_EQ"],
         asset_series_map={"US_EQ": "US_EQ"},
+        allocation_config={"constraints": {"max_weight": 1.0}},
     )
     strategy(
         rows,
