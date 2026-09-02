@@ -188,6 +188,34 @@ def test_marco_never_calls_legacy_factory_on_success_or_failure(tmp_path):
     assert calls == []
 
 
+def test_incomplete_marco_strategy_inputs_fail_closed_without_legacy(monkeypatch):
+    bundle = MarcoProvider(FIXTURE).load_bundle(at=AS_OF)
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError(
+            "legacy build_macro_state must not run for incomplete Marco inputs"
+        )
+
+    monkeypatch.setattr(
+        "cross_asset.backtest.replay.build_macro_state",
+        forbidden,
+    )
+    strategy = FullModelStrategy(
+        ["CN_EQ"],
+        asset_series_map={"CN_EQ": "CN_EQ_LARGE"},
+        allocation_config={"constraints": {"max_weight": 1.0}},
+    )
+    with pytest.raises(
+        ValueError,
+        match="FundamentalAssetView; legacy fallback is disabled",
+    ):
+        strategy(
+            _single_asset_observations(),
+            datetime(2026, 9, 2, 23, 59, 59, tzinfo=UTC),
+            macro_snapshot=bundle.macro_snapshot,
+        )
+
+
 def test_fundamental_score_enters_asset_macro_directly_and_structure_stays_missing(
     monkeypatch,
 ):
