@@ -7,10 +7,11 @@ Marco mode therefore cannot silently fall back to legacy macro computation.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import ValidationError
 
