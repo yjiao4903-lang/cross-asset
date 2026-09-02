@@ -3,11 +3,7 @@ import json
 import pandas as pd
 import pytest
 
-from cross_asset.research import (
-    ResearchProtocol,
-    build_research_plan,
-    load_decision_dates,
-)
+from cross_asset import research
 
 
 RAW = {
@@ -55,9 +51,9 @@ RAW = {
 
 
 def test_planning_protocol_builds_sealed_plan_but_blocks_execution():
-    protocol = ResearchProtocol.from_mapping(RAW)
+    protocol = research.ResearchProtocol.from_mapping(RAW)
     dates = pd.date_range("2015-01-02", "2026-12-25", freq="W-FRI", tz="UTC")
-    plan = build_research_plan(dates, protocol)
+    plan = research.build_research_plan(dates, protocol)
     assert plan.holdout_sealed is True
     assert plan.holdout_dates == ()
     assert plan.holdout_count > 0
@@ -77,9 +73,9 @@ def test_frozen_approved_protocol_is_ready_with_enough_dates():
             "approved_at": "2026-09-02T10:00:00+08:00",
         }
     )
-    protocol = ResearchProtocol.from_mapping(raw)
+    protocol = research.ResearchProtocol.from_mapping(raw)
     dates = pd.date_range("2015-01-02", "2026-12-25", freq="W-FRI", tz="UTC")
-    plan = build_research_plan(dates, protocol)
+    plan = research.build_research_plan(dates, protocol)
     assert plan.status == "READY_FOR_OOS"
     assert plan.holdout_sealed is True
     assert plan.development_end < plan.holdout_start
@@ -89,4 +85,4 @@ def test_decision_date_loader_rejects_duplicates(tmp_path):
     path = tmp_path / "dates.json"
     path.write_text(json.dumps(["2026-01-02T00:00:00Z", "2026-01-02T00:00:00Z"]), encoding="utf-8")
     with pytest.raises(ValueError, match="unique"):
-        load_decision_dates(path)
+        research.load_decision_dates(path)
