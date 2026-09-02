@@ -140,17 +140,25 @@ def research_readiness_command(
     from .research import (
         evaluate_research_readiness,
         load_decision_dates,
+        load_research_model_config,
         load_research_protocol,
     )
     from .storage import init_db
 
     protocol = load_research_protocol(config)
+    model_config = load_research_model_config()
+    return_series = [
+        spec.series_id
+        for spec in model_config.return_specs.values()
+        if spec.series_id is not None
+    ]
     store = init_db(database or get_settings().database_path)
     try:
         dates = load_decision_dates(decision_dates) if decision_dates else None
         result = evaluate_research_readiness(
             store.conn,
             protocol,
+            required_series=return_series,
             decision_times=dates,
         )
         typer.echo(json.dumps(result, ensure_ascii=False, default=str, sort_keys=True))
@@ -235,10 +243,17 @@ def research_run_oos_command(
         "config/macro.yml",
     ]
     try:
+        model_config = load_research_model_config()
+        return_series = [
+            spec.series_id
+            for spec in model_config.return_specs.values()
+            if spec.series_id is not None
+        ]
         development_dates = dates[: plan.development_count]
         readiness = evaluate_research_readiness(
             store.conn,
             protocol,
+            required_series=return_series,
             decision_times=development_dates,
         )
         if readiness["status"] != "READY_FOR_OOS" or plan.status != "READY_FOR_OOS":
@@ -250,7 +265,6 @@ def research_run_oos_command(
             typer.echo(json.dumps(result, ensure_ascii=False, default=str, sort_keys=True))
             raise typer.Exit(2)
 
-        model_config = load_research_model_config()
         fold_rows = execute_walk_forward(
             store.conn,
             decision_dates=dates,
