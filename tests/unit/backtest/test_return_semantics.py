@@ -129,7 +129,7 @@ def test_full_model_freezes_when_critical_signal_is_missing():
     assert weights == {"CN_EQ": 0.5, "CASH": 0.5}
 
 
-def test_full_model_can_reverse_yield_signal_direction_explicitly():
+def test_full_model_uses_yield_return_index_for_bond_signal():
     from cross_asset.backtest.replay import FullModelStrategy
 
     rows = []
@@ -147,7 +147,6 @@ def test_full_model_can_reverse_yield_signal_direction_explicitly():
         ["CN_BOND", "CASH"],
         strategic_weights={"CN_BOND": 0.5, "CASH": 0.5},
         asset_series_map={"CN_BOND": "CN10Y", "CASH": None},
-        signal_directions={"CN_BOND": -1.0},
         return_specs={
             "CN_BOND": AssetReturnSpec(
                 "CN10Y",
@@ -161,3 +160,51 @@ def test_full_model_can_reverse_yield_signal_direction_explicitly():
     strategy(pd.DataFrame(rows), pd.Timestamp("2026-01-22"))
     assert strategy.last_decision["allocation"].status == "ACTIVE"
     assert strategy.last_decision["asset_scores"]["CN_BOND"].score > 0
+
+
+
+def test_realized_return_ignores_revision_not_available_by_next_decision():
+    frame = pd.DataFrame(
+        [
+            {
+                "series_id": "A",
+                "observation_date": "2026-01-02",
+                "available_at": "2026-01-02T00:00:00Z",
+                "value": 100.0,
+            },
+            {
+                "series_id": "A",
+                "observation_date": "2026-01-09",
+                "available_at": "2026-01-09T00:00:00Z",
+                "value": 110.0,
+            },
+            {
+                "series_id": "A",
+                "observation_date": "2026-01-09",
+                "available_at": "2026-01-12T00:00:00Z",
+                "value": 120.0,
+            },
+        ]
+    )
+    result = period_asset_return(
+        frame,
+        decision="2026-01-02",
+        next_decision="2026-01-09",
+        spec=AssetReturnSpec("A", "price"),
+    )
+    assert result == pytest.approx(0.10)
+
+
+def test_terminal_decision_has_no_realized_holding_period():
+    frame = pd.DataFrame(
+        [{"series_id": "A", "observation_date": "2026-01-02", "value": 100.0}]
+    )
+    assert (
+        period_asset_return(
+            frame,
+            decision="2026-01-02",
+            next_decision=None,
+            spec=AssetReturnSpec("A", "price"),
+        )
+        is None
+    )
