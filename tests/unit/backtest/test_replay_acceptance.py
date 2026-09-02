@@ -143,3 +143,30 @@ def test_full_model_calls_engine_chain_and_realizes_next_period_return(tmp_path)
     assert {"market", "macro", "style", "asset", "allocation"} <= set(result.decisions[0]["model_versions"])
     out = result.write_artifacts(tmp_path)
     assert (out / "decisions.json").exists()
+
+
+
+def test_replay_terminal_period_is_unrealized_and_initial_cost_policy_is_explicit():
+    observations = pd.DataFrame(
+        [
+            {"available_at": "2025-01-03", "observation_date": "2025-01-03"},
+            {"available_at": "2025-01-10", "observation_date": "2025-01-10"},
+        ]
+    )
+    no_initial_cost = HistoricalReplay(
+        observations,
+        _Strategy(),
+        cost_bps=100,
+        charge_initial_trade=False,
+    ).run("2025-01-03", "2025-01-10")
+    with_initial_cost = HistoricalReplay(
+        observations,
+        _Strategy(),
+        cost_bps=100,
+        charge_initial_trade=True,
+    ).run("2025-01-03", "2025-01-10")
+
+    assert no_initial_cost.returns.iloc[0] == 0.01
+    assert with_initial_cost.returns.iloc[0] == 0.0
+    assert pd.isna(no_initial_cost.returns.iloc[-1])
+    assert pd.isna(with_initial_cost.returns.iloc[-1])
