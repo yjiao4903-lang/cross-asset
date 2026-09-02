@@ -1,5 +1,5 @@
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from cross_asset.engines.macro import build_macro_state
@@ -151,9 +151,9 @@ def test_macro_causal_normalization_requires_prior_history():
     rows = [
         {
             "series_id": "X",
-            "observation_date": (datetime(2025, 1, 1) + __import__("datetime").timedelta(days=i)).date(),
+            "observation_date": (datetime(2025, 1, 1) + timedelta(days=i)).date(),
             "available_at": datetime(2025, 1, 1, tzinfo=UTC)
-            + __import__("datetime").timedelta(days=i),
+            + timedelta(days=i),
             "value": float(i),
         }
         for i in range(15)
