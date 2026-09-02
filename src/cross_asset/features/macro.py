@@ -22,7 +22,7 @@ def _get(row, key):
 def _ordered_rows(series):
     if hasattr(series, "sort_values"):
         return list(series.sort_values("observation_date").to_dict("records"))
-    return sorted(list(series), key=lambda row: _get(row, "observation_date"))
+    return sorted(series, key=lambda row: _get(row, "observation_date"))
 
 
 def _values(series):
