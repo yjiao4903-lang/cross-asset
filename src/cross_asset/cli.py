@@ -409,6 +409,106 @@ def _reserved(name: str):
     return command
 
 
+@app.command("validate-integration")
+def validate_integration_command(
+    integration_dir: str = typer.Option(..., "--integration-dir"),
+    as_of: str | None = typer.Option(None, "--as-of"),
+) -> None:
+    """Validate a Marco Integration Contract v1 directory without fallback."""
+    from datetime import datetime
+
+    from .integration.marco_provider import MarcoProvider
+
+    when = datetime.fromisoformat(as_of.replace("Z", "+00:00")) if as_of else None
+    report = MarcoProvider(integration_dir).validate(at=when)
+    typer.echo(
+        json.dumps(
+            report.model_dump(mode="json"),
+            ensure_ascii=False,
+            sort_keys=True,
+            indent=2,
+        )
+    )
+    if report.exit_code:
+        raise typer.Exit(report.exit_code)
+
+
+@app.command("run-daily")
+def run_daily_command(
+    macro_source: str = typer.Option("legacy", "--macro-source"),
+    integration_dir: str | None = typer.Option(None, "--integration-dir"),
+    as_of: str | None = typer.Option(None, "--as-of"),
+) -> None:
+    """Run the daily macro integration boundary.
+
+    Legacy remains frozen at its prior reserved behavior. Marco consumes only
+    the external contract and never falls back to legacy macro computation.
+    """
+    from datetime import datetime
+
+    source = macro_source.strip().lower()
+    if source == "legacy":
+        _not_implemented("run-daily")
+        return
+    if source != "marco":
+        raise typer.BadParameter("--macro-source must be legacy or marco")
+    if integration_dir is None:
+        raise typer.BadParameter(
+            "--integration-dir is required when --macro-source marco"
+        )
+
+    from .integration.contracts import ALLOCATABLE_ASSETS, VIEWABLE_ASSETS
+    from .integration.marco_provider import MarcoIntegrationError, MarcoProvider
+
+    when = datetime.fromisoformat(as_of.replace("Z", "+00:00")) if as_of else None
+    provider = MarcoProvider(integration_dir)
+    try:
+        bundle = provider.load_bundle(at=when)
+    except MarcoIntegrationError as exc:
+        report = exc.report or provider.validate(at=when)
+        typer.echo(
+            json.dumps(
+                {
+                    "status": "FAIL",
+                    "macro_source": "marco",
+                    "legacy_fallback_used": False,
+                    "validation": report.model_dump(mode="json"),
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        raise typer.Exit(1) from exc
+
+    payload = {
+        "status": bundle.report.status,
+        "macro_source": "marco",
+        "legacy_fallback_used": False,
+        "contract_version": bundle.manifest.contract_version,
+        "as_of": bundle.macro_state.as_of,
+        "data_cutoff": bundle.macro_state.data_cutoff,
+        "macro_state": bundle.macro_state.model_dump(mode="json"),
+        "asset_views": [
+            view.model_dump(mode="json") for view in bundle.viewable_views
+        ],
+        "allocatable_assets": list(ALLOCATABLE_ASSETS),
+        "viewable_assets": list(VIEWABLE_ASSETS),
+        "validation": bundle.report.model_dump(mode="json"),
+    }
+    typer.echo(
+        json.dumps(
+            payload,
+            ensure_ascii=False,
+            default=str,
+            sort_keys=True,
+            indent=2,
+        )
+    )
+    if bundle.report.status == "DEGRADED":
+        raise typer.Exit(2)
+
+
 @app.command("report-daily")
 def report_daily(as_of: str | None = typer.Option(None, "--as-of")):
     from .reports.daily import generate_daily_report
@@ -466,7 +566,6 @@ for _name in (
     "import-manual",
     "quality-check",
     "score",
-    "run-daily",
     "ui",
 ):
     app.command(_name)(_reserved(_name))
