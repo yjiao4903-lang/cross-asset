@@ -104,10 +104,10 @@ def evaluate_research_readiness(
 ) -> dict:
     """Evaluate protocol, registry, formal observations, history and PIT coverage."""
 
-    required = (
-        list(required_series)
-        if required_series is not None
-        else _required_series(connection)
+    catalog_critical = _required_series(connection)
+    required = sorted(
+        set(catalog_critical)
+        | set(required_series or ())
     )
     research_decisions = _decision_times(decision_times)
     blockers = list(protocol.execution_blockers)
