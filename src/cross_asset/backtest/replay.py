@@ -123,7 +123,9 @@ class HistoricalReplay:
             allocation = allocation / allocation.sum() if allocation.sum() else allocation
             next_decision = dates[index + 1] if index + 1 < len(dates) else None
 
-            if hasattr(self.strategy, "realized_return"):
+            if next_decision is None:
+                gross_return = float("nan")
+            elif hasattr(self.strategy, "realized_return"):
                 realized = self.strategy.realized_return(
                     obs,
                     allocation,
@@ -140,7 +142,7 @@ class HistoricalReplay:
                     )
                 )
             else:
-                gross_return = 0.0 if next_decision is not None else float("nan")
+                gross_return = 0.0
 
             if next_decision is None:
                 turnover = 0.0
