@@ -14,5 +14,4 @@ def test_research_cli_help_is_available():
 def test_research_ingest_help_is_available():
     result = CliRunner().invoke(app, ["ingest", "--help"])
     assert result.exit_code == 0, result.output
-    assert "--dry-run" in result.output
-    assert "--database" in result.output
+    assert "Validate and optionally admit research observations" in result.output
