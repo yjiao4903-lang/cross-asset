@@ -78,9 +78,7 @@ def _utc(value: datetime) -> datetime:
 
 
 def contract_major(value: str) -> int:
-    normalized = str(value).strip().lower()
-    if normalized.startswith("v"):
-        normalized = normalized[1:]
+    normalized = str(value).strip().lower().removeprefix("v")
     try:
         return int(normalized.split(".", 1)[0])
     except (TypeError, ValueError) as exc:
@@ -267,15 +265,15 @@ class IntegrationValidationReport(_StrictModel):
 __all__ = [
     "ALLOCATABLE_ASSETS",
     "ASSET_ID_ALIASES",
+    "KNOWN_MACRO_DIMENSIONS",
+    "REQUIRED_MACRO_DIMENSIONS",
+    "VIEWABLE_ASSETS",
     "AssetView",
     "AssetViewsContract",
     "IntegrationManifest",
     "IntegrationValidationReport",
-    "KNOWN_MACRO_DIMENSIONS",
     "MacroDimensionContract",
     "MarcoMacroState",
-    "REQUIRED_MACRO_DIMENSIONS",
-    "VIEWABLE_ASSETS",
     "contract_major",
     "normalize_asset_id",
     "validate_contract_version",
