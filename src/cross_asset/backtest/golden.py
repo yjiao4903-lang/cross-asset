@@ -44,7 +44,12 @@ def snapshot(observations=None):
     strategy = FullModelStrategy(
         ["A", "B"],
         macro_config={
-            "series": {"MACRO_GROWTH": {"transform": {"type": "level"}}},
+            "series": {
+                "MACRO_GROWTH": {
+                    "stale_after_hours": 1080,
+                    "transform": {"type": "level"},
+                }
+            },
             "dimensions": {"GROWTH": ["MACRO_GROWTH"], "POLICY": ["MISSING_POLICY"]},
         },
     )
@@ -90,7 +95,7 @@ def snapshot(observations=None):
             "axes": {k: {"status": v.status, "score": _number(v.score), "confidence": _number(v.confidence), "contributions": v.contributions} for k, v in sorted(style.items())},
         },
         "asset_scores": {
-            "model_version": "asset_score_v0.1",
+            "model_version": "asset_score_v0.2",
             "data_cutoff": str(DECISION),
             "status": "AVAILABLE",
             "fixture": True,
