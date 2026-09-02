@@ -1,15 +1,11 @@
-"""Filesystem adapter for Marco Integration Contract v1.
-
-This adapter is intentionally independent of the legacy macro engine.
-Marco mode therefore cannot silently fall back to legacy macro computation.
-"""
+"""Strict consumer for Marco Integration Contract v1."""
 
 from __future__ import annotations
 
-import json
-from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -17,30 +13,31 @@ from pydantic import ValidationError
 
 from .contracts import (
     ALLOCATABLE_ASSETS,
-    REQUIRED_MACRO_DIMENSIONS,
-    VIEWABLE_ASSETS,
-    AssetView,
-    AssetViewsContract,
+    DATA_FILES,
+    MANIFEST_FILE,
+    FundamentalAsset,
+    FundamentalAssetView,
     IntegrationManifest,
     IntegrationValidationReport,
-    MarcoMacroState,
-    contract_major,
-    normalize_asset_id,
+    MacroSnapshot,
+    SnapshotStatus,
+    StructuralSnapshot,
+    marco_to_cross_asset_id,
 )
 
-MANIFEST_FILE = "manifest.json"
-MACRO_STATE_FILE = "macro_state.json"
-ASSET_VIEWS_FILE = "asset_views.json"
+MACRO_SNAPSHOT_FILE = "macro_snapshot.json"
+STRUCTURAL_SNAPSHOT_FILE = "structural_snapshot.json"
+FUNDAMENTAL_ASSET_VIEW_FILE = "fundamental_asset_view.json"
 
 
 class MarcoIntegrationError(RuntimeError):
-    """Raised when a Marco bundle cannot be safely consumed."""
+    """Raised when Marco v1 cannot be consumed safely."""
 
     def __init__(
         self,
         message: str,
         report: IntegrationValidationReport | None = None,
-    ):
+    ) -> None:
         super().__init__(message)
         self.report = report
 
@@ -48,77 +45,100 @@ class MarcoIntegrationError(RuntimeError):
 @dataclass(frozen=True)
 class MarcoBundle:
     manifest: IntegrationManifest
-    macro_state: MarcoMacroState
-    asset_views: tuple[AssetView, ...]
+    macro_snapshot: MacroSnapshot
+    structural_snapshot: StructuralSnapshot
+    fundamental_asset_view: FundamentalAssetView
     report: IntegrationValidationReport
 
     @property
-    def allocatable_views(self) -> tuple[AssetView, ...]:
-        return tuple(
-            view for view in self.asset_views if view.asset_id in ALLOCATABLE_ASSETS
-        )
+    def cross_asset_fundamentals(self) -> dict[str, FundamentalAsset]:
+        mapped: dict[str, FundamentalAsset] = {}
+        for row in self.fundamental_asset_view.assets:
+            cross_id = marco_to_cross_asset_id(row.asset_id)
+            if cross_id is not None and cross_id in ALLOCATABLE_ASSETS:
+                mapped[cross_id] = row
+        return mapped
 
     @property
-    def viewable_views(self) -> tuple[AssetView, ...]:
-        return tuple(
-            view for view in self.asset_views if view.asset_id in VIEWABLE_ASSETS
-        )
-
-
-def _utc(value: datetime) -> datetime:
-    return value.astimezone(UTC) if value.tzinfo else value.replace(tzinfo=UTC)
-
-
-def _read_json(path: Path) -> Any:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as exc:
-        raise MarcoIntegrationError(
-            f"missing required integration file: {path.name}"
-        ) from exc
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise MarcoIntegrationError(
-            f"cannot read valid JSON from {path.name}: {exc}"
-        ) from exc
+    def diagnostics(self) -> dict[str, Any]:
+        return {
+            "macro_snapshot": self.macro_snapshot.model_dump(mode="json"),
+            "structural_snapshot": self.structural_snapshot.model_dump(mode="json"),
+            "fx_views": [
+                row.model_dump(mode="json")
+                for row in self.fundamental_asset_view.fx_views
+            ],
+        }
 
 
 def _failure(message: str) -> IntegrationValidationReport:
-    return IntegrationValidationReport(status="FAIL", errors=[message])
+    return IntegrationValidationReport(
+        status="FAIL",
+        errors=[message],
+        legacy_fallback_used=False,
+    )
 
 
-def _normalize_views(
-    contract: AssetViewsContract,
-) -> tuple[tuple[AssetView, ...], list[str]]:
-    normalized: list[AssetView] = []
-    warnings: list[str] = []
-    seen: set[str] = set()
-    for raw in contract.views:
-        canonical = normalize_asset_id(raw.asset_id)
-        if canonical not in VIEWABLE_ASSETS:
-            raise MarcoIntegrationError(
-                f"asset_id {raw.asset_id!r} normalizes to unsupported view {canonical!r}"
-            )
-        if canonical in seen:
-            raise MarcoIntegrationError(
-                f"duplicate asset view after alias normalization: {canonical}"
-            )
-        seen.add(canonical)
-        if canonical != raw.asset_id:
-            warnings.append(f"asset alias normalized: {raw.asset_id} -> {canonical}")
-        normalized.append(raw.model_copy(update={"asset_id": canonical}))
-    return tuple(normalized), warnings
+def _decision_date(value: date | datetime | str | None) -> date:
+    if value is None:
+        return datetime.now(UTC).date()
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return date.fromisoformat(str(value)[:10])
+
+
+def _read_json(path: Path) -> tuple[Any, bytes]:
+    try:
+        payload = path.read_bytes()
+    except OSError as exc:
+        raise MarcoIntegrationError(
+            f"required integration file unavailable: {path.name}"
+        ) from exc
+    try:
+        return json.loads(payload.decode("utf-8")), payload
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise MarcoIntegrationError(f"invalid JSON in {path.name}: {exc}") from exc
+
+
+def _signal_state(
+    macro: MacroSnapshot,
+    assets: FundamentalAssetView,
+) -> tuple[str, list[str], list[str], list[str]]:
+    unavailable_factors = [
+        name
+        for name, value in macro.factors.model_dump().items()
+        if value["status"] != SnapshotStatus.READY
+    ]
+    unavailable_assets = [
+        row.asset_id
+        for row in assets.assets
+        if row.status != SnapshotStatus.READY
+    ]
+    view_only_assets = [
+        row.asset_id
+        for row in assets.assets
+        if marco_to_cross_asset_id(row.asset_id) is None
+    ]
+    signal_status = (
+        "READY"
+        if not unavailable_factors and not unavailable_assets
+        else "PARTIAL"
+    )
+    return signal_status, unavailable_factors, unavailable_assets, view_only_assets
 
 
 class MarcoProvider:
-    """Validate and consume one immutable Marco integration directory."""
+    """Read and validate the authoritative Marco v1 four-file bundle."""
 
-    def __init__(self, integration_dir: str | Path):
+    def __init__(self, integration_dir: str | Path) -> None:
         self.integration_dir = Path(integration_dir)
 
     def validate(
         self,
         *,
-        at: datetime | None = None,
+        at: date | datetime | str | None = None,
     ) -> IntegrationValidationReport:
         try:
             return self.load_bundle(at=at).report
@@ -127,17 +147,10 @@ class MarcoProvider:
         except ValidationError as exc:
             return _failure(f"schema mismatch: {exc}")
 
-    def load_macro_state(
-        self,
-        *,
-        at: datetime | None = None,
-    ) -> MarcoMacroState:
-        return self.load_bundle(at=at).macro_state
-
     def load_bundle(
         self,
         *,
-        at: datetime | None = None,
+        at: date | datetime | str | None = None,
     ) -> MarcoBundle:
         if not self.integration_dir.exists():
             raise MarcoIntegrationError(
@@ -148,13 +161,36 @@ class MarcoProvider:
                 f"integration path is not a directory: {self.integration_dir}"
             )
 
+        required = (*DATA_FILES, MANIFEST_FILE)
+        missing = [
+            name for name in required if not (self.integration_dir / name).is_file()
+        ]
+        if missing:
+            report = _failure(
+                "missing required Marco v1 files: " + ", ".join(sorted(missing))
+            )
+            raise MarcoIntegrationError(report.errors[0], report)
+
+        raw: dict[str, bytes] = {}
         try:
-            manifest = IntegrationManifest.model_validate(
-                _read_json(self.integration_dir / MANIFEST_FILE)
+            manifest_payload, raw[MANIFEST_FILE] = _read_json(
+                self.integration_dir / MANIFEST_FILE
             )
-            macro = MarcoMacroState.model_validate(
-                _read_json(self.integration_dir / MACRO_STATE_FILE)
+            macro_payload, raw[MACRO_SNAPSHOT_FILE] = _read_json(
+                self.integration_dir / MACRO_SNAPSHOT_FILE
             )
+            structural_payload, raw[STRUCTURAL_SNAPSHOT_FILE] = _read_json(
+                self.integration_dir / STRUCTURAL_SNAPSHOT_FILE
+            )
+            fundamental_payload, raw[FUNDAMENTAL_ASSET_VIEW_FILE] = _read_json(
+                self.integration_dir / FUNDAMENTAL_ASSET_VIEW_FILE
+            )
+            manifest = IntegrationManifest.model_validate(manifest_payload)
+            macro = MacroSnapshot.model_validate(macro_payload)
+            structural = StructuralSnapshot.model_validate(structural_payload)
+            fundamental = FundamentalAssetView.model_validate(fundamental_payload)
+        except MarcoIntegrationError:
+            raise
         except ValidationError as exc:
             report = _failure(f"schema mismatch: {exc}")
             raise MarcoIntegrationError(report.errors[0], report) from exc
@@ -162,143 +198,86 @@ class MarcoProvider:
         errors: list[str] = []
         warnings: list[str] = []
 
-        if contract_major(manifest.contract_version) != contract_major(
-            macro.contract_version
-        ):
-            errors.append(
-                "manifest and macro_state contract_version major versions differ"
-            )
-        if _utc(manifest.as_of) != _utc(macro.as_of):
-            errors.append("manifest.as_of must equal macro_state.as_of")
-        if _utc(macro.data_cutoff) > _utc(manifest.as_of):
-            errors.append("macro_state.data_cutoff is after manifest.as_of")
-
-        validation_time = _utc(at) if at is not None else datetime.now(UTC)
-        if _utc(manifest.as_of) > validation_time:
-            errors.append(
-                "Marco snapshot is from the future relative to validation time"
-            )
-
-        stale = manifest.status == "STALE" or macro.status == "STALE"
-        if manifest.expires_at is None:
-            warnings.append(
-                "manifest.expires_at is missing; freshness is producer-status only"
-            )
-        elif _utc(manifest.expires_at) <= validation_time:
-            stale = True
-            warnings.append("Marco integration bundle has expired")
-
-        if manifest.status == "FAILED" or macro.status == "FAILED":
-            errors.append("Marco producer marked the integration payload FAILED")
-
-        missing_dimensions = [
-            name for name in REQUIRED_MACRO_DIMENSIONS if name not in macro.dimensions
-        ]
-        if missing_dimensions:
-            warnings.append(
-                "required downstream macro dimensions missing: "
-                + ", ".join(missing_dimensions)
-            )
-
-        dimension_degraded = False
-        for name, dimension in macro.dimensions.items():
-            if dimension.status in {"FAILED", "DEGRADED"}:
-                dimension_degraded = True
-                warnings.append(
-                    f"macro dimension {name} is {dimension.status}"
-                )
-            elif dimension.status == "STALE":
-                stale = True
-                warnings.append(f"macro dimension {name} is STALE")
-            if dimension.score is None:
-                dimension_degraded = True
-                warnings.append(
-                    f"macro dimension {name} score is missing; no zero imputation"
-                )
-
-        views_path = self.integration_dir / ASSET_VIEWS_FILE
-        normalized_views: tuple[AssetView, ...] = ()
-        views_degraded = False
-        if views_path.exists():
-            try:
-                views_contract = AssetViewsContract.model_validate(
-                    _read_json(views_path)
-                )
-            except ValidationError as exc:
-                report = _failure(f"asset_views schema mismatch: {exc}")
-                raise MarcoIntegrationError(report.errors[0], report) from exc
-
-            if contract_major(views_contract.contract_version) != contract_major(
-                manifest.contract_version
-            ):
+        for name in DATA_FILES:
+            expected = manifest.files[name].sha256
+            actual = hashlib.sha256(raw[name]).hexdigest()
+            if actual != expected:
                 errors.append(
-                    "asset_views and manifest contract_version major versions differ"
+                    f"SHA-256 mismatch for {name}: expected {expected}, got {actual}"
                 )
-            if _utc(views_contract.as_of) != _utc(manifest.as_of):
-                errors.append("asset_views.as_of must equal manifest.as_of")
-            try:
-                normalized_views, alias_warnings = _normalize_views(views_contract)
-            except (MarcoIntegrationError, ValueError) as exc:
-                errors.append(str(exc))
-            else:
-                warnings.extend(alias_warnings)
-                for view in normalized_views:
-                    if view.status in {"FAILED", "DEGRADED", "STALE"}:
-                        views_degraded = True
-                        warnings.append(
-                            f"asset view {view.asset_id} is {view.status}"
-                        )
-                    if view.score is None:
-                        views_degraded = True
-                        warnings.append(
-                            f"asset view {view.asset_id} score is missing; "
-                            "no zero imputation"
-                        )
-                if views_contract.status == "FAILED":
-                    errors.append("Marco producer marked asset_views FAILED")
-                elif views_contract.status in {"DEGRADED", "STALE"}:
-                    views_degraded = True
-                    warnings.append(
-                        f"asset_views producer status is {views_contract.status}"
-                    )
-        else:
-            warnings.append(
-                "asset_views.json is absent; only macro state will be consumed"
+
+        if macro.as_of != manifest.as_of:
+            errors.append("macro_snapshot.as_of must equal manifest.as_of")
+        if structural.as_of != manifest.as_of:
+            errors.append("structural_snapshot.as_of must equal manifest.as_of")
+        if fundamental.as_of != manifest.as_of:
+            errors.append("fundamental_asset_view.as_of must equal manifest.as_of")
+        if macro.data_cutoff != manifest.data_cutoff:
+            errors.append("macro_snapshot.data_cutoff must equal manifest.data_cutoff")
+        if fundamental.data_cutoff != manifest.data_cutoff:
+            errors.append(
+                "fundamental_asset_view.data_cutoff must equal manifest.data_cutoff"
+            )
+        if macro.model_version != manifest.marco_model_version:
+            errors.append(
+                "macro_snapshot.model_version must equal manifest.marco_model_version"
+            )
+        if fundamental.model_version != manifest.marco_model_version:
+            errors.append(
+                "fundamental_asset_view.model_version must equal manifest.marco_model_version"
+            )
+        if manifest.data_cutoff > manifest.as_of:
+            errors.append("manifest.data_cutoff must be <= manifest.as_of")
+
+        decision = _decision_date(at)
+        if manifest.as_of > decision:
+            errors.append(
+                f"Marco snapshot as_of {manifest.as_of} is after decision_date {decision}"
+            )
+        if manifest.data_cutoff > decision:
+            errors.append(
+                f"Marco data_cutoff {manifest.data_cutoff} is after decision_date {decision}"
             )
 
-        producer_degraded = (
-            manifest.status == "DEGRADED"
-            or macro.status == "DEGRADED"
-            or dimension_degraded
-            or views_degraded
+        signal_status, unavailable_factors, unavailable_assets, view_only_assets = (
+            _signal_state(macro, fundamental)
         )
-        status = (
-            "FAIL"
-            if errors
-            else (
-                "DEGRADED"
-                if stale or producer_degraded or missing_dimensions
-                else "PASS"
+        for name in unavailable_factors:
+            status = getattr(macro.factors, name).status.value
+            warnings.append(
+                f"Marco factor {name} status={status}; missing is not zero-filled"
             )
-        )
+        for row in fundamental.assets:
+            if row.status != SnapshotStatus.READY:
+                warnings.append(
+                    f"Marco fundamental {row.asset_id} status={row.status.value}; "
+                    "missing is not zero-filled"
+                )
+        if view_only_assets:
+            warnings.append(
+                "Marco assets outside the current Cross allocation universe remain "
+                "diagnostic/view-only: " + ", ".join(view_only_assets)
+            )
+
         report = IntegrationValidationReport(
-            status=status,
-            contract_version=manifest.contract_version,
-            macro_status=macro.status,
+            status="FAIL" if errors else "PASS",
+            schema_version=manifest.schema_version,
+            signal_status=signal_status,
             errors=errors,
             warnings=warnings,
-            missing_dimensions=missing_dimensions,
-            normalized_asset_ids=[
-                view.asset_id for view in normalized_views
-            ],
+            unavailable_factors=unavailable_factors,
+            unavailable_assets=unavailable_assets,
+            view_only_assets=view_only_assets,
             legacy_fallback_used=False,
         )
         if errors:
             raise MarcoIntegrationError("; ".join(errors), report)
+
         return MarcoBundle(
             manifest=manifest,
-            macro_state=macro,
-            asset_views=normalized_views,
+            macro_snapshot=macro,
+            structural_snapshot=structural,
+            fundamental_asset_view=fundamental,
             report=report,
         )
 
@@ -307,15 +286,10 @@ def resolve_macro_source(
     macro_source: str,
     *,
     integration_dir: str | Path | None = None,
-    legacy_factory: Callable[[], Any] | None = None,
-    at: datetime | None = None,
+    legacy_factory=None,
+    at: date | datetime | str | None = None,
 ) -> Any:
-    """Resolve macro input without any cross-source fallback.
-
-    Marco mode never invokes legacy_factory. A Marco validation failure is
-    propagated to the caller. Legacy remains available but receives no new
-    behavior in this integration layer.
-    """
+    """Resolve the configured source without cross-source fallback."""
 
     source = macro_source.strip().lower()
     if source == "marco":
@@ -323,7 +297,7 @@ def resolve_macro_source(
             raise MarcoIntegrationError(
                 "--integration-dir is required when --macro-source marco"
             )
-        return MarcoProvider(integration_dir).load_macro_state(at=at)
+        return MarcoProvider(integration_dir).load_bundle(at=at)
     if source == "legacy":
         if legacy_factory is None:
             raise MarcoIntegrationError(
@@ -336,9 +310,10 @@ def resolve_macro_source(
 
 
 __all__ = [
-    "ASSET_VIEWS_FILE",
-    "MACRO_STATE_FILE",
+    "FUNDAMENTAL_ASSET_VIEW_FILE",
+    "MACRO_SNAPSHOT_FILE",
     "MANIFEST_FILE",
+    "STRUCTURAL_SNAPSHOT_FILE",
     "MarcoBundle",
     "MarcoIntegrationError",
     "MarcoProvider",
