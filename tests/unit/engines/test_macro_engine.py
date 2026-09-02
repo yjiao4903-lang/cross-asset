@@ -75,3 +75,106 @@ def test_macro_confidence_drops_with_missing_dimension():
     assert state["GROWTH"].coverage == 0.5
     assert state["POLICY"].score is None
     assert state.confidence < 1
+
+
+
+def test_macro_revisions_do_not_count_as_extra_time_periods():
+    rows = [
+        {
+            "series_id": "X",
+            "observation_date": datetime(2025, 1, 1).date(),
+            "available_at": datetime(2025, 2, 1, tzinfo=UTC),
+            "value": 100.0,
+        },
+        {
+            "series_id": "X",
+            "observation_date": datetime(2025, 1, 1).date(),
+            "available_at": datetime(2025, 3, 1, tzinfo=UTC),
+            "value": 102.0,
+        },
+        {
+            "series_id": "X",
+            "observation_date": datetime(2025, 2, 1).date(),
+            "available_at": datetime(2025, 3, 10, tzinfo=UTC),
+            "value": 105.0,
+        },
+    ]
+    state = build_macro_state(
+        rows,
+        datetime(2025, 3, 20, tzinfo=UTC),
+        {
+            "series": {"X": {"transform": {"type": "diff"}}},
+            "dimensions": {"GROWTH": ["X"]},
+        },
+    )
+    assert state["GROWTH"].contributions["X"] == 3.0
+    assert state["GROWTH"].raw_contributions["X"] == 3.0
+
+
+def test_macro_dimension_freshness_is_series_local_not_global():
+    rows = [
+        {
+            "series_id": "FRESH",
+            "observation_date": datetime(2025, 1, 9).date(),
+            "available_at": datetime(2025, 1, 9, tzinfo=UTC),
+            "value": 1.0,
+        },
+        {
+            "series_id": "STALE",
+            "observation_date": datetime(2024, 12, 1).date(),
+            "available_at": datetime(2024, 12, 1, tzinfo=UTC),
+            "value": 1.0,
+        },
+    ]
+    state = build_macro_state(
+        rows,
+        datetime(2025, 1, 10, tzinfo=UTC),
+        {
+            "series": {
+                "FRESH": {
+                    "stale_after_hours": 168,
+                    "transform": {"type": "level"},
+                },
+                "STALE": {
+                    "stale_after_hours": 168,
+                    "transform": {"type": "level"},
+                },
+            },
+            "dimensions": {"A": ["FRESH"], "B": ["STALE"]},
+        },
+    )
+    assert state["A"].confidence > 0
+    assert state["B"].confidence == 0
+
+
+def test_macro_causal_normalization_requires_prior_history():
+    rows = [
+        {
+            "series_id": "X",
+            "observation_date": (datetime(2025, 1, 1) + __import__("datetime").timedelta(days=i)).date(),
+            "available_at": datetime(2025, 1, 1, tzinfo=UTC)
+            + __import__("datetime").timedelta(days=i),
+            "value": float(i),
+        }
+        for i in range(15)
+    ]
+    state = build_macro_state(
+        rows,
+        datetime(2025, 1, 20, tzinfo=UTC),
+        {
+            "series": {
+                "X": {
+                    "transform": {"type": "level"},
+                    "normalization": {
+                        "method": "causal_zscore",
+                        "min_history": 10,
+                        "clip": 2.0,
+                    },
+                }
+            },
+            "dimensions": {"GROWTH": ["X"]},
+        },
+    )
+    assert state["GROWTH"].score is not None
+    assert 0 < state["GROWTH"].score <= 2
+    assert state["GROWTH"].raw_contributions["X"] == 14.0
