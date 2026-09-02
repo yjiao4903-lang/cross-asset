@@ -162,6 +162,7 @@ class FullModelStrategy:
         style_definitions=None,
         asset_series_map=None,
         return_specs=None,
+        signal_directions=None,
         critical_assets=None,
     ):
         self.assets = list(assets)
@@ -182,6 +183,8 @@ class FullModelStrategy:
             for asset in self.assets
         }
         self.return_specs.update(return_specs or {})
+        self.signal_directions = {asset: 1.0 for asset in self.assets}
+        self.signal_directions.update(signal_directions or {})
         self.critical_assets = set(
             critical_assets
             or [
@@ -215,6 +218,8 @@ class FullModelStrategy:
             trend = market_asset.get("trend", {}).get("ret_1m")
             if trend is not None and pd.isna(trend):
                 trend = None
+            if trend is not None:
+                trend = float(trend) * float(self.signal_directions.get(asset, 1.0))
             if asset in self.critical_assets and trend is None:
                 missing_signal_assets.append(asset)
             scores[asset] = score_asset(asset, {"trend": trend}, data_cutoff=decision)
