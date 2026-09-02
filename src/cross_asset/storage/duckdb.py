@@ -9,6 +9,15 @@ import duckdb
 from .schema import initialize_schema
 
 
+def _utc_naive(value):
+    """Normalize aware datetimes for the schema's timezone-naive TIMESTAMPs."""
+    if value is None or not isinstance(value, datetime):
+        return value
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(UTC).replace(tzinfo=None)
+
+
 class DuckDBStore:
     def __init__(self, path=":memory:"):
         self.path = str(path)
@@ -86,6 +95,8 @@ class DuckDBStore:
                     "raw_file",
                     "run_id",
                 ]
+                r["available_at"] = _utc_naive(r.get("available_at"))
+                r["ingested_at"] = _utc_naive(r.get("ingested_at"))
                 vals = [r.get(c) for c in cols]
                 before = self.connection.execute(
                     "SELECT count(*) FROM observations WHERE series_id=? AND observation_date=? AND available_at=? AND source=? AND source_series_id=?",
