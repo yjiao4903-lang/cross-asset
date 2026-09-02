@@ -63,7 +63,7 @@ class ResearchProtocol:
     evaluation_thresholds: dict[str, float | int]
 
     @classmethod
-    def from_mapping(cls, raw: dict[str, Any]) -> "ResearchProtocol":
+    def from_mapping(cls, raw: dict[str, Any]) -> ResearchProtocol:
         try:
             windows = raw["windows"]
             data_policy = raw["data_policy"]
