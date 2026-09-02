@@ -1,7 +1,7 @@
 """Explicit asset holding-period return semantics for research backtests."""
 
-from dataclasses import dataclass
 from collections.abc import Mapping
+from dataclasses import dataclass
 
 import pandas as pd
 
