@@ -1,9 +1,9 @@
 import json
 
-from cross_asset import research
-
 import pandas as pd
 import pytest
+
+from cross_asset import research
 
 
 RAW = {
