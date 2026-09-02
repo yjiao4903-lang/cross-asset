@@ -414,12 +414,12 @@ def validate_integration_command(
     integration_dir: str = typer.Option(..., "--integration-dir"),
     as_of: str | None = typer.Option(None, "--as-of"),
 ) -> None:
-    """Validate a Marco Integration Contract v1 directory without fallback."""
-    from datetime import datetime
+    """Validate the authoritative Marco Integration Contract v1 bundle."""
+    from datetime import date
 
     from .integration.marco_provider import MarcoProvider
 
-    when = datetime.fromisoformat(as_of) if as_of else None
+    when = date.fromisoformat(as_of[:10]) if as_of else None
     report = MarcoProvider(integration_dir).validate(at=when)
     typer.echo(
         json.dumps(
@@ -438,13 +438,14 @@ def run_daily_command(
     macro_source: str = typer.Option("legacy", "--macro-source"),
     integration_dir: str | None = typer.Option(None, "--integration-dir"),
     as_of: str | None = typer.Option(None, "--as-of"),
+    database: str | None = typer.Option(None, "--database"),
 ) -> None:
-    """Run the daily macro integration boundary.
+    """Run the daily Cross model chain with an explicit macro source."""
+    from dataclasses import asdict
+    from datetime import date, datetime, time
+    from pathlib import Path
 
-    Legacy remains frozen at its prior reserved behavior. Marco consumes only
-    the external contract and never falls back to legacy macro computation.
-    """
-    from datetime import datetime
+    import yaml
 
     source = macro_source.strip().lower()
     if source == "legacy":
@@ -457,22 +458,29 @@ def run_daily_command(
             "--integration-dir is required when --macro-source marco"
         )
 
-    from .integration.contracts import ALLOCATABLE_ASSETS, VIEWABLE_ASSETS
+    from .backtest.replay import FullModelStrategy
     from .integration.marco_provider import MarcoIntegrationError, MarcoProvider
+    from .storage import init_db, latest_observations_asof
 
-    when = datetime.fromisoformat(as_of) if as_of else None
+    requested_date = date.fromisoformat(as_of[:10]) if as_of else None
     provider = MarcoProvider(integration_dir)
     try:
-        bundle = provider.load_bundle(at=when)
+        bundle = provider.load_bundle(at=requested_date)
     except MarcoIntegrationError as exc:
-        report = exc.report or provider.validate(at=when)
+        report = exc.report or provider.validate(at=requested_date)
         typer.echo(
             json.dumps(
                 {
                     "status": "FAIL",
+                    "as_of": as_of,
                     "macro_source": "marco",
+                    "contract_status": report.status,
+                    "asset_scores": {},
+                    "allocation": None,
+                    "allocation_status": "FAIL",
+                    "data_cutoff": None,
+                    "warnings": [*report.errors, *report.warnings],
                     "legacy_fallback_used": False,
-                    "validation": report.model_dump(mode="json"),
                 },
                 ensure_ascii=False,
                 sort_keys=True,
@@ -481,20 +489,173 @@ def run_daily_command(
         )
         raise typer.Exit(1) from exc
 
-    payload = {
-        "status": bundle.report.status,
-        "macro_source": "marco",
-        "legacy_fallback_used": False,
-        "contract_version": bundle.manifest.contract_version,
-        "as_of": bundle.macro_state.as_of,
-        "data_cutoff": bundle.macro_state.data_cutoff,
-        "macro_state": bundle.macro_state.model_dump(mode="json"),
-        "asset_views": [
-            view.model_dump(mode="json") for view in bundle.viewable_views
+    decision_date = requested_date or bundle.manifest.as_of
+    decision_time = datetime.combine(decision_date, time.max)
+
+    settings = get_settings()
+    allocation_path = Path(settings.cross_asset_config_dir) / "allocation.yml"
+    allocation_cfg = yaml.safe_load(
+        allocation_path.read_text(encoding="utf-8")
+    )
+    strategic_weights = dict(allocation_cfg["strategic_weights"])
+    assets = list(strategic_weights)
+    asset_signal_map = allocation_cfg.get("asset_signal_map", {})
+    asset_series_map = {
+        asset: asset_signal_map.get(asset, {}).get("trend")
+        for asset in assets
+    }
+
+    db = init_db(database or settings.database_path)
+    try:
+        observations = latest_observations_asof(
+            db.conn,
+            decision_time,
+        ).df()
+    finally:
+        db.close()
+
+    required_series = sorted(
+        {
+            series_id
+            for series_id in asset_series_map.values()
+            if series_id is not None
+        }
+    )
+    if observations.empty:
+        counts = {}
+    else:
+        relevant = observations[
+            observations["series_id"].isin(required_series)
+        ].copy()
+        counts = (
+            relevant.groupby("series_id")["observation_date"]
+            .nunique()
+            .to_dict()
+        )
+
+    minimum_market_observations = 22
+    blocked = [
+        series_id
+        for series_id in required_series
+        if int(counts.get(series_id, 0)) < minimum_market_observations
+    ]
+    cross_cutoff = None
+    if not observations.empty:
+        relevant = observations[
+            observations["series_id"].isin(required_series)
+        ]
+        if not relevant.empty:
+            cross_cutoff = str(relevant["observation_date"].max())
+
+    if blocked:
+        warnings = list(bundle.report.warnings)
+        warnings.append(
+            "insufficient local market observations: "
+            + ", ".join(
+                f"{series_id}={int(counts.get(series_id, 0))}/"
+                f"{minimum_market_observations}"
+                for series_id in blocked
+            )
+        )
+        typer.echo(
+            json.dumps(
+                {
+                    "status": "DATA_BLOCKED",
+                    "as_of": decision_date.isoformat(),
+                    "macro_source": "marco",
+                    "contract_status": bundle.report.status,
+                    "signal_status": bundle.report.signal_status,
+                    "asset_scores": {},
+                    "allocation": None,
+                    "allocation_status": "DATA_BLOCKED",
+                    "data_cutoff": {
+                        "marco": bundle.manifest.data_cutoff.isoformat(),
+                        "cross_market": cross_cutoff,
+                    },
+                    "warnings": warnings,
+                    "legacy_fallback_used": False,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        raise typer.Exit(1)
+
+    strategy = FullModelStrategy(
+        assets,
+        strategic_weights=strategic_weights,
+        asset_series_map=asset_series_map,
+        asset_signal_map=asset_signal_map,
+        component_weights=allocation_cfg.get("component_weights"),
+        allocation_config=allocation_cfg,
+        critical_assets=[
+            asset
+            for asset, series_id in asset_series_map.items()
+            if series_id is not None
         ],
-        "allocatable_assets": list(ALLOCATABLE_ASSETS),
-        "viewable_assets": list(VIEWABLE_ASSETS),
-        "validation": bundle.report.model_dump(mode="json"),
+    )
+    try:
+        strategy(
+            observations,
+            decision_time,
+            macro_snapshot=bundle.macro_snapshot,
+            fundamental_asset_view=bundle.fundamental_asset_view,
+            structural_snapshot=bundle.structural_snapshot,
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        typer.echo(
+            json.dumps(
+                {
+                    "status": "FAIL",
+                    "as_of": decision_date.isoformat(),
+                    "macro_source": "marco",
+                    "contract_status": bundle.report.status,
+                    "signal_status": bundle.report.signal_status,
+                    "asset_scores": {},
+                    "allocation": None,
+                    "allocation_status": "FAIL",
+                    "data_cutoff": {
+                        "marco": bundle.manifest.data_cutoff.isoformat(),
+                        "cross_market": cross_cutoff,
+                    },
+                    "warnings": [*bundle.report.warnings, str(exc)],
+                    "legacy_fallback_used": False,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        raise typer.Exit(1) from exc
+
+    state = strategy.last_decision
+    allocation = state["allocation"]
+    payload = {
+        "status": (
+            "SUCCESS"
+            if allocation.status == "ACTIVE"
+            else "DEGRADED"
+        ),
+        "as_of": decision_date.isoformat(),
+        "macro_source": "marco",
+        "contract_status": bundle.report.status,
+        "signal_status": bundle.report.signal_status,
+        "asset_scores": {
+            asset: asdict(score)
+            for asset, score in state["asset_scores"].items()
+        },
+        "allocation": dict(allocation.weights),
+        "allocation_status": allocation.status,
+        "data_cutoff": {
+            "marco": bundle.manifest.data_cutoff.isoformat(),
+            "cross_market": cross_cutoff,
+        },
+        "warnings": [
+            *bundle.report.warnings,
+            *allocation.warnings,
+        ],
+        "legacy_fallback_used": False,
     }
     typer.echo(
         json.dumps(
@@ -505,8 +666,6 @@ def run_daily_command(
             indent=2,
         )
     )
-    if bundle.report.status == "DEGRADED":
-        raise typer.Exit(2)
 
 
 @app.command("report-daily")
