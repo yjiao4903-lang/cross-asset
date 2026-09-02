@@ -11,6 +11,8 @@ def test_frozen_sprint2_protocol_loads_and_hash_is_stable():
     assert len(protocol.universe) == 4
     assert protocol.default_mode == "expanding"
     assert protocol.transaction_cost_bps == (0, 5, 10, 20, 30)
+    assert protocol.charge_initial_trade is False
+    assert protocol.signal_model_version == "full_model_v0.2"
     assert len(protocol.benchmarks) == 5
     assert len(protocol.outputs) == 7
     assert protocol.preliminary and protocol.partial_universe and not protocol.research_validated
@@ -25,6 +27,8 @@ def test_frozen_sprint2_protocol_loads_and_hash_is_stable():
         ("default_mode", "rolling"),
         ("transaction_cost_bps", [0, 5, 10]),
         ("research_validated", True),
+        ("charge_initial_trade", True),
+        ("signal_model_version", "full_model_v0.1"),
     ],
 )
 def test_protocol_rejects_tuning_or_release_drift(field, value):
