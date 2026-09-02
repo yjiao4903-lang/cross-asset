@@ -174,7 +174,7 @@ def stitch_oos_path(
     stitched["cost"] = 0.0
     stitched["net_return"] = float("nan")
 
-    for benchmark, indices in stitched.groupby("benchmark").groups.items():
+    for indices in stitched.groupby("benchmark").groups.values():
         previous = None
         ordered = stitched.loc[list(indices)].sort_values("decision_date")
         for index, row in ordered.iterrows():
