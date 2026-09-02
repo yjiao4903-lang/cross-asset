@@ -1,5 +1,5 @@
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from cross_asset.engines.macro import build_macro_state
@@ -82,19 +82,19 @@ def test_macro_revisions_do_not_count_as_extra_time_periods():
     rows = [
         {
             "series_id": "X",
-            "observation_date": datetime(2025, 1, 1).date(),
+            "observation_date": date(2025, 1, 1),
             "available_at": datetime(2025, 2, 1, tzinfo=UTC),
             "value": 100.0,
         },
         {
             "series_id": "X",
-            "observation_date": datetime(2025, 1, 1).date(),
+            "observation_date": date(2025, 1, 1),
             "available_at": datetime(2025, 3, 1, tzinfo=UTC),
             "value": 102.0,
         },
         {
             "series_id": "X",
-            "observation_date": datetime(2025, 2, 1).date(),
+            "observation_date": date(2025, 2, 1),
             "available_at": datetime(2025, 3, 10, tzinfo=UTC),
             "value": 105.0,
         },
@@ -115,13 +115,13 @@ def test_macro_dimension_freshness_is_series_local_not_global():
     rows = [
         {
             "series_id": "FRESH",
-            "observation_date": datetime(2025, 1, 9).date(),
+            "observation_date": date(2025, 1, 9),
             "available_at": datetime(2025, 1, 9, tzinfo=UTC),
             "value": 1.0,
         },
         {
             "series_id": "STALE",
-            "observation_date": datetime(2024, 12, 1).date(),
+            "observation_date": date(2024, 12, 1),
             "available_at": datetime(2024, 12, 1, tzinfo=UTC),
             "value": 1.0,
         },
@@ -151,7 +151,7 @@ def test_macro_causal_normalization_requires_prior_history():
     rows = [
         {
             "series_id": "X",
-            "observation_date": (datetime(2025, 1, 1) + timedelta(days=i)).date(),
+            "observation_date": (date(2025, 1, 1) + timedelta(days=i)),
             "available_at": datetime(2025, 1, 1, tzinfo=UTC)
             + timedelta(days=i),
             "value": float(i),
