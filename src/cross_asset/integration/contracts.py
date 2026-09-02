@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -62,9 +62,9 @@ class SnapshotStatus(str, Enum):
 
 
 class FactorSnapshot(ContractModel):
-    score: Optional[float] = None
-    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    coverage: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    score: float | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    coverage: float | None = Field(default=None, ge=0.0, le=1.0)
     status: SnapshotStatus
 
     @model_validator(mode="after")
@@ -92,7 +92,7 @@ class FactorSet(ContractModel):
 
 class RegimeSnapshot(ContractModel):
     state: str
-    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class MacroSnapshot(ContractModel):
@@ -105,8 +105,8 @@ class MacroSnapshot(ContractModel):
 
 
 class StructuralMetric(ContractModel):
-    score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    score: float | None = Field(default=None, ge=0.0, le=1.0)
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     status: SnapshotStatus
 
     @model_validator(mode="after")
@@ -136,10 +136,10 @@ class StructuralSnapshot(ContractModel):
 
 
 class AssetContributions(ContractModel):
-    growth: Optional[float] = None
-    inflation: Optional[float] = None
-    domestic_financial: Optional[float] = None
-    global_financial: Optional[float] = None
+    growth: float | None = None
+    inflation: float | None = None
+    domestic_financial: float | None = None
+    global_financial: float | None = None
     structural: None = None
 
 
@@ -154,9 +154,9 @@ class FundamentalAsset(ContractModel):
         "COMMODITY",
         "CASH",
     ]
-    fundamental_score: Optional[float] = None
-    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    coverage: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    fundamental_score: float | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    coverage: float | None = Field(default=None, ge=0.0, le=1.0)
     status: SnapshotStatus
     contributions: AssetContributions
 
@@ -180,9 +180,9 @@ class FundamentalAsset(ContractModel):
 
 class FxView(ContractModel):
     asset_id: Literal["CNY"]
-    fundamental_score: Optional[float] = None
-    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    coverage: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    fundamental_score: float | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    coverage: float | None = Field(default=None, ge=0.0, le=1.0)
     status: SnapshotStatus
     contributions: AssetContributions
 
