@@ -3,7 +3,6 @@ import json
 import pandas as pd
 import pytest
 
-
 RAW = {
     "version": "0.3",
     "status": "PLANNING_ONLY",
