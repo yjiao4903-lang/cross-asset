@@ -291,6 +291,18 @@ class FullModelStrategy:
         )
         market = self.market_engine.build(market_histories, as_of=decision)
 
+        marco_inputs_present = any(
+            value is not None
+            for value in (
+                macro_snapshot,
+                fundamental_asset_view,
+                structural_snapshot,
+            )
+        )
+        if marco_inputs_present and fundamental_asset_view is None:
+            raise ValueError(
+                "Marco mode requires FundamentalAssetView; legacy fallback is disabled"
+            )
         marco_mode = fundamental_asset_view is not None
         if marco_mode:
             decision_date = pd.Timestamp(decision).date()
