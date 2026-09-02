@@ -12,7 +12,7 @@ windows:
   rolling_years: null
   final_holdout: last_20_percent
 coverage_threshold: 0.95
-coverage_definition: "for each critical series: eligible decision times with at least one PIT-available observation / eligible decision times"
+coverage_definition: "for each required critical or return series: development decision times with a PIT-available observation fresh within stale_after_hours when configured / development decision times"
 rebalance: weekly
 transaction_cost_bps: [0, 5, 10, 20, 30]
 base_cost_bps: 10
