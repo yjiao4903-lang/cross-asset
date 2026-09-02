@@ -24,7 +24,7 @@ def _parse_aware_datetime(value: Any) -> datetime:
         parsed = value
     else:
         try:
-            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            parsed = datetime.fromisoformat(str(value))
         except (TypeError, ValueError) as exc:
             raise ValueError("available_at_invalid") from exc
     if parsed.tzinfo is None:
@@ -106,7 +106,7 @@ def _canonical_rows(record: dict) -> list[dict]:
     ingested_at = datetime.now(UTC).replace(tzinfo=None)
     for item in record["observations"]:
         if not isinstance(item, dict):
-            raise ValueError("observation_must_be_mapping")
+            raise TypeError("observation_must_be_mapping")
         if item.get("series_id") not in (None, record["series_id"]):
             raise ValueError("observation_series_id_mismatch")
         if item.get("source_series_id") not in (None, record["source_series_id"]):
