@@ -120,13 +120,13 @@ def test_full_model_freezes_when_critical_signal_is_missing():
     )
     strategy = FullModelStrategy(
         ["CN_EQ", "CASH"],
-        strategic_weights={"CN_EQ": 0.6, "CASH": 0.4},
+        strategic_weights={"CN_EQ": 0.5, "CASH": 0.5},
         asset_series_map={"CN_EQ": "CN_EQ_LARGE", "CASH": None},
     )
     weights = strategy(frame, pd.Timestamp("2026-01-02"))
     assert strategy.last_decision["allocation"].status == "FROZEN"
     assert strategy.last_decision["missing_signal_assets"] == ["CN_EQ"]
-    assert weights == {"CN_EQ": 0.6, "CASH": 0.4}
+    assert weights == {"CN_EQ": 0.5, "CASH": 0.5}
 
 
 def test_full_model_can_reverse_yield_signal_direction_explicitly():
