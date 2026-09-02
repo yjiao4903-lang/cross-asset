@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from cross_asset.research.protocol import ResearchProtocol
 from cross_asset.research.readiness import evaluate_research_readiness
@@ -54,7 +54,7 @@ def test_readiness_blocks_empty_formal_store():
             """INSERT INTO series_catalog
                (series_id,display_name,frequency,unit,critical,point_in_time_class,created_at,updated_at)
                VALUES ('A','A','daily','price',TRUE,'market',?,?)""",
-            [datetime(2026, 1, 1), datetime(2026, 1, 1)],
+            [datetime(2026, 1, 1, tzinfo=UTC), datetime(2026, 1, 1, tzinfo=UTC)],
         )
         result = evaluate_research_readiness(
             store.conn,
