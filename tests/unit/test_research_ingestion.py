@@ -1,5 +1,5 @@
 import hashlib
-from datetime import datetime
+from datetime import UTC, datetime
 
 from cross_asset.ingestion.research import ingest_research_data
 from cross_asset.storage import init_db
@@ -44,7 +44,7 @@ def test_admitted_research_data_writes_only_after_registry_pass(tmp_path):
         blocked = ingest_research_data([record], policies=policies, store=store)
         assert blocked["status"] == "REJECTED"
 
-        now = datetime(2026, 9, 2, 2, 0, 0)
+        now = datetime(2026, 9, 2, 2, 0, 0, tzinfo=UTC)
         store.conn.execute(
             """INSERT INTO data_acceptance_registry
                (series_id,provider,source_series_id,status,tech_gate,legal_gate,pit_gate,
