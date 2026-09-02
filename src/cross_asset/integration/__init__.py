@@ -2,10 +2,20 @@
 
 from .contracts import (
     ALLOCATABLE_ASSETS,
-    ASSET_ID_ALIASES,
+    ASSET_ALIASES,
+    CANONICAL_ASSET_IDS,
+    CROSS_ASSET_ID_ALIASES,
+    DATA_FILES,
+    SCHEMA_VERSION,
     VIEWABLE_ASSETS,
+    FundamentalAsset,
+    FundamentalAssetView,
+    IntegrationManifest,
     IntegrationValidationReport,
-    MarcoMacroState,
+    MacroSnapshot,
+    SnapshotStatus,
+    StructuralSnapshot,
+    marco_to_cross_asset_id,
     normalize_asset_id,
 )
 from .marco_provider import (
@@ -17,13 +27,23 @@ from .marco_provider import (
 
 __all__ = [
     "ALLOCATABLE_ASSETS",
-    "ASSET_ID_ALIASES",
+    "ASSET_ALIASES",
+    "CANONICAL_ASSET_IDS",
+    "CROSS_ASSET_ID_ALIASES",
+    "DATA_FILES",
+    "SCHEMA_VERSION",
     "VIEWABLE_ASSETS",
+    "FundamentalAsset",
+    "FundamentalAssetView",
+    "IntegrationManifest",
     "IntegrationValidationReport",
+    "MacroSnapshot",
     "MarcoBundle",
     "MarcoIntegrationError",
-    "MarcoMacroState",
     "MarcoProvider",
+    "SnapshotStatus",
+    "StructuralSnapshot",
+    "marco_to_cross_asset_id",
     "normalize_asset_id",
     "resolve_macro_source",
 ]
