@@ -6,16 +6,8 @@ from pathlib import Path
 
 import duckdb
 
+from ._time import utc_naive
 from .schema import initialize_schema
-
-
-def _utc_naive(value):
-    """Normalize aware datetimes for the schema's timezone-naive TIMESTAMPs."""
-    if value is None or not isinstance(value, datetime):
-        return value
-    if value.tzinfo is None:
-        return value
-    return value.astimezone(UTC).replace(tzinfo=None)
 
 
 class DuckDBStore:
@@ -49,7 +41,7 @@ class DuckDBStore:
     run_transaction = atomic
 
     def start_run(self, provider, run_id, requested_series=None, started_at=None):
-        started_at = started_at or datetime.now(UTC).replace(tzinfo=None)
+        started_at = utc_naive(started_at or datetime.now(UTC).replace(tzinfo=None))
         self.connection.execute(
             "INSERT INTO ingestion_runs(run_id,provider,started_at,status,requested_series) VALUES (?,?,?,?,?) ON CONFLICT DO NOTHING",
             [str(run_id), provider, started_at, "running", requested_series],
@@ -64,7 +56,9 @@ class DuckDBStore:
             "error_summary",
         }
         fields = {k: v for k, v in fields.items() if k in allowed}
-        fields.setdefault("finished_at", datetime.now(UTC).replace(tzinfo=None))
+        fields["finished_at"] = utc_naive(
+            fields.get("finished_at", datetime.now(UTC).replace(tzinfo=None))
+        )
         fields["status"] = status
         assignments = ", ".join(f"{k}=?" for k in fields)
         self.connection.execute(
@@ -95,8 +89,8 @@ class DuckDBStore:
                     "raw_file",
                     "run_id",
                 ]
-                r["available_at"] = _utc_naive(r.get("available_at"))
-                r["ingested_at"] = _utc_naive(r.get("ingested_at"))
+                r["available_at"] = utc_naive(r.get("available_at"))
+                r["ingested_at"] = utc_naive(r.get("ingested_at"))
                 vals = [r.get(c) for c in cols]
                 before = self.connection.execute(
                     "SELECT count(*) FROM observations WHERE series_id=? AND observation_date=? AND available_at=? AND source=? AND source_series_id=?",
@@ -128,6 +122,7 @@ class DuckDBStore:
             "provider",
             "run_id",
         ]
+        r["detected_at"] = utc_naive(r.get("detected_at"))
         self.connection.execute(
             "INSERT INTO data_quality_events VALUES (?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING",
             [r.get(c) for c in cols],
@@ -138,6 +133,8 @@ class DuckDBStore:
         cols = ['attempt_id','provider','series_id','started_at','finished_at','status','latency_ms','schema_error','fallback','source_switch','error_message']
         r.setdefault('fallback', False)
         r.setdefault('source_switch', False)
+        r["started_at"] = utc_naive(r.get("started_at"))
+        r["finished_at"] = utc_naive(r.get("finished_at"))
         self.connection.execute('INSERT INTO provider_attempts VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING', [r.get(c) for c in cols])
 
 

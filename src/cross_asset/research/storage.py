@@ -6,6 +6,8 @@ import hashlib
 import json
 from datetime import UTC, datetime
 
+from cross_asset.storage._time import utc_naive
+
 
 def _digest(payload) -> str:
     body = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()
@@ -43,10 +45,10 @@ def persist_research_plan(
             code_version,
             plan["status"],
             bool(plan["holdout_sealed"]),
-            plan.get("development_start"),
-            plan.get("development_end"),
-            plan.get("holdout_start"),
-            plan.get("holdout_end"),
+            utc_naive(plan.get("development_start")),
+            utc_naive(plan.get("development_end")),
+            utc_naive(plan.get("holdout_start")),
+            utc_naive(plan.get("holdout_end")),
             int(plan.get("holdout_count", 0)),
             int(plan.get("fold_count", 0)),
             json.dumps(plan.get("blockers", []), sort_keys=True),
@@ -95,10 +97,10 @@ def persist_fold_result(
             int(fold),
             "WALK_FORWARD",
             benchmark,
-            manifest["train_start"],
-            manifest["train_end"],
-            manifest["test_start"],
-            manifest["test_end"],
+            utc_naive(manifest["train_start"]),
+            utc_naive(manifest["train_end"]),
+            utc_naive(manifest["test_start"]),
+            utc_naive(manifest["test_end"]),
             int(metrics.get("observations", 0)),
             json.dumps(metrics, sort_keys=True, default=str),
             data_snapshot_id,

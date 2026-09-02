@@ -6,6 +6,7 @@ import hashlib
 import json
 from datetime import UTC, datetime
 
+from ._time import utc_naive
 from .provenance import ProvenanceStore
 
 
@@ -25,6 +26,7 @@ def persist_local_experiment(
 ) -> dict:
     """Persist one deterministic local experiment; identical inputs reuse the run."""
     provenance = ProvenanceStore(store.conn)
+    decision_time = utc_naive(decision_time)
     snapshot_id = provenance.create_snapshot(
         snapshot_rows, data_cutoff=decision_time, config_hash_value=config_hash
     )
