@@ -53,9 +53,15 @@ def _component_confidence(value):
         return 0.0
     if isinstance(value, dict):
         confidence = value.get("confidence", 1.0)
+        coverage = value.get("coverage", 1.0)
     else:
         confidence = getattr(value, "confidence", 1.0)
-    return max(0.0, min(1.0, float(confidence)))
+        coverage = getattr(value, "coverage", 1.0)
+    if confidence is None or coverage is None:
+        return 0.0
+    confidence = max(0.0, min(1.0, float(confidence)))
+    coverage = max(0.0, min(1.0, float(coverage)))
+    return confidence * coverage
 
 
 def _validated_weights(component_weights: Mapping[str, float] | None):
