@@ -1,0 +1,11 @@
+{
+  "contract_version": "1.0",
+  "producer": "Marco",
+  "generated_at": "2020-01-31T17:00:00Z",
+  "as_of": "2020-01-31T16:00:00Z",
+  "status": "OK",
+  "expires_at": "2099-01-01T00:00:00Z",
+  "metadata": {
+    "fixture": true
+  }
+}
