@@ -15,6 +15,29 @@ cross-asset validate-data-file <file> [--manifest <yaml-or-json>] [--output <jso
 
 首轮公共 CLI 已预留 `ingest`、`quality-check`、`build-features`、`score`、`allocate`、`run-daily`、`backtest`、`report` 和 `ui` 接口；具体实现由对应模块延迟接入。缺少并行模块时命令会明确提示，而不会静默成功。
 
+## Model core v0.2
+
+当前研究核心使用统一、可审计的 signal contract，而不是把不同量纲的原始值直接相加：
+
+- `trend_signal_v0.2`：1M/3M/6M/12M 多周期趋势，使用 log move / 同周期已实现波动率构造无量纲信号；缺失周期降低 confidence，不做零填充。
+- `risk_signal_v0.2`：20 日波动率相对其严格历史基线的 causal z-score，风险越高分数越低。
+- `macro_v0.2`：先按 observation_date 去除同一期的旧 revision，再做 transform；可选 causal z-score 只使用当前观测之前的历史，freshness 按单序列计算。
+- `asset_score_v0.2`：按预声明 component weight 聚合，并把 component confidence 与 weighted coverage 纳入最终 confidence。
+- Price 与 yield proxy 统一转成 price-like return index；债券收益率使用显式 duration proxy，不再把 yield level 当价格。
+- `valuation`、`carry`、`structure` 在没有可信输入时保持 `None`；系统不会为补齐模型而伪造信号。
+- 关键 trend 不可用或上游 health 失败时 allocation 进入 `FROZEN`；若存在最近一次 ACTIVE 权重则冻结到该权重，否则回退战略权重。
+
+这些参数目前仍是 `DEVELOPMENT_PRIOR`，不代表 OOS 验证结论。
+
+## 回测与研究口径
+
+- 决策只能使用 `available_at <= decision_time` 的信息。
+- 已实现显式价格/现金/yield-duration holding-period return 语义。
+- 末端 decision 没有下一持有期，因此 realized return 为缺失值，而不是 0。
+- 默认不对首个战略建仓收取交易成本；如需要可通过显式参数启用。
+- turnover convention 明确记录为 `two_sided_notional` 或 `one_way`。
+- 提供按显式交易日生成的 calendar walk-forward manifest，可落实 5 年最短训练、12 个月测试、3 个月步长等研究协议，同时不虚构交易日期。
+
 ## 目录约定
 
 - `config/`：canonical 资产、序列、来源映射、因子和配置约束。
@@ -30,12 +53,14 @@ make check
 make test
 ```
 
+GitHub Actions 在 Ubuntu 与 Windows、Python 3.12 上执行 compile、Ruff 和全量 pytest。
+
 所有外部数据应保留 `observation_date`、`available_at`、`vintage_date` 和 `ingested_at`。历史查询必须使用 `available_at <= decision_time`，不得以观察期日期代替可用时间。
 
 `validate-data-file` 是只读验收入口，不写入 observations；它按 Data Acceptance Gate 返回 PASS/PARTIAL/FAIL（exit code 0/2/1）。
 
 `coverage-report --database <db> --as-of <ISO> --output <json>` 是只读 coverage/PIT 报告；仅统计 `available_at <= as_of`，空数据保持 `DATA_BLOCKED`，日历覆盖范围外标记 `UNKNOWN`。
 
-离线 benchmark 已支持 `MACRO_ONLY` 与 `RISK_ONLY`；两者分别只读取宏观、风险/波动率输入，接口 READY 不等于 OOS 验证。
+离线 benchmark 已支持 `MACRO_ONLY` 与 `RISK_ONLY`；benchmark 与 FULL_MODEL 共享资产收益语义，但接口 READY 不等于 OOS 验证。
 
 `probe-fred` 仅检查 FRED DGS10/DFII10 metadata 能力；key 只从 `FRED_API_KEY` 环境变量读取，未经 PIT 证据不会写正式 observations。

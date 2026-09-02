@@ -1,16 +1,23 @@
-version: "0.1"
+version: "0.2"
 status: PLANNING_ONLY
 owner: TBD
 reviewer: TBD
 approved_at: TBD
 windows:
+  builder: calendar_explicit_dates
+  default_mode: expanding
   train_min_years: 5
   test_window_months: 12
   step_months: 3
+  rolling_years: null
   final_holdout: last_20_percent
 coverage_threshold: TBD
 rebalance: weekly
 transaction_cost_bps: [0, 5, 10, 20, 30]
+turnover_convention: two_sided_notional
+charge_initial_trade: false
+terminal_period_return: unavailable_without_next_decision
+signal_model_version: full_model_v0.2
 benchmarks: [STATIC, TREND_ONLY, MACRO_ONLY, RISK_ONLY, FULL_MODEL]
 verdict_rules:
   accept: "frozen inputs, provenance complete, PIT clean, and predeclared metrics pass"
@@ -20,3 +27,9 @@ data_policy:
   project_status: DATA_BLOCKED
   zero_imputation: false
   decision_cutoff: "available_at <= decision_time"
+  revision_policy: latest_released_revision_per_observation_date
+signal_policy:
+  heterogeneous_raw_units_direct_aggregation: false
+  causal_normalization_required_when_units_are_not_dimensionless: true
+  missing_optional_component: unavailable
+  critical_component: trend
