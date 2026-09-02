@@ -1,0 +1,18 @@
+{
+  "as_of": "2026-09-02",
+  "fragility_scale": {
+    "higher_fragility": 1.0,
+    "lower_fragility": 0.0
+  },
+  "property_fragility": {
+    "confidence": 0.75,
+    "score": 0.8,
+    "status": "READY"
+  },
+  "schema_version": "1.0",
+  "structural_risk": {
+    "confidence": 0.8,
+    "score": 0.6,
+    "status": "READY"
+  }
+}
