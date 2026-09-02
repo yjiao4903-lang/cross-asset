@@ -199,19 +199,25 @@ class MarcoProvider:
                 + ", ".join(missing_dimensions)
             )
 
+        dimension_degraded = False
         for name, dimension in macro.dimensions.items():
-            if dimension.status == "FAILED":
-                warnings.append(f"macro dimension {name} is FAILED")
+            if dimension.status in {"FAILED", "DEGRADED"}:
+                dimension_degraded = True
+                warnings.append(
+                    f"macro dimension {name} is {dimension.status}"
+                )
             elif dimension.status == "STALE":
                 stale = True
                 warnings.append(f"macro dimension {name} is STALE")
             if dimension.score is None:
+                dimension_degraded = True
                 warnings.append(
                     f"macro dimension {name} score is missing; no zero imputation"
                 )
 
         views_path = self.integration_dir / ASSET_VIEWS_FILE
         normalized_views: tuple[AssetView, ...] = ()
+        views_degraded = False
         if views_path.exists():
             try:
                 views_contract = AssetViewsContract.model_validate(
@@ -238,6 +244,7 @@ class MarcoProvider:
                 if views_contract.status == "FAILED":
                     errors.append("Marco producer marked asset_views FAILED")
                 elif views_contract.status in {"DEGRADED", "STALE"}:
+                    views_degraded = True
                     warnings.append(
                         f"asset_views producer status is {views_contract.status}"
                     )
@@ -247,7 +254,10 @@ class MarcoProvider:
             )
 
         producer_degraded = (
-            manifest.status == "DEGRADED" or macro.status == "DEGRADED"
+            manifest.status == "DEGRADED"
+            or macro.status == "DEGRADED"
+            or dimension_degraded
+            or views_degraded
         )
         status = (
             "FAIL"
