@@ -300,8 +300,8 @@ class FullModelStrategy:
             macro = build_macro_state(macro_rows, decision, self.macro_config)
         else:
             decision_timestamp = _utc_timestamp(decision)
-            macro_as_of = _utc_timestamp(getattr(macro_state, "as_of"))
-            macro_cutoff = _utc_timestamp(getattr(macro_state, "data_cutoff"))
+            macro_as_of = _utc_timestamp(macro_state.as_of)
+            macro_cutoff = _utc_timestamp(macro_state.data_cutoff)
             if macro_as_of > decision_timestamp or macro_cutoff > decision_timestamp:
                 raise ValueError("external macro state is not point-in-time safe")
             macro = macro_state
