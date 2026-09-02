@@ -3,8 +3,6 @@ import json
 import pandas as pd
 import pytest
 
-from cross_asset import research
-
 
 RAW = {
     "version": "0.3",
@@ -51,6 +49,8 @@ RAW = {
 
 
 def test_planning_protocol_builds_sealed_plan_but_blocks_execution():
+    from cross_asset import research
+
     protocol = research.ResearchProtocol.from_mapping(RAW)
     dates = pd.date_range("2015-01-02", "2026-12-25", freq="W-FRI", tz="UTC")
     plan = research.build_research_plan(dates, protocol)
@@ -64,6 +64,8 @@ def test_planning_protocol_builds_sealed_plan_but_blocks_execution():
 
 
 def test_frozen_approved_protocol_is_ready_with_enough_dates():
+    from cross_asset import research
+
     raw = json.loads(json.dumps(RAW))
     raw.update(
         {
@@ -82,6 +84,8 @@ def test_frozen_approved_protocol_is_ready_with_enough_dates():
 
 
 def test_decision_date_loader_rejects_duplicates(tmp_path):
+    from cross_asset import research
+
     path = tmp_path / "dates.json"
     path.write_text(json.dumps(["2026-01-02T00:00:00Z", "2026-01-02T00:00:00Z"]), encoding="utf-8")
     with pytest.raises(ValueError, match="unique"):
