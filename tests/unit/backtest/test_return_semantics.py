@@ -103,3 +103,61 @@ def test_sprint2_return_model_and_turnover_are_frozen():
     changed["protocol"]["turnover_convention"] = "one_way"
     with pytest.raises(ValueError, match="turnover_convention_is_frozen"):
         validate_sprint2_config(changed)
+
+
+def test_full_model_freezes_when_critical_signal_is_missing():
+    from cross_asset.backtest.replay import FullModelStrategy
+
+    frame = pd.DataFrame(
+        [
+            {
+                "series_id": "OTHER",
+                "observation_date": "2026-01-02",
+                "available_at": "2026-01-02",
+                "value": 100.0,
+            }
+        ]
+    )
+    strategy = FullModelStrategy(
+        ["CN_EQ", "CASH"],
+        strategic_weights={"CN_EQ": 0.6, "CASH": 0.4},
+        asset_series_map={"CN_EQ": "CN_EQ_LARGE", "CASH": None},
+    )
+    weights = strategy(frame, pd.Timestamp("2026-01-02"))
+    assert strategy.last_decision["allocation"].status == "FROZEN"
+    assert strategy.last_decision["missing_signal_assets"] == ["CN_EQ"]
+    assert weights == {"CN_EQ": 0.6, "CASH": 0.4}
+
+
+def test_full_model_can_reverse_yield_signal_direction_explicitly():
+    from cross_asset.backtest.replay import FullModelStrategy
+
+    rows = []
+    for i in range(22):
+        day = pd.Timestamp("2026-01-01") + pd.Timedelta(days=i)
+        rows.append(
+            {
+                "series_id": "CN10Y",
+                "observation_date": day,
+                "available_at": day,
+                "value": 3.0 - i * 0.005,
+            }
+        )
+    strategy = FullModelStrategy(
+        ["CN_BOND", "CASH"],
+        strategic_weights={"CN_BOND": 0.5, "CASH": 0.5},
+        asset_series_map={"CN_BOND": "CN10Y", "CASH": None},
+        signal_directions={"CN_BOND": -1.0},
+        return_specs={
+            "CN_BOND": AssetReturnSpec(
+                "CN10Y",
+                "yield_duration_proxy",
+                duration_years=8.0,
+                yield_scale=100.0,
+            ),
+            "CASH": AssetReturnSpec(None, "cash"),
+        },
+    )
+    strategy(pd.DataFrame(rows), pd.Timestamp("2026-01-22"))
+    assert strategy.last_decision["allocation"].status == "ACTIVE"
+    assert strategy.last_decision["asset_scores"]["CN_BOND"].score > 0
