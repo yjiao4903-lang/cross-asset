@@ -23,12 +23,12 @@
     },
     {
       "asset_id": "CN_EQ",
-      "score": null,
+      "score": 0.1,
       "confidence": 0.5,
-      "status": "DEGRADED",
+      "status": "OK",
       "data_cutoff": "2020-01-31T15:00:00Z",
       "horizon": "1m",
-      "rationale": "fixture missing view remains null"
+      "rationale": "fixture canonical China equity view"
     }
   ],
   "metadata": {
