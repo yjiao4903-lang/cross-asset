@@ -210,3 +210,57 @@ def test_terminal_decision_has_no_realized_holding_period():
         )
         is None
     )
+
+
+
+def test_full_model_freeze_reuses_last_active_allocation():
+    from cross_asset.backtest.replay import FullModelStrategy
+
+    strategy = FullModelStrategy(
+        ["A", "B", "CASH"],
+        strategic_weights={"A": 0.4, "B": 0.3, "CASH": 0.3},
+        asset_series_map={"A": None, "B": None, "CASH": None},
+        critical_assets=[],
+    )
+    components = {
+        "A": {"trend": {"score": 2.0, "confidence": 1.0}},
+        "B": {"trend": {"score": -2.0, "confidence": 1.0}},
+        "CASH": {},
+    }
+    first = strategy(
+        pd.DataFrame(columns=["series_id", "observation_date", "available_at", "value"]),
+        pd.Timestamp("2026-01-02"),
+        component_inputs=components,
+    )
+    assert strategy.last_decision["allocation"].status == "ACTIVE"
+    assert first != {"A": 0.4, "B": 0.3, "CASH": 0.3}
+
+    frozen = strategy(
+        pd.DataFrame(columns=["series_id", "observation_date", "available_at", "value"]),
+        pd.Timestamp("2026-01-09"),
+        health=False,
+        component_inputs=components,
+    )
+    assert strategy.last_decision["allocation"].status == "FROZEN"
+    assert frozen == pytest.approx(first)
+
+
+def test_full_model_does_not_invent_unavailable_components():
+    from cross_asset.backtest.replay import FullModelStrategy
+
+    strategy = FullModelStrategy(
+        ["A"],
+        strategic_weights={"A": 1.0},
+        asset_series_map={"A": None},
+        critical_assets=[],
+        allocation_config={"constraints": {"max_weight": 1.0}},
+    )
+    strategy(
+        pd.DataFrame(columns=["series_id", "observation_date", "available_at", "value"]),
+        pd.Timestamp("2026-01-02"),
+        component_inputs={"A": {"trend": {"score": 0.5, "confidence": 1.0}}},
+    )
+    score = strategy.last_decision["asset_scores"]["A"]
+    assert score.contributions["trend"] is not None
+    for name in ("macro", "valuation", "carry", "risk", "structure"):
+        assert score.contributions[name] is None
