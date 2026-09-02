@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import json
 from dataclasses import dataclass, field
@@ -5,9 +7,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from cross_asset.backtest.returns import AssetReturnSpec, portfolio_period_return
+from cross_asset.backtest.returns import (
+    AssetReturnSpec,
+    portfolio_period_return,
+    return_index_from_series,
+)
+from cross_asset.backtest.walk_forward import portfolio_turnover
 from cross_asset.engines.allocation import allocate
-from cross_asset.engines.asset_score import score_asset
+from cross_asset.engines.asset_score import COMPONENT_WEIGHTS, score_asset
 from cross_asset.engines.macro import build_macro_state
 from cross_asset.engines.market import MarketEngine
 from cross_asset.engines.style import StyleEngine
@@ -18,11 +25,13 @@ class ReplayResult:
     returns: pd.Series
     allocations: pd.DataFrame
     decision_dates: list
-    model_version: str = "market_v0.1"
+    model_version: str = "full_model_v0.2"
     assumptions: list[str] = field(
         default_factory=lambda: [
             "weekly deterministic calendar",
             "next-period effective",
+            "terminal decision has no realized return",
+            "initial allocation trade cost disabled unless explicitly requested",
             "cost is research placeholder",
         ]
     )
@@ -66,7 +75,9 @@ class HistoricalReplay:
         *,
         frequency="W-FRI",
         cost_bps=0,
-        model_version="market_v0.1",
+        turnover_convention="two_sided_notional",
+        charge_initial_trade=False,
+        model_version="full_model_v0.2",
         config=None,
         fixture=True,
     ):
@@ -74,11 +85,19 @@ class HistoricalReplay:
         self.strategy = strategy
         self.frequency = frequency
         self.cost_bps = cost_bps
+        self.turnover_convention = turnover_convention
+        self.charge_initial_trade = bool(charge_initial_trade)
         self.model_version = model_version
         self.fixture = fixture
         self.config_hash = hash_config(
             config
-            or {"frequency": frequency, "cost_bps": cost_bps, "model_version": model_version}
+            or {
+                "frequency": frequency,
+                "cost_bps": cost_bps,
+                "turnover_convention": turnover_convention,
+                "charge_initial_trade": self.charge_initial_trade,
+                "model_version": model_version,
+            }
         )
 
     def run(self, start=None, end=None):
@@ -86,59 +105,94 @@ class HistoricalReplay:
             _available=pd.to_datetime(self.observations["available_at"])
         )
         dates = pd.date_range(
-            start or obs._available.min(), end or obs._available.max(), freq=self.frequency
+            start or obs._available.min(),
+            end or obs._available.max(),
+            freq=self.frequency,
         )
-        alloc = []
+        allocations = []
         score_rows = []
         decision_records = []
-        rets = []
-        prev = None
+        returns = []
+        previous = None
         benchmark_metadata = {}
-        for decision in dates:
+        for index, decision in enumerate(dates):
             info = obs[obs._available <= decision]
             raw_allocation = self.strategy(info, decision)
             benchmark_metadata = dict(getattr(raw_allocation, "attrs", {}))
-            a = pd.Series(raw_allocation, dtype=float)
-            a = a / a.sum() if a.sum() else a
-            next_decision = dates[dates > decision][0] if any(dates > decision) else None
-            if hasattr(self.strategy, "realized_return"):
-                realized = self.strategy.realized_return(obs, a, decision, next_decision)
-                ret = float("nan") if realized is None else float(realized)
+            allocation = pd.Series(raw_allocation, dtype=float)
+            allocation = allocation / allocation.sum() if allocation.sum() else allocation
+            next_decision = dates[index + 1] if index + 1 < len(dates) else None
+
+            if next_decision is None:
+                gross_return = float("nan")
+            elif hasattr(self.strategy, "realized_return"):
+                realized = self.strategy.realized_return(
+                    obs,
+                    allocation,
+                    decision,
+                    next_decision,
+                )
+                gross_return = float("nan") if realized is None else float(realized)
             elif hasattr(self.strategy, "next_return"):
-                ret = float(
-                    self.strategy.next_return(obs[obs._available <= decision], a, decision)
+                gross_return = float(
+                    self.strategy.next_return(
+                        obs[obs._available <= decision],
+                        allocation,
+                        decision,
+                    )
                 )
             else:
-                ret = 0.0
-            turnover = float((a - prev).abs().sum()) if prev is not None else 0.0
-            rets.append(ret - turnover * self.cost_bps / 10000)
-            alloc.append(a)
+                gross_return = 0.0
+
+            if next_decision is None:
+                turnover = 0.0
+            elif previous is None:
+                turnover = (
+                    portfolio_turnover(
+                        allocation,
+                        {},
+                        convention=self.turnover_convention,
+                    )
+                    if self.charge_initial_trade
+                    else 0.0
+                )
+            else:
+                turnover = portfolio_turnover(
+                    allocation,
+                    previous,
+                    convention=self.turnover_convention,
+                )
+            returns.append(gross_return - turnover * self.cost_bps / 10000)
+            allocations.append(allocation)
             score_rows.append(
                 {
-                    k: getattr(v, "score", v)
-                    for k, v in getattr(self.strategy, "last_scores", {}).items()
+                    key: getattr(value, "score", value)
+                    for key, value in getattr(self.strategy, "last_scores", {}).items()
                 }
             )
             if getattr(self.strategy, "last_decision", None):
-                d = self.strategy.last_decision
+                state = self.strategy.last_decision
                 decision_records.append(
                     {
                         "decision": str(decision),
-                        "allocation": dict(a),
+                        "allocation": dict(allocation),
                         "scores": {
-                            k: getattr(v, "score", None)
-                            for k, v in d["asset_scores"].items()
+                            key: getattr(value, "score", None)
+                            for key, value in state["asset_scores"].items()
                         },
-                        "attribution": d["attribution"],
-                        "model_versions": d["model_versions"],
-                        "data_cutoff": str(d["data_cutoff"]),
-                        "missing_signal_assets": d.get("missing_signal_assets", []),
+                        "attribution": state["attribution"],
+                        "signal_components": state.get("signal_components", {}),
+                        "model_versions": state["model_versions"],
+                        "data_cutoff": str(state["data_cutoff"]),
+                        "missing_signal_assets": state.get("missing_signal_assets", []),
+                        "turnover": turnover,
                     }
                 )
-            prev = a
+            previous = allocation
+
         return ReplayResult(
-            pd.Series(rets, index=dates, name="return"),
-            pd.DataFrame(alloc, index=dates).fillna(0),
+            pd.Series(returns, index=dates, name="return"),
+            pd.DataFrame(allocations, index=dates).fillna(0),
             list(dates),
             self.model_version,
             config_hash=self.config_hash,
@@ -151,7 +205,7 @@ class HistoricalReplay:
 
 
 class FullModelStrategy:
-    """PIT-only decision strategy that executes the complete offline model chain."""
+    """PIT-only decision strategy with explicit normalized signal components."""
 
     def __init__(
         self,
@@ -163,7 +217,11 @@ class FullModelStrategy:
         asset_series_map=None,
         return_specs=None,
         signal_directions=None,
+        asset_signal_map=None,
+        component_weights=None,
+        allocation_config=None,
         critical_assets=None,
+        market_engine=None,
     ):
         self.assets = list(assets)
         self.strategic_weights = strategic_weights or {
@@ -185,22 +243,43 @@ class FullModelStrategy:
         self.return_specs.update(return_specs or {})
         self.signal_directions = {asset: 1.0 for asset in self.assets}
         self.signal_directions.update(signal_directions or {})
+        self.asset_signal_map = {
+            asset: dict((asset_signal_map or {}).get(asset, {}))
+            for asset in self.assets
+        }
+        self.component_weights = dict(component_weights or COMPONENT_WEIGHTS)
+        self.allocation_config = dict(allocation_config or {})
+        default_critical_assets = [
+            asset
+            for asset in self.assets
+            if self.asset_series_map.get(asset) is not None
+        ]
         self.critical_assets = set(
-            critical_assets
-            or [
-                asset
-                for asset in self.assets
-                if self.asset_series_map.get(asset) is not None
-            ]
+            default_critical_assets
+            if critical_assets is None
+            else critical_assets
         )
         self.macro_config = macro_config or {"series": {}, "dimensions": {}}
         self.style_engine = StyleEngine(style_definitions or {})
-        self.market_engine = MarketEngine(min_history=1)
+        self.market_engine = market_engine or MarketEngine(min_history=21)
         self.last_decision = None
+        self.last_scores = {}
+        self.previous_valid_weight = None
 
-    def __call__(self, info, decision, *, health=True):
-        prices = _price_histories(info, self.assets, self.asset_series_map)
-        market = self.market_engine.build(prices, as_of=decision)
+    def reset_state(self):
+        self.previous_valid_weight = None
+        self.last_decision = None
+        self.last_scores = {}
+
+    def __call__(self, info, decision, *, health=True, component_inputs=None):
+        market_histories = _market_histories(
+            info,
+            self.assets,
+            self.asset_series_map,
+            self.return_specs,
+        )
+        market = self.market_engine.build(market_histories, as_of=decision)
+
         macro_rows = info.to_dict("records")
         for row in macro_rows:
             available = pd.Timestamp(row["available_at"])
@@ -211,43 +290,92 @@ class FullModelStrategy:
             )
         macro = build_macro_state(macro_rows, decision, self.macro_config)
         style = self.style_engine.build({}, data_cutoff=decision)
+
+        explicit_components = component_inputs or {}
         scores = {}
+        signal_components = {}
         missing_signal_assets = []
         for asset in self.assets:
             market_asset = market.assets.get(asset, {})
-            trend = market_asset.get("trend", {}).get("ret_1m")
-            if trend is not None and pd.isna(trend):
-                trend = None
-            if trend is not None:
-                trend = float(trend) * float(self.signal_directions.get(asset, 1.0))
-            if asset in self.critical_assets and trend is None:
+            signals = market_asset.get("signals", {})
+            trend = signals.get("trend")
+            if (
+                trend is not None
+                and self.return_specs[asset].kind == "price"
+                and float(self.signal_directions.get(asset, 1.0)) != 1.0
+            ):
+                trend = _scaled_signal(
+                    trend,
+                    float(self.signal_directions[asset]),
+                )
+            risk = signals.get("risk")
+            macro_dimension = self.asset_signal_map.get(asset, {}).get("macro")
+            macro_signal = (
+                macro.dimensions.get(macro_dimension)
+                if macro_dimension is not None
+                else None
+            )
+            components = {
+                "macro": macro_signal,
+                "trend": trend,
+                "risk": risk,
+                "valuation": None,
+                "carry": None,
+                "structure": None,
+            }
+            components.update(explicit_components.get(asset, {}))
+            trend_score = _signal_score(components.get("trend"))
+            if asset in self.critical_assets and trend_score is None:
                 missing_signal_assets.append(asset)
-            scores[asset] = score_asset(asset, {"trend": trend}, data_cutoff=decision)
+
+            scores[asset] = score_asset(
+                asset,
+                components,
+                component_weights=self.component_weights,
+                data_cutoff=decision,
+            )
+            signal_components[asset] = {
+                name: _signal_audit(value) for name, value in components.items()
+            }
 
         upstream_healthy = not (
             health is False
             or str(health).upper() in {"UNHEALTHY", "FAILED", "STALE"}
         )
         effective_health = upstream_healthy and not missing_signal_assets
+        constraints = self.allocation_config.get("constraints", self.allocation_config)
         allocation = allocate(
             scores,
             self.strategic_weights,
+            max_tilt=float(
+                constraints.get(
+                    "max_tactical_tilt",
+                    constraints.get("max_tilt", 0.10),
+                )
+            ),
+            min_weight=float(constraints.get("min_weight", 0.0)),
+            max_weight=float(constraints.get("max_weight", 0.5)),
+            previous_valid_weight=self.previous_valid_weight,
             as_of=decision,
             data_cutoff=decision,
             health=effective_health,
         )
+        if allocation.status == "ACTIVE":
+            self.previous_valid_weight = dict(allocation.weights)
+
         self.last_decision = {
             "market_state": market,
             "macro_state": macro,
             "style_state": style,
             "asset_scores": scores,
+            "signal_components": signal_components,
             "allocation": allocation,
             "attribution": allocation.attribution,
             "model_versions": {
                 "market": market.model_version,
-                "macro": getattr(macro, "model_version", "macro_v0.1"),
+                "macro": getattr(macro, "model_version", "macro_v0.2"),
                 "style": self.style_engine.model_version,
-                "asset": "asset_score_v0.1",
+                "asset": "asset_score_v0.2",
                 "allocation": allocation.model_version,
             },
             "data_cutoff": decision,
@@ -266,8 +394,44 @@ class FullModelStrategy:
         )
 
 
+def _scaled_signal(value, scale):
+    if isinstance(value, dict):
+        out = dict(value)
+        if out.get("score") is not None:
+            out["score"] = float(out["score"]) * scale
+        if isinstance(out.get("components"), dict):
+            out["components"] = {
+                key: None if component is None else float(component) * scale
+                for key, component in out["components"].items()
+            }
+        return out
+    return value
+
+
+def _signal_score(value):
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return value.get("score", value.get("value"))
+    return getattr(value, "score", getattr(value, "value", value))
+
+
+def _signal_audit(value):
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return dict(value)
+    if hasattr(value, "__dict__"):
+        return dict(value.__dict__)
+    return {"score": value, "confidence": 1.0}
+
+
 def realized_return(
-    observations, allocation, decision, next_decision, return_specs=None
+    observations,
+    allocation,
+    decision,
+    next_decision,
+    return_specs=None,
 ):
     """Compatibility helper using explicit full holding-period boundaries."""
 
@@ -280,28 +444,39 @@ def realized_return(
     )
 
 
-def _price_histories(info, assets, asset_series_map=None):
+def _market_histories(info, assets, asset_series_map=None, return_specs=None):
     if "series_id" not in info or "value" not in info:
         return {asset: pd.Series(dtype=float) for asset in assets}
     mapping = {
         asset: (asset_series_map or {}).get(
-            asset, None if asset == "CASH" else asset
+            asset,
+            None if asset == "CASH" else asset,
         )
         for asset in assets
     }
-    series_ids = {sid for sid in mapping.values() if sid is not None}
+    series_ids = {series_id for series_id in mapping.values() if series_id is not None}
     rows = info[info["series_id"].isin(series_ids)].copy()
     rows["_date"] = pd.to_datetime(rows["observation_date"])
-    return {
-        asset: (
-            pd.Series(dtype=float)
-            if sid is None
-            else rows[rows["series_id"] == sid]
-            .sort_values("_date")
+    histories = {}
+    for asset, series_id in mapping.items():
+        if series_id is None:
+            histories[asset] = pd.Series(dtype=float)
+            continue
+        raw = (
+            rows[rows["series_id"] == series_id]
+            .sort_values(["_date", "available_at"])
+            .drop_duplicates("_date", keep="last")
             .set_index("_date")["value"]
         )
-        for asset, sid in mapping.items()
-    }
+        spec = (return_specs or {}).get(asset, AssetReturnSpec(series_id, kind="price"))
+        histories[asset] = return_index_from_series(raw, spec)
+    return histories
+
+
+def _price_histories(info, assets, asset_series_map=None):
+    """Backward-compatible alias for legacy callers."""
+
+    return _market_histories(info, assets, asset_series_map)
 
 
 def hash_config(config):
@@ -317,6 +492,7 @@ def hash_config(config):
 
 def _write_parquet(frame, path):
     """Write parquet through DuckDB so pyarrow is not required."""
+
     import duckdb
 
     con = duckdb.connect()

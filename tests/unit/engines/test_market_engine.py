@@ -14,4 +14,6 @@ def test_market_engine_marks_short_series_unavailable():
 
 def test_market_engine_emits_versioned_state():
     state = MarketEngine().build({"US_EQ": pd.Series(np.arange(300.0) + 1)}, as_of="2025-01-01")
-    assert state.model_version == "market_v0.1" and state.assets["US_EQ"]["available"] is True
+    assert state.model_version == "market_v0.2"
+    assert state.assets["US_EQ"]["available"] is True
+    assert state.assets["US_EQ"]["signals"]["trend"]["score"] is not None

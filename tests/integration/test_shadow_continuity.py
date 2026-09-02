@@ -19,7 +19,8 @@ def make_runner(tmp_path, fail_on=None, stale_on=None):
         for s in series:
             # A real-looking 30-day history makes the model's trend component
             # observable while keeping every vintage available at decision time.
-            slope=(calls['n'] + sum(ord(c) for c in s) % 5) / 100
+            phase=(calls['n'] + sum(ord(c) for c in s)) % 7 - 3
+            slope=phase / 100
             for i in range(30):
                 obs_day=end-timedelta(days=29-i)
                 rows.append(Observation(series_id=s, observation_date=obs_day, available_at=datetime(obs_day.year, obs_day.month, obs_day.day, tzinfo=UTC), value=100+slope*i+calls['n'], source='simulated', source_series_id=s, frequency='daily', unit='fixture', quality=quality))

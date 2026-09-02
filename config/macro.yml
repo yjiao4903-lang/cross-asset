@@ -1,19 +1,137 @@
-version: 0.1
-# Canonical macro definitions. Provider identifiers remain in sources.yml.
+version: 0.2
+parameter_status: DEVELOPMENT_PRIOR
+# Each series is transformed first, then causally normalized against prior
+# history only. Monthly releases use a longer freshness horizon than daily data.
 series:
-  US_CPI: {display_name: US CPI, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: negative}}
-  US_CORE_PCE: {display_name: US Core PCE, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: negative}}
-  US_UNEMPLOYMENT: {display_name: US unemployment, frequency: monthly, unit: percent, critical: false, transform: {type: level, direction: negative}}
-  US_INITIAL_CLAIMS: {display_name: US initial claims, frequency: weekly, unit: persons, critical: false, transform: {type: level, direction: negative}}
-  US_INDUSTRIAL_PRODUCTION: {display_name: US industrial production, frequency: monthly, unit: index, critical: false, transform: {type: yoy, direction: positive}}
-  US_REAL_10Y: {display_name: US 10Y real yield, frequency: daily, unit: yield_percent, critical: false, transform: {type: level, direction: negative}}
-  US_GOV_10Y: {display_name: US 10Y Treasury yield, frequency: daily, unit: yield_percent, critical: false, transform: {type: level, direction: negative}}
-  CN_PMI: {display_name: China PMI, frequency: monthly, unit: index, critical: false, transform: {type: level, direction: positive, baseline: 50}}
-  CN_CPI: {display_name: China CPI, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: negative}}
-  CN_PPI: {display_name: China PPI, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: negative}}
-  CN_M1: {display_name: China M1, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: positive}}
-  CN_M2: {display_name: China M2, frequency: monthly, unit: percent, critical: false, transform: {type: yoy, direction: positive}}
-  CN_DR007: {display_name: China DR007, frequency: daily, unit: yield_percent, critical: false, transform: {type: level, direction: negative}}
+  US_CPI:
+    display_name: US CPI
+    frequency: monthly
+    unit: percent
+    critical: false
+    stale_after_hours: 1080
+    transform: {type: yoy, direction: negative}
+    normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
+  US_CORE_PCE:
+    display_name: US Core PCE
+    frequency: monthly
+    unit: percent
+    critical: false
+    stale_after_hours: 1080
+    transform: {type: yoy, direction: negative}
+    normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
+  US_UNEMPLOYMENT:
+    display_name: US unemployment
+    frequency: monthly
+    unit: percent
+    critical: false
+    stale_after_hours: 1080
+    transform: {type: level, direction: negative}
+    normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
+  US_INITIAL_CLAIMS:
+    display_name: US initial claims
+    frequency: weekly
+    unit: persons
+    critical: false
+    stale_after_hours: 336
+    transform: {type: level, direction: negative}
+    normalization: {method: causal_zscore, min_history: 26, window: 104, clip: 2.0}
+  US_INDUSTRIAL_PRODUCTION:
+    display_name: US industrial production
+    frequency: monthly
+    unit: index
+    critical: false
+    stale_after_hours: 1080
+    transform: {type: yoy, direction: positive}
+    normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
+  US_REAL_10Y:
+    display_name: US 10Y real yield
+    frequency: daily
+    unit: yield_percent
+    critical: false
+    stale_after_hours: 96
+    transform: {type: level, direction: negative}
+    normalization: {method: causal_zscore, min_history: 60, window: 252, clip: 2.0}
+  US_GOV_10Y:
+    display_name: US 10Y Treasury yield
+    frequency: daily
+    unit: yield_percent
+    critical: false
+    stale_after_hours: 96
+    transform: {type: level, direction: negative}
+    normalization: {method: causal_zscore, min_history: 60, window: 252, clip: 2.0}
+  CN_PMI:
+    display_name: China PMI
+    frequency: monthly
+    unit: index
+    critical: false
+    stale_after_hours: 1080
+    transform: {type: level, direction: positive, baseline: 50}
+    normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
+  CN_CPI:
+    display_name: China CPI
+    frequency: monthly
+    unit: percent
+    critical: false
+    stale_after_hours: 1080
+    transform: {type: yoy, direction: negative}
+    normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
+  CN_PPI:
+    display_name: China PPI
+    frequency: monthly
+    unit: percent
+    critical: false
+    stale_after_hours: 1080
+    transform: {type: yoy, direction: negative}
+    normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
+  CN_M1:
+    display_name: China M1
+    frequency: monthly
+    unit: percent
+    critical: false
+    stale_after_hours: 1080
+    transform: {type: yoy, direction: positive}
+    normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
+  CN_M2:
+    display_name: China M2
+    frequency: monthly
+    unit: percent
+    critical: false
+    stale_after_hours: 1080
+    transform: {type: yoy, direction: positive}
+    normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
+  CN_DR007:
+    display_name: China DR007
+    frequency: daily
+    unit: yield_percent
+    critical: false
+    stale_after_hours: 96
+    transform: {type: level, direction: negative}
+    normalization: {method: causal_zscore, min_history: 60, window: 252, clip: 2.0}
+  DXY:
+    display_name: US dollar index proxy
+    frequency: daily
+    unit: index_points
+    critical: false
+    stale_after_hours: 96
+    transform: {type: level, direction: negative}
+    normalization: {method: causal_zscore, min_history: 60, window: 252, clip: 2.0}
+  COPPER:
+    display_name: Copper price proxy
+    frequency: daily
+    unit: price
+    critical: false
+    stale_after_hours: 96
+    transform: {type: level, direction: positive}
+    normalization: {method: causal_zscore, min_history: 60, window: 252, clip: 2.0}
+  GOLD:
+    display_name: Gold price proxy
+    frequency: daily
+    unit: price
+    critical: false
+    stale_after_hours: 96
+    transform: {type: level, direction: positive}
+    normalization: {method: causal_zscore, min_history: 60, window: 252, clip: 2.0}
+
 dimensions:
   GROWTH: [US_INDUSTRIAL_PRODUCTION, CN_PMI, US_INITIAL_CLAIMS, US_UNEMPLOYMENT]
   INFLATION: [US_CPI, US_CORE_PCE, CN_CPI, CN_PPI]

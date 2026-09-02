@@ -3,6 +3,7 @@ import pytest
 
 from cross_asset.backtest.metrics import performance_metrics
 from cross_asset.backtest.walk_forward import (
+    build_calendar_window_manifest,
     build_turnover_cost_ledger,
     build_window_manifest,
     cost_sensitivity_ledger,
@@ -76,3 +77,49 @@ def test_metrics_worst_1m_recovery_and_cost():
     result = compare_costs(returns, allocations, cost_bps=10)
     assert result["net"]["Cost"] == pytest.approx(0.002)
     assert result["ledger"]["cost"].sum() == pytest.approx(0.002)
+
+
+
+def test_calendar_manifest_honors_year_month_protocol_without_inventing_dates():
+    dates = pd.date_range("2018-01-05", "2026-12-25", freq="W-FRI")
+    folds = build_calendar_window_manifest(
+        dates,
+        train_min_years=5,
+        test_window_months=12,
+        step_months=3,
+    )
+    assert folds
+    first = folds[0]
+    assert first["test_start"] >= pd.Timestamp("2023-01-05")
+    assert first["train_start"] == dates[0]
+    assert first["train_end"] < first["test_start"]
+    assert first["test_end"] < first["test_start"] + pd.DateOffset(months=12)
+    assert folds[1]["test_start"] >= first["test_start"] + pd.DateOffset(months=3)
+    supplied = set(dates)
+    assert all(
+        fold[key] in supplied
+        for fold in folds
+        for key in ("train_start", "train_end", "test_start", "test_end")
+    )
+
+
+def test_calendar_rolling_manifest_limits_training_horizon():
+    dates = pd.date_range("2015-01-02", "2026-12-25", freq="W-FRI")
+    folds = build_calendar_window_manifest(
+        dates,
+        train_min_years=5,
+        test_window_months=12,
+        step_months=6,
+        window_type="rolling",
+        rolling_years=3,
+    )
+    first = folds[0]
+    assert first["window_type"] == "rolling"
+    assert first["train_start"] >= first["test_start"] - pd.DateOffset(years=3)
+
+
+def test_calendar_manifest_rejects_invalid_protocol_lengths():
+    with pytest.raises(ValueError, match="positive"):
+        build_calendar_window_manifest(DATES, train_min_years=0)
+    with pytest.raises(ValueError, match="rolling_years"):
+        build_calendar_window_manifest(DATES, window_type="rolling")

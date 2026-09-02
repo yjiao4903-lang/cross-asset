@@ -91,6 +91,8 @@ def test_sprint2_return_model_and_turnover_are_frozen():
     raw = load_sprint2_config()
     protocol, _ = validate_sprint2_config(raw)
     assert protocol.turnover_convention == "two_sided_notional"
+    assert protocol.charge_initial_trade is False
+    assert protocol.signal_model_version == "full_model_v0.2"
     assert protocol.return_model["CN_EQ"]["series_id"] == "CN_EQ_LARGE"
     assert protocol.return_model["CN_BOND"]["kind"] == "yield_duration_proxy"
 
@@ -129,7 +131,7 @@ def test_full_model_freezes_when_critical_signal_is_missing():
     assert weights == {"CN_EQ": 0.5, "CASH": 0.5}
 
 
-def test_full_model_can_reverse_yield_signal_direction_explicitly():
+def test_full_model_uses_yield_return_index_for_bond_signal():
     from cross_asset.backtest.replay import FullModelStrategy
 
     rows = []
@@ -147,7 +149,6 @@ def test_full_model_can_reverse_yield_signal_direction_explicitly():
         ["CN_BOND", "CASH"],
         strategic_weights={"CN_BOND": 0.5, "CASH": 0.5},
         asset_series_map={"CN_BOND": "CN10Y", "CASH": None},
-        signal_directions={"CN_BOND": -1.0},
         return_specs={
             "CN_BOND": AssetReturnSpec(
                 "CN10Y",
@@ -161,3 +162,105 @@ def test_full_model_can_reverse_yield_signal_direction_explicitly():
     strategy(pd.DataFrame(rows), pd.Timestamp("2026-01-22"))
     assert strategy.last_decision["allocation"].status == "ACTIVE"
     assert strategy.last_decision["asset_scores"]["CN_BOND"].score > 0
+
+
+
+def test_realized_return_ignores_revision_not_available_by_next_decision():
+    frame = pd.DataFrame(
+        [
+            {
+                "series_id": "A",
+                "observation_date": "2026-01-02",
+                "available_at": "2026-01-02T00:00:00Z",
+                "value": 100.0,
+            },
+            {
+                "series_id": "A",
+                "observation_date": "2026-01-09",
+                "available_at": "2026-01-09T00:00:00Z",
+                "value": 110.0,
+            },
+            {
+                "series_id": "A",
+                "observation_date": "2026-01-09",
+                "available_at": "2026-01-12T00:00:00Z",
+                "value": 120.0,
+            },
+        ]
+    )
+    result = period_asset_return(
+        frame,
+        decision="2026-01-02",
+        next_decision="2026-01-09",
+        spec=AssetReturnSpec("A", "price"),
+    )
+    assert result == pytest.approx(0.10)
+
+
+def test_terminal_decision_has_no_realized_holding_period():
+    frame = pd.DataFrame(
+        [{"series_id": "A", "observation_date": "2026-01-02", "value": 100.0}]
+    )
+    assert (
+        period_asset_return(
+            frame,
+            decision="2026-01-02",
+            next_decision=None,
+            spec=AssetReturnSpec("A", "price"),
+        )
+        is None
+    )
+
+
+
+def test_full_model_freeze_reuses_last_active_allocation():
+    from cross_asset.backtest.replay import FullModelStrategy
+
+    strategy = FullModelStrategy(
+        ["A", "B", "CASH"],
+        strategic_weights={"A": 0.4, "B": 0.3, "CASH": 0.3},
+        asset_series_map={"A": None, "B": None, "CASH": None},
+        critical_assets=[],
+    )
+    components = {
+        "A": {"trend": {"score": 2.0, "confidence": 1.0}},
+        "B": {"trend": {"score": -2.0, "confidence": 1.0}},
+        "CASH": {},
+    }
+    first = strategy(
+        pd.DataFrame(columns=["series_id", "observation_date", "available_at", "value"]),
+        pd.Timestamp("2026-01-02"),
+        component_inputs=components,
+    )
+    assert strategy.last_decision["allocation"].status == "ACTIVE"
+    assert first != {"A": 0.4, "B": 0.3, "CASH": 0.3}
+
+    frozen = strategy(
+        pd.DataFrame(columns=["series_id", "observation_date", "available_at", "value"]),
+        pd.Timestamp("2026-01-09"),
+        health=False,
+        component_inputs=components,
+    )
+    assert strategy.last_decision["allocation"].status == "FROZEN"
+    assert frozen == pytest.approx(first)
+
+
+def test_full_model_does_not_invent_unavailable_components():
+    from cross_asset.backtest.replay import FullModelStrategy
+
+    strategy = FullModelStrategy(
+        ["A"],
+        strategic_weights={"A": 1.0},
+        asset_series_map={"A": None},
+        critical_assets=[],
+        allocation_config={"constraints": {"max_weight": 1.0}},
+    )
+    strategy(
+        pd.DataFrame(columns=["series_id", "observation_date", "available_at", "value"]),
+        pd.Timestamp("2026-01-02"),
+        component_inputs={"A": {"trend": {"score": 0.5, "confidence": 1.0}}},
+    )
+    score = strategy.last_decision["asset_scores"]["A"]
+    assert score.contributions["trend"] is not None
+    for name in ("macro", "valuation", "carry", "risk", "structure"):
+        assert score.contributions[name] is None

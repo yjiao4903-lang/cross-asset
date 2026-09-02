@@ -5,6 +5,8 @@ protocol:
   transaction_cost_bps: [0, 5, 10, 20, 30]
   base_cost_bps: 10
   turnover_convention: two_sided_notional
+  charge_initial_trade: false
+  signal_model_version: full_model_v0.2
   return_model:
     CN_EQ: {series_id: CN_EQ_LARGE, kind: price}
     HK_EQ: {series_id: HK_EQ, kind: price}

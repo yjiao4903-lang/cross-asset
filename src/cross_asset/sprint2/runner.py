@@ -11,11 +11,16 @@ import pandas as pd
 from cross_asset.backtest.benchmarks import make_benchmark
 from cross_asset.backtest.metrics import performance_metrics
 from cross_asset.backtest.replay import FullModelStrategy
-from cross_asset.backtest.returns import AssetReturnSpec, portfolio_period_return
+from cross_asset.backtest.returns import (
+    AssetReturnSpec,
+    portfolio_period_return,
+    return_index_from_series,
+)
 from cross_asset.backtest.walk_forward import portfolio_turnover
 from cross_asset.engines.allocation import allocate
 from cross_asset.engines.asset_score import score_asset
 from cross_asset.engines.macro import build_macro_state
+from cross_asset.engines.market import MarketEngine
 from cross_asset.ingestion.evidence_shadow import load_wind_engineering_frame
 from cross_asset.operations.exchange_calendar import CalendarBlockedError, cn_hk_calendar
 from cross_asset.sprint2.artifact import protocol_hash, sha256_file, sha256_frame, write_artifacts
@@ -45,6 +50,77 @@ def _series_mapping(protocol_obj) -> dict[str, str | None]:
         for asset, definition in protocol_obj.return_model.items()
     }
 
+def _macro_config() -> dict:
+    return {
+        "series": {
+            "CN_CPI": {
+                "transform": {"type": "yoy", "direction": "negative"},
+                "normalization": {"method": "causal_zscore", "min_history": 12, "clip": 2.0},
+            },
+            "CN_PPI": {
+                "transform": {"type": "yoy", "direction": "negative"},
+                "normalization": {"method": "causal_zscore", "min_history": 12, "clip": 2.0},
+            },
+            "CN_M1": {
+                "transform": {"type": "yoy", "direction": "positive"},
+                "normalization": {"method": "causal_zscore", "min_history": 12, "clip": 2.0},
+            },
+            "CN_M2": {
+                "transform": {"type": "yoy", "direction": "positive"},
+                "normalization": {"method": "causal_zscore", "min_history": 12, "clip": 2.0},
+            },
+            "CN_DR007": {
+                "transform": {"type": "level", "direction": "negative"},
+                "normalization": {
+                    "method": "causal_zscore",
+                    "min_history": 20,
+                    "window": 120,
+                    "clip": 2.0,
+                },
+            },
+        },
+        "dimensions": {
+            "INFLATION": ["CN_CPI", "CN_PPI"],
+            "LIQUIDITY": ["CN_DR007", "CN_M1", "CN_M2"],
+        },
+    }
+
+
+def _asset_signal_map() -> dict[str, dict[str, str | None]]:
+    return {
+        "CN_EQ": {"macro": "INFLATION"},
+        "HK_EQ": {"macro": "INFLATION"},
+        "CN_BOND": {"macro": "LIQUIDITY"},
+        "CASH": {"macro": None},
+    }
+
+
+def _market_histories(
+    frame: pd.DataFrame,
+    assets: tuple[str, ...],
+    series_mapping: dict[str, str | None],
+    return_specs: dict[str, AssetReturnSpec],
+) -> dict[str, pd.Series]:
+    histories = {}
+    for asset in assets:
+        series_id = series_mapping.get(asset)
+        if series_id is None:
+            histories[asset] = pd.Series(dtype=float)
+            continue
+        rows = frame[frame.series_id == series_id].copy()
+        if rows.empty:
+            histories[asset] = pd.Series(dtype=float)
+            continue
+        rows["_date"] = pd.to_datetime(rows["observation_date"])
+        raw = (
+            rows.sort_values(["_date", "available_at"])
+            .drop_duplicates("_date", keep="last")
+            .set_index("_date")["value"]
+        )
+        histories[asset] = return_index_from_series(raw, return_specs[asset])
+    return histories
+
+
 
 def _weights(
     benchmark: str,
@@ -53,6 +129,7 @@ def _weights(
     *,
     decision,
     series_mapping: dict[str, str | None],
+    return_specs: dict[str, AssetReturnSpec],
     full_strategy: FullModelStrategy | None = None,
 ) -> tuple[dict[str, float], bool, str | None]:
     strategic = _strategic_weights()
@@ -69,24 +146,30 @@ def _weights(
         )
         return dict(weights), available, reason
 
-    trend = {asset: 0.0 for asset in assets}
-    for asset, series in series_mapping.items():
-        if series is None:
-            continue
-        rows = frame[frame.series_id == series].sort_values("observation_date")
-        if len(rows) >= 2:
-            direction = -1.0 if asset == "CN_BOND" else 1.0
-            trend[asset] = direction * float(
-                rows.iloc[-1].value / rows.iloc[-2].value - 1.0
-            )
+    histories = _market_histories(
+        frame,
+        assets,
+        series_mapping,
+        return_specs,
+    )
+    market = MarketEngine(min_history=21).build(histories, as_of=decision)
+    trend = {
+        asset: (
+            market.assets.get(asset, {})
+            .get("signals", {})
+            .get("trend", {})
+            .get("score")
+        )
+        for asset in assets
+    }
 
     if benchmark == "RISK_ONLY":
         volatility = {}
-        for asset, series in series_mapping.items():
-            if series is None:
+        for asset in assets:
+            if asset == "CASH":
                 continue
-            rows = frame[frame.series_id == series].sort_values("observation_date")
-            returns = rows.value.astype(float).pct_change().dropna().tail(60)
+            history = histories.get(asset, pd.Series(dtype=float))
+            returns = history.astype(float).pct_change(fill_method=None).dropna().tail(60)
             if len(returns) < 20 or not float(returns.std(ddof=1)):
                 return {}, False, "volatility_history_unavailable"
             volatility[asset] = float(returns.std(ddof=1))
@@ -99,23 +182,31 @@ def _weights(
 
     info = {"weights": strategic if benchmark == "STATIC" else {}}
     if benchmark == "TREND_ONLY":
-        positive = {a: max(trend[a], 0.0) for a in assets}
+        positive = {
+            asset: max(float(trend.get(asset) or 0.0), 0.0)
+            for asset in assets
+        }
         if sum(positive.values()) > 0:
             info["weights"] = {
-                a: positive[a] / sum(positive.values()) for a in assets
+                asset: positive[asset] / sum(positive.values())
+                for asset in assets
             }
         else:
             info["weights"] = {
-                a: 1.0 if a == "CASH" else 0.0 for a in assets
+                asset: 1.0 if asset == "CASH" else 0.0
+                for asset in assets
             }
-    series = make_benchmark(benchmark, assets, strategic_weights=strategic)(info, None)
+    series = make_benchmark(
+        benchmark,
+        assets,
+        strategic_weights=strategic,
+    )(info, None)
     unavailable = bool(series.attrs.get("unavailable", False))
     return (
-        {str(k): float(v) for k, v in series.items()},
+        {str(key): float(value) for key, value in series.items()},
         not unavailable,
         series.attrs.get("reason"),
     )
-
 
 def _realized_return(
     frame: pd.DataFrame,
@@ -135,25 +226,16 @@ def _realized_return(
 
 
 def _macro_only_weights(
-    frame: pd.DataFrame, decision
+    frame: pd.DataFrame,
+    decision,
 ) -> tuple[dict[str, float], bool, str | None]:
-    macro_series = ("CN_CPI", "CN_PPI", "CN_M1", "CN_M2", "CN_DR007")
-    macro_config = {
-        "series": {
-            "CN_CPI": {"transform": {"type": "yoy", "direction": "negative"}},
-            "CN_PPI": {"transform": {"type": "yoy", "direction": "negative"}},
-            "CN_M1": {"transform": {"type": "yoy", "direction": "positive"}},
-            "CN_M2": {"transform": {"type": "yoy", "direction": "positive"}},
-            "CN_DR007": {"transform": {"type": "level", "direction": "negative"}},
-        },
-        "dimensions": {
-            "INFLATION": ["CN_CPI", "CN_PPI"],
-            "LIQUIDITY": ["CN_DR007", "CN_M1", "CN_M2"],
-        },
-    }
+    macro_config = _macro_config()
+    macro_series = tuple(macro_config["series"])
     rows = frame[frame.series_id.isin(macro_series)].to_dict("records")
     state = build_macro_state(
-        rows, pd.Timestamp(decision).to_pydatetime(), macro_config
+        rows,
+        pd.Timestamp(decision).to_pydatetime(),
+        macro_config,
     )
     liquidity = state.dimensions.get("LIQUIDITY")
     liquidity_score = liquidity.score if liquidity is not None else None
@@ -167,7 +249,9 @@ def _macro_only_weights(
         for asset, value in components.items()
     }
     scores["CASH"] = score_asset(
-        "CASH", {"risk": 0.0}, data_cutoff=decision
+        "CASH",
+        {"risk": 0.0},
+        data_cutoff=decision,
     )
     result = allocate(
         scores,
@@ -178,7 +262,7 @@ def _macro_only_weights(
         health=all(score.score is not None for score in scores.values()),
         as_of=decision,
         data_cutoff=decision,
-        model_version="macro_only_allocation_v0.1",
+        model_version="macro_only_allocation_v0.2",
     )
     available = result.status == "ACTIVE"
     reason = (
@@ -187,7 +271,6 @@ def _macro_only_weights(
         else ";".join(result.warnings) or "macro_inputs_unavailable"
     )
     return dict(result.weights), available, reason
-
 
 def run_preliminary(
     connection: Any,
@@ -251,6 +334,8 @@ def run_preliminary(
             "transaction_costs_bps": [0, 5, 10, 20, 30],
             "turnover_convention": protocol_obj.turnover_convention,
             "return_model": protocol_obj.return_model,
+            "charge_initial_trade": protocol_obj.charge_initial_trade,
+            "signal_model_version": protocol_obj.signal_model_version,
             "mode": "expanding",
             "universe": protocol_obj.universe,
         }
@@ -272,18 +357,21 @@ def run_preliminary(
     unavailable = []
 
     for benchmark in protocol_obj.benchmarks:
-        previous = {}
+        previous = None
         full_strategy = (
             FullModelStrategy(
                 protocol_obj.universe,
                 strategic_weights=_strategic_weights(),
                 asset_series_map=series_mapping,
                 return_specs=return_specs,
-                signal_directions={
-                    asset: (
-                        -1.0 if spec.kind == "yield_duration_proxy" else 1.0
-                    )
-                    for asset, spec in return_specs.items()
+                macro_config=_macro_config(),
+                asset_signal_map=_asset_signal_map(),
+                allocation_config={
+                    "constraints": {
+                        "max_tactical_tilt": 0.10,
+                        "min_weight": 0.0,
+                        "max_weight": 0.5,
+                    }
                 },
             )
             if benchmark == "FULL_MODEL"
@@ -305,6 +393,7 @@ def run_preliminary(
                     protocol_obj.universe,
                     decision=decision,
                     series_mapping=series_mapping,
+                    return_specs=return_specs,
                     full_strategy=full_strategy,
                 )
             if not available:
@@ -312,15 +401,31 @@ def run_preliminary(
                     f"{benchmark}:{decision.isoformat()}:{reason}"
                 )
 
-            turnover = (
-                portfolio_turnover(
+            next_decision = (
+                dates[index + 1]
+                if index + 1 < len(dates)
+                else None
+            )
+            if not available:
+                turnover = None
+            elif next_decision is None:
+                turnover = 0.0
+            elif previous is None:
+                turnover = (
+                    portfolio_turnover(
+                        weights,
+                        {},
+                        convention=protocol_obj.turnover_convention,
+                    )
+                    if protocol_obj.charge_initial_trade
+                    else 0.0
+                )
+            else:
+                turnover = portfolio_turnover(
                     weights,
                     previous,
                     convention=protocol_obj.turnover_convention,
                 )
-                if available
-                else None
-            )
             cost = (
                 turnover * protocol_obj.base_cost_bps / 10000
                 if turnover is not None
@@ -385,11 +490,7 @@ def run_preliminary(
                     frame,
                     weights,
                     decision,
-                    (
-                        dates[index + 1]
-                        if index + 1 < len(dates)
-                        else None
-                    ),
+                    next_decision,
                     return_specs=return_specs,
                 )
                 if available
@@ -535,6 +636,8 @@ def run_preliminary(
         + f"calendar: {calendar.metadata.provider}\n"
         + f"benchmarks: {', '.join(protocol_obj.benchmarks)}\n"
         + "base_cost_bps: 10\n"
+        + f"charge_initial_trade: {str(protocol_obj.charge_initial_trade).lower()}\n"
+        + f"signal_model_version: {protocol_obj.signal_model_version}\n"
         + (
             "turnover_convention: "
             f"{protocol_obj.turnover_convention}\n"

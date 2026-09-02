@@ -89,6 +89,86 @@ generate_walk_forward_manifest = build_window_manifest
 make_walk_forward_manifest = build_window_manifest
 
 
+def build_calendar_window_manifest(
+    decision_dates: Iterable,
+    *,
+    train_min_years: int = 5,
+    test_window_months: int = 12,
+    step_months: int = 3,
+    window_type: str = "expanding",
+    rolling_years: int | None = None,
+) -> list[dict]:
+    """Build time-based walk-forward folds from explicit valid decision dates.
+
+    Calendar offsets define research horizons while the returned indices always
+    point to dates supplied by the caller; no synthetic trading dates are
+    created. Test windows may overlap when the step is shorter than the test
+    horizon.
+    """
+
+    dates = pd.DatetimeIndex(list(decision_dates))
+    if len(dates) == 0:
+        return []
+    if dates.isna().any():
+        raise ValueError("decision_dates cannot contain missing values")
+    if any(dates[index] >= dates[index + 1] for index in range(len(dates) - 1)):
+        raise ValueError("decision_dates must be strictly increasing")
+    if train_min_years < 1 or test_window_months < 1 or step_months < 1:
+        raise ValueError("calendar window lengths must be positive")
+
+    kind = str(window_type).lower()
+    if kind not in {"expanding", "rolling"}:
+        raise ValueError("window_type must be 'expanding' or 'rolling'")
+    if kind == "rolling" and (rolling_years is None or rolling_years < 1):
+        raise ValueError("rolling_years is required for rolling calendar windows")
+
+    first_test_target = dates[0] + pd.DateOffset(years=train_min_years)
+    test_start_index = int(dates.searchsorted(first_test_target, side="left"))
+    folds = []
+    fold = 0
+    while test_start_index < len(dates):
+        test_start = dates[test_start_index]
+        test_end_target = test_start + pd.DateOffset(months=test_window_months)
+        test_end_index = int(dates.searchsorted(test_end_target, side="left"))
+        test_end_index = min(max(test_end_index, test_start_index + 1), len(dates))
+
+        if kind == "expanding":
+            train_start_index = 0
+        else:
+            train_target = test_start - pd.DateOffset(years=int(rolling_years))
+            train_start_index = int(dates.searchsorted(train_target, side="left"))
+
+        train_indices = tuple(range(train_start_index, test_start_index))
+        test_indices = tuple(range(test_start_index, test_end_index))
+        if not train_indices:
+            raise ValueError("calendar fold has no training observations")
+        if not test_indices:
+            break
+
+        folds.append(
+            WalkForwardWindow(
+                fold=fold,
+                train_start=dates[train_indices[0]],
+                train_end=dates[train_indices[-1]],
+                test_start=dates[test_indices[0]],
+                test_end=dates[test_indices[-1]],
+                train_indices=train_indices,
+                test_indices=test_indices,
+                window_type=kind,
+            ).to_dict()
+        )
+        fold += 1
+
+        next_target = test_start + pd.DateOffset(months=step_months)
+        next_index = int(dates.searchsorted(next_target, side="left"))
+        test_start_index = max(test_start_index + 1, next_index)
+
+    return folds
+
+
+build_research_window_manifest = build_calendar_window_manifest
+
+
 def portfolio_turnover(current, previous, *, convention="two_sided_notional") -> float:
     """Compute turnover under an explicit and reproducible convention."""
 

@@ -22,6 +22,7 @@ REQUIRED_OUTPUTS = (
 )
 REQUIRED_UNIVERSE = ("CN_EQ", "HK_EQ", "CN_BOND", "CASH")
 REQUIRED_TURNOVER_CONVENTION = "two_sided_notional"
+REQUIRED_SIGNAL_MODEL_VERSION = "full_model_v0.2"
 REQUIRED_RETURN_MODEL = {
     "CN_EQ": {"series_id": "CN_EQ_LARGE", "kind": "price"},
     "HK_EQ": {"series_id": "HK_EQ", "kind": "price"},
@@ -48,6 +49,8 @@ class Sprint2Protocol:
     partial_universe: bool
     research_validated: bool
     turnover_convention: str
+    charge_initial_trade: bool
+    signal_model_version: str
     return_model: dict[str, dict[str, Any]]
 
     def validate(self) -> None:
@@ -73,13 +76,17 @@ class Sprint2Protocol:
             raise ProtocolValidationError("release_status_must_remain_preliminary_partial_false")
         if self.turnover_convention != REQUIRED_TURNOVER_CONVENTION:
             raise ProtocolValidationError("turnover_convention_is_frozen")
+        if self.charge_initial_trade is not False:
+            raise ProtocolValidationError("initial_trade_cost_policy_is_frozen")
+        if self.signal_model_version != REQUIRED_SIGNAL_MODEL_VERSION:
+            raise ProtocolValidationError("signal_model_version_is_frozen")
         if self.return_model != REQUIRED_RETURN_MODEL:
             raise ProtocolValidationError("return_model_is_frozen")
 
     @classmethod
     def from_mapping(cls, raw: dict[str, Any]) -> Sprint2Protocol:
         try:
-            p = cls(
+            protocol = cls(
                 tuple(raw["universe"]),
                 tuple(raw["modes"]),
                 raw["default_mode"],
@@ -91,9 +98,11 @@ class Sprint2Protocol:
                 bool(raw["partial_universe"]),
                 bool(raw["research_validated"]),
                 str(raw["turnover_convention"]),
-                {str(k): dict(v) for k, v in raw["return_model"].items()},
+                bool(raw["charge_initial_trade"]),
+                str(raw["signal_model_version"]),
+                {str(key): dict(value) for key, value in raw["return_model"].items()},
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise ProtocolValidationError("protocol_fields_invalid") from exc
-        p.validate()
-        return p
+        protocol.validate()
+        return protocol

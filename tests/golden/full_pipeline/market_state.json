@@ -15,7 +15,7 @@
   },
   "data_cutoff": "2025-12-31 00:00:00+00:00",
   "fixture": true,
-  "model_version": "market_v0.1",
+  "model_version": "market_v0.2",
   "status": "AVAILABLE",
   "unavailable": []
 }

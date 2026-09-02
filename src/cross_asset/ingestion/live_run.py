@@ -8,6 +8,7 @@ from uuid import uuid4
 import pandas as pd
 
 from ..backtest.replay import FullModelStrategy
+from ..backtest.returns import AssetReturnSpec
 from ..storage import ProvenanceStore
 from .normalization import normalize_observation
 from .raw_archive import ImmutableRawArchive
@@ -41,7 +42,7 @@ def _run_live_pipeline_unlocked(*, store, archive_root, output_root, fetcher, pr
         store.record_quality_event({'event_id':str(uuid4()),'detected_at':now,'series_id':sid,'severity':'INFO' if normalized else 'ERROR','event_type':'OK' if normalized else 'FETCH_ERROR','message':'simulated provider result' if normalized else (error or 'provider failed'),'provider':source_mode.lower(),'run_id':key})
     health = quality_checker(normalized) if quality_checker else not any(str(r.get('quality','')).lower() in ('stale','failed') for r in normalized)
     p=ProvenanceStore(store.conn); snap=p.create_snapshot(normalized,data_cutoff=now)
-    rid=p.start_model_run('live_daily',now,'live_v0.1','simulated_config_hash','simulated_code_version',snap,now,[status])
+    rid=p.start_model_run('live_daily',now,'live_v0.2','simulated_config_hash','simulated_code_version',snap,now,[status])
     p.finish_model_run(rid,'success' if normalized else 'partial',[status])
     modes={sid:(source_mode if any(r['series_id']==sid for r in normalized) else 'UNAVAILABLE') for sid in CANONICAL_LIVE_SERIES}
     frame=pd.DataFrame(normalized)
@@ -50,7 +51,9 @@ def _run_live_pipeline_unlocked(*, store, archive_root, output_root, fetcher, pr
         cutoff=pd.Timestamp(as_of or now); cutoff=cutoff.tz_localize('UTC') if cutoff.tzinfo is None else cutoff.tz_convert('UTC')
         frame=frame[frame['_available']<=cutoff]
     assets=['US_EQ','GOLD','COPPER','OIL','DXY','USDCNH','HK_EQ','US_GOV_10Y']; strategic={a:1/len(assets) for a in assets}
-    strategy=FullModelStrategy(assets,strategic_weights=strategic)
+    return_specs={a:AssetReturnSpec(a,kind='price') for a in assets}
+    return_specs['US_GOV_10Y']=AssetReturnSpec('US_GOV_10Y',kind='yield_duration_proxy',duration_years=8.0,yield_scale=100.0)
+    strategy=FullModelStrategy(assets,strategic_weights=strategic,return_specs=return_specs)
     decision_time=pd.Timestamp(as_of or now); decision_time=decision_time.tz_localize('UTC') if decision_time.tzinfo is None else decision_time.tz_convert('UTC')
     weights=strategy(frame, decision_time, health=health)
     decision=strategy.last_decision or {}; allocation=decision.get('allocation')
@@ -60,7 +63,7 @@ def _run_live_pipeline_unlocked(*, store, archive_root, output_root, fetcher, pr
         if isinstance(x,(list,tuple)): return [obj(v) for v in x]
         return x
     summaries={'market':obj(decision.get('market_state',{})),'macro':obj(decision.get('macro_state',{})),'style':obj(decision.get('style_state',{})),'asset_scores':obj(decision.get('asset_scores',{})),'confidence':{k:getattr(v,'confidence',None) for k,v in decision.get('asset_scores',{}).items()},'allocation':obj(allocation),'allocation_status':getattr(allocation,'status',None),'weights':weights,'attribution':obj(decision.get('attribution',{})),'model_versions':decision.get('model_versions',{})}
-    payload={'run_key':key,'run_id':rid,'as_of':today,'source_mode':modes,'origin_summary':{'origin':source_mode,'counts':{source_mode:len(normalized)}},'status':status,'series_count':len({r['series_id'] for r in normalized}),'rows_written':len(normalized),'reused':False,'data_snapshot_id':snap,'model_version':'live_v0.1','config_hash':'simulated_config_hash','data_cutoff':now.isoformat(),'quality_health':health,**summaries}
+    payload={'run_key':key,'run_id':rid,'as_of':today,'source_mode':modes,'origin_summary':{'origin':source_mode,'counts':{source_mode:len(normalized)}},'status':status,'series_count':len({r['series_id'] for r in normalized}),'rows_written':len(normalized),'reused':False,'data_snapshot_id':snap,'model_version':'live_v0.2','config_hash':'simulated_config_hash','data_cutoff':now.isoformat(),'quality_health':health,**summaries}
     common={'run_id':rid,'as_of':today,'origin':source_mode,'model_versions':summaries['model_versions'],'data_cutoff':now.isoformat()}
     artifact_payloads={'capability':{**common,'probe':obj(probe or {}),'status':status,'source':modes},'data_health':{**common,'health':health,'quality_events':[{'series_id':sid,'source_mode':modes[sid],'status':'OK' if health else 'FAILED'} for sid in CANONICAL_LIVE_SERIES],'source_modes':modes},'market_state':{**common,'state':summaries['market']},'macro_state':{**common,'state':summaries['macro']},'style_state':{**common,'state':summaries['style']},'asset_scores':{**common,'scores':summaries['asset_scores'],'confidence':summaries['confidence']},'allocation':{**common,'allocation':summaries['allocation'],'weights':weights,'attribution':summaries['attribution'],'status':summaries['allocation_status']}}
     for name,content in artifact_payloads.items():
