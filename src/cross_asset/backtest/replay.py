@@ -214,6 +214,7 @@ class FullModelStrategy:
         style_definitions=None,
         asset_series_map=None,
         return_specs=None,
+        signal_directions=None,
         asset_signal_map=None,
         component_weights=None,
         allocation_config=None,
@@ -238,6 +239,8 @@ class FullModelStrategy:
             for asset in self.assets
         }
         self.return_specs.update(return_specs or {})
+        self.signal_directions = {asset: 1.0 for asset in self.assets}
+        self.signal_directions.update(signal_directions or {})
         self.asset_signal_map = {
             asset: dict((asset_signal_map or {}).get(asset, {}))
             for asset in self.assets
@@ -292,6 +295,15 @@ class FullModelStrategy:
             market_asset = market.assets.get(asset, {})
             signals = market_asset.get("signals", {})
             trend = signals.get("trend")
+            if (
+                trend is not None
+                and self.return_specs[asset].kind == "price"
+                and float(self.signal_directions.get(asset, 1.0)) != 1.0
+            ):
+                trend = _scaled_signal(
+                    trend,
+                    float(self.signal_directions[asset]),
+                )
             risk = signals.get("risk")
             macro_dimension = self.asset_signal_map.get(asset, {}).get("macro")
             macro_signal = (
@@ -376,6 +388,20 @@ class FullModelStrategy:
             next_decision,
             specs=self.return_specs,
         )
+
+
+def _scaled_signal(value, scale):
+    if isinstance(value, dict):
+        out = dict(value)
+        if out.get("score") is not None:
+            out["score"] = float(out["score"]) * scale
+        if isinstance(out.get("components"), dict):
+            out["components"] = {
+                key: None if component is None else float(component) * scale
+                for key, component in out["components"].items()
+            }
+        return out
+    return value
 
 
 def _signal_score(value):
