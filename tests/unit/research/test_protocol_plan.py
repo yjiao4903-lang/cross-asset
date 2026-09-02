@@ -3,7 +3,11 @@ import json
 import pandas as pd
 import pytest
 
-from cross_asset.research import ResearchProtocol, build_research_plan, load_decision_dates
+from cross_asset.research import (
+    ResearchProtocol,
+    build_research_plan,
+    load_decision_dates,
+)
 
 
 RAW = {
