@@ -21,6 +21,7 @@ data/db/*
 data/manual_inbox/*
 data/manual_archive/*
 data/.run.lock
+OPENSOURCE_REUSE_EVALUATION_20260901.md
 artifacts/*
 !artifacts/.gitkeep
 
