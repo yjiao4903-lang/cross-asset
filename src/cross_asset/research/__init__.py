@@ -13,9 +13,9 @@ from .protocol import ResearchProtocol, load_research_protocol
 from .readiness import evaluate_research_readiness
 
 __all__ = [
+    "ResearchModelConfig",
     "ResearchPlan",
     "ResearchProtocol",
-    "ResearchModelConfig",
     "build_research_plan",
     "evaluate_research_readiness",
     "execute_walk_forward",
