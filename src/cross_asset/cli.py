@@ -188,6 +188,144 @@ def research_plan_command(
     if plan.status != "READY_FOR_OOS":
         raise typer.Exit(2)
 
+@app.command("research-run-oos")
+def research_run_oos_command(
+    decision_dates: str = typer.Argument(...),
+    database: str | None = typer.Option(None, "--database"),
+    config: str = typer.Option("config/research.yml", "--config"),
+    output: str = typer.Option("artifacts/research/oos", "--output"),
+) -> None:
+    """Run only the frozen development walk-forward sample; final holdout stays sealed."""
+    from pathlib import Path
+
+    import pandas as pd
+
+    from .research import (
+        build_research_plan,
+        evaluate_research_readiness,
+        execute_walk_forward,
+        load_decision_dates,
+        load_research_model_config,
+        load_research_protocol,
+        paired_oos_metrics,
+        stitch_oos_path,
+        verdict_from_thresholds,
+    )
+    from .research.storage import persist_fold_result, persist_research_plan
+    from .storage import code_version, config_hash, init_db
+
+    protocol = load_research_protocol(config)
+    dates = load_decision_dates(decision_dates)
+    plan = build_research_plan(dates, protocol)
+    store = init_db(database or get_settings().database_path)
+    config_paths = [
+        config,
+        "config/research_universe.yml",
+        "config/allocation.yml",
+        "config/macro.yml",
+    ]
+    try:
+        readiness = evaluate_research_readiness(store.conn, protocol)
+        if readiness["status"] != "READY_FOR_OOS" or plan.status != "READY_FOR_OOS":
+            result = {
+                "status": "BLOCKED",
+                "readiness": readiness,
+                "plan": plan.to_dict(),
+            }
+            typer.echo(json.dumps(result, ensure_ascii=False, default=str, sort_keys=True))
+            raise typer.Exit(2)
+
+        model_config = load_research_model_config()
+        fold_rows = execute_walk_forward(
+            store.conn,
+            decision_dates=dates,
+            plan=plan.to_dict(),
+            protocol=protocol,
+            model_config=model_config,
+        )
+        stitched = stitch_oos_path(
+            fold_rows,
+            plan.to_dict(),
+            cost_bps=protocol.base_cost_bps,
+            turnover_convention=protocol.turnover_convention,
+            charge_initial_trade=protocol.charge_initial_trade,
+        )
+        pivot = stitched.pivot(
+            index="decision_date",
+            columns="benchmark",
+            values="net_return",
+        )
+        if "FULL_MODEL" not in pivot or "STATIC" not in pivot:
+            raise ValueError("full_model_and_static_oos_returns_required")
+        metrics = paired_oos_metrics(pivot["FULL_MODEL"], pivot["STATIC"])
+        verdict = verdict_from_thresholds(metrics, protocol.evaluation_thresholds)
+        persisted = persist_research_plan(
+            store,
+            plan=plan.to_dict(),
+            config_hash=config_hash(config_paths),
+            code_version=code_version("."),
+        )
+        research_run_id = persisted["research_run_id"]
+        for (fold, benchmark), group in fold_rows.groupby(["fold", "benchmark"]):
+            valid = group["gross_return"].dropna().astype(float)
+            fold_metrics = {
+                "observations": int(len(valid)),
+                "mean_gross_return": float(valid.mean()) if len(valid) else None,
+            }
+            persist_fold_result(
+                store,
+                research_run_id=research_run_id,
+                fold=int(fold),
+                benchmark=str(benchmark),
+                metrics=fold_metrics,
+                data_snapshot_id=None,
+                status="COMPLETE",
+            )
+
+        root = Path(output)
+        root.mkdir(parents=True, exist_ok=True)
+
+        def serializable_records(frame):
+            clean = frame.astype(object).where(pd.notna(frame), None)
+            return clean.to_dict("records")
+
+        artifacts = {
+            "plan.json": plan.to_dict(),
+            "fold_rows.json": serializable_records(fold_rows),
+            "stitched_oos.json": serializable_records(stitched),
+            "summary.json": {
+                "status": "OOS_COMPLETE",
+                "holdout_sealed": True,
+                "protocol_hash": protocol.protocol_hash,
+                "research_run_id": research_run_id,
+                "metrics_vs_static": metrics,
+                **verdict,
+            },
+        }
+        for name, payload in artifacts.items():
+            (root / name).write_text(
+                json.dumps(
+                    payload,
+                    ensure_ascii=False,
+                    default=str,
+                    sort_keys=True,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+        typer.echo(
+            json.dumps(
+                artifacts["summary.json"],
+                ensure_ascii=False,
+                default=str,
+                sort_keys=True,
+            )
+        )
+    finally:
+        store.close()
+
+
 @app.command("data-readiness")
 def data_readiness() -> None:
     from .reports.readiness import generate_readiness
