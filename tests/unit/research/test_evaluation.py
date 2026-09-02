@@ -3,6 +3,7 @@ import pytest
 
 from cross_asset.research.evaluation import (
     paired_oos_metrics,
+    stitch_oos_path,
     stitch_oos_returns,
     verdict_from_thresholds,
 )
@@ -58,3 +59,59 @@ def test_paired_metrics_and_predeclared_verdict():
     assert metrics["observations"] == 60
     assert metrics["annualized_excess_return"] > 0
     assert result["verdict"] == "ACCEPT"
+
+
+
+def test_stitched_path_recomputes_turnover_after_fold_selection():
+    plan = {
+        "holdout_sealed": True,
+        "holdout_start": "2026-07-01T00:00:00+00:00",
+        "folds": [
+            {
+                "fold": 0,
+                "test_start": "2026-01-01T00:00:00+00:00",
+                "test_end": "2026-06-30T00:00:00+00:00",
+            },
+            {
+                "fold": 1,
+                "test_start": "2026-04-01T00:00:00+00:00",
+                "test_end": "2026-06-30T00:00:00+00:00",
+            },
+        ],
+    }
+    frame = pd.DataFrame(
+        [
+            {
+                "fold": 0,
+                "decision_date": "2026-04-03T00:00:00Z",
+                "benchmark": "FULL_MODEL",
+                "gross_return": 0.01,
+                "weights": {"A": 1.0},
+            },
+            {
+                "fold": 1,
+                "decision_date": "2026-04-03T00:00:00Z",
+                "benchmark": "FULL_MODEL",
+                "gross_return": 0.02,
+                "weights": {"A": 0.5, "B": 0.5},
+            },
+            {
+                "fold": 1,
+                "decision_date": "2026-04-10T00:00:00Z",
+                "benchmark": "FULL_MODEL",
+                "gross_return": 0.01,
+                "weights": {"A": 1.0, "B": 0.0},
+            },
+        ]
+    )
+    stitched = stitch_oos_path(
+        frame,
+        plan,
+        cost_bps=10,
+        turnover_convention="two_sided_notional",
+        charge_initial_trade=False,
+    )
+    assert len(stitched) == 2
+    assert stitched.iloc[0]["turnover"] == 0
+    assert stitched.iloc[1]["turnover"] == pytest.approx(1.0)
+    assert stitched.iloc[1]["net_return"] == pytest.approx(0.009)
