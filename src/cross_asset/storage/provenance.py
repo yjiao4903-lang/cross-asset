@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
+from ._time import utc_naive
+
 
 def _sha(data): return hashlib.sha256(data).hexdigest()
 
@@ -75,8 +77,9 @@ class ProvenanceStore:
         if config_hash_value is not None and (not isinstance(config_hash_value,str) or not config_hash_value.strip()):
             raise ValueError('config_hash must be a non-empty string')
         manifest=json.dumps(rows,default=_json_default,sort_keys=True,separators=(",", ":"))
-        available=[r.get("available_at", r.get("latest_available_at")) if isinstance(r,dict) else getattr(r,"available_at",None) for r in rows]
+        available=[utc_naive(r.get("available_at", r.get("latest_available_at")) if isinstance(r,dict) else getattr(r,"available_at",None)) for r in rows]
         max_available=max((x for x in available if x is not None), default=None)
+        data_cutoff = utc_naive(data_cutoff)
         self.connection.execute('''INSERT INTO data_snapshots
             (snapshot_id,created_at,series_count,observation_count,max_available_at,data_cutoff,manifest_hash,manifest_json,config_hash)
             VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING''',
@@ -84,6 +87,8 @@ class ProvenanceStore:
         return sid
     def start_model_run(self,run_type,decision_time,model_version,config_hash_value,code_version_value,data_snapshot_id_value,data_cutoff=None,warnings=None,run_id=None):
         if not isinstance(config_hash_value,str) or not config_hash_value.strip(): raise ValueError('config_hash must be a non-empty string')
+        decision_time = utc_naive(decision_time)
+        data_cutoff = utc_naive(data_cutoff)
         rid=str(run_id or uuid4()); now=datetime.now(UTC).replace(tzinfo=None)
         self.connection.execute('''INSERT INTO model_runs
             (run_id,run_type,decision_time,model_version,config_hash,code_version,data_snapshot_id,data_cutoff,status,warnings,started_at,finished_at)

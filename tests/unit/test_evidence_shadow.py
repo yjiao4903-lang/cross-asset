@@ -99,6 +99,11 @@ def test_local_experiment_persistence_is_idempotent_and_explainable(tmp_path):
         assert explained["allocation_results"]
         assert explained["factors"]
         assert explained["asset_scores"]
+        expected_time = datetime(2025, 12, 31, tzinfo=UTC).replace(tzinfo=None)
+        assert explained["factors"][0]["decision_time"] == expected_time
+        assert explained["factors"][0]["data_cutoff"] == expected_time
+        assert explained["asset_scores"][0]["decision_time"] == expected_time
+        assert explained["asset_scores"][0]["data_cutoff"] == expected_time
         assert store.conn.execute("select count(*) from model_runs").fetchone()[0] == 1
         assert store.conn.execute("select count(*) from observations").fetchone()[0] == 0
     finally:

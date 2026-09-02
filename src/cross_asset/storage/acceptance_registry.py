@@ -8,6 +8,8 @@ from typing import Any
 from cross_asset.domain.usage import validate_usage_status
 from cross_asset.pit import validate_pit_grade
 
+from ._time import utc_naive
+
 
 def candidate_registry_record(result: dict[str, Any]) -> dict[str, Any]:
     """Build a candidate only; this function never writes to DuckDB."""
@@ -41,7 +43,7 @@ def upsert_data_acceptance(store, record: dict[str, Any]) -> dict[str, Any]:
     if errors:
         raise ValueError(";".join(sorted(set(errors))))
     fields = ["series_id", "provider", "source_series_id", "status", "tech_gate", "legal_gate", "pit_gate", "stability_gate", "pit_grade", "origin", "permission_scope", "semantic_equivalence", "manifest_hash", "reviewer", "approved_at", "evidence_json", "updated_at", "usage_status"]
-    values = [record.get(field) for field in fields]
+    values = [utc_naive(record.get(field)) if field in {"approved_at", "updated_at"} else record.get(field) for field in fields]
     store.conn.execute(f"INSERT INTO data_acceptance_registry ({','.join(fields)}) VALUES ({','.join('?' for _ in fields)}) ON CONFLICT(series_id,provider,source_series_id) DO UPDATE SET {','.join(f'{field}=excluded.{field}' for field in fields[3:])}", values)
     return query_data_acceptance(store, record["series_id"], record["provider"], record["source_series_id"])[0]
 
