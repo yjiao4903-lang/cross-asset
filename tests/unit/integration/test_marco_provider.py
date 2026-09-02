@@ -1,6 +1,7 @@
+import hashlib
 import json
 import shutil
-from datetime import UTC, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -11,7 +12,10 @@ from cross_asset.backtest.replay import FullModelStrategy
 from cross_asset.cli import app
 from cross_asset.integration.contracts import (
     ALLOCATABLE_ASSETS,
+    BUNDLE_FILES,
     VIEWABLE_ASSETS,
+    SnapshotStatus,
+    marco_to_cross_asset_id,
     normalize_asset_id,
 )
 from cross_asset.integration.marco_provider import (
@@ -19,13 +23,10 @@ from cross_asset.integration.marco_provider import (
     MarcoProvider,
     resolve_macro_source,
 )
+from cross_asset.storage import DuckDBStore
 
-FIXTURE = (
-    Path(__file__).resolve().parents[2]
-    / "fixtures"
-    / "marco_integration_v1"
-)
-AT = datetime(2026, 9, 2, 12, tzinfo=UTC)
+FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "marco_integration_v1"
+AS_OF = date(2026, 9, 2)
 
 
 def _copy_fixture(tmp_path):
@@ -34,71 +35,129 @@ def _copy_fixture(tmp_path):
     return target
 
 
-def _rewrite(path, mutate):
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    mutate(payload)
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+def _seed_market_db(path, *, rows_per_series=80):
+    series = {
+        "CN_EQ_LARGE": (100.0, 0.60),
+        "HK_EQ": (100.0, 0.45),
+        "US_EQ": (100.0, 0.50),
+        "CN_BOND_10Y": (2.5, -0.002),
+        "GOLD": (1800.0, 1.20),
+        "COPPER": (4.0, 0.006),
+    }
+    start = datetime(2026, 6, 1, 16, 0, 0)
+    rows = []
+    for index in range(rows_per_series):
+        stamp = start + timedelta(days=index)
+        for series_id, (base, slope) in series.items():
+            rows.append(
+                {
+                    "series_id": series_id,
+                    "observation_date": stamp.date(),
+                    "available_at": stamp,
+                    "value": base + slope * index,
+                    "source": "fixture",
+                    "source_series_id": series_id,
+                    "vintage_date": None,
+                    "ingested_at": stamp,
+                    "quality": "ok",
+                    "raw_file": None,
+                }
+            )
+    store = DuckDBStore(path)
+    try:
+        store.insert_observations(rows, run_id="marco-run-daily-fixture")
+    finally:
+        store.close()
 
 
-def test_contract_assets_and_aliases_are_explicit():
-    assert set(ALLOCATABLE_ASSETS) < set(VIEWABLE_ASSETS)
-    assert normalize_asset_id("SPX") == "US_EQ"
-    assert normalize_asset_id("xau") == "GOLD"
-    assert normalize_asset_id("usd-cnh") == "USDCNH"
-    with pytest.raises(ValueError):
-        normalize_asset_id("UNKNOWN_ASSET")
+def _single_asset_observations():
+    rows = []
+    start = pd.Timestamp("2026-07-01")
+    for index in range(40):
+        day = start + pd.Timedelta(days=index)
+        rows.append(
+            {
+                "series_id": "CN_EQ_LARGE",
+                "observation_date": day.date(),
+                "available_at": day.to_pydatetime(),
+                "value": 100.0 + index,
+            }
+        )
+    return pd.DataFrame(rows)
 
 
-def test_marco_fixture_validates_and_normalizes_aliases():
-    bundle = MarcoProvider(FIXTURE).load_bundle(at=AT)
+def test_fixture_matches_authoritative_four_file_contract_and_hashes():
+    assert {path.name for path in FIXTURE.iterdir()} == set(BUNDLE_FILES)
+    bundle = MarcoProvider(FIXTURE).load_bundle(at=AS_OF)
     assert bundle.report.status == "PASS"
-    assert bundle.report.legacy_fallback_used is False
-    assert bundle.report.normalized_asset_ids == ["US_EQ", "GOLD", "CN_EQ"]
-    assert [view.asset_id for view in bundle.allocatable_views] == [
-        "US_EQ",
-        "GOLD",
-        "CN_EQ",
-    ]
+    assert bundle.report.signal_status == "PARTIAL"
+    assert bundle.manifest.schema_version == "1.0"
+    assert bundle.macro_snapshot.factors.fiscal.status == SnapshotStatus.UNAVAILABLE
+    assert bundle.macro_snapshot.factors.fiscal.score is None
+
+    for name, manifest_file in bundle.manifest.files.items():
+        digest = hashlib.sha256((FIXTURE / name).read_bytes()).hexdigest()
+        assert digest == manifest_file.sha256
 
 
-def test_missing_score_is_degraded_and_never_zero_filled(tmp_path):
+def test_contract_pass_is_separate_from_signal_completeness():
+    bundle = MarcoProvider(FIXTURE).load_bundle(at=AS_OF)
+    fundamentals = {
+        row.asset_id: row for row in bundle.fundamental_asset_view.assets
+    }
+    assert bundle.report.status == "PASS"
+    assert bundle.report.signal_status == "PARTIAL"
+    assert bundle.report.unavailable_factors == ["fiscal"]
+    assert bundle.report.unavailable_assets == ["US_EQ", "CASH"]
+    for asset_id in ("US_EQ", "CASH"):
+        row = fundamentals[asset_id]
+        assert row.status == SnapshotStatus.UNAVAILABLE
+        assert row.fundamental_score is None
+        assert row.confidence is None
+        assert row.coverage is None
+
+
+def test_manifest_hash_mismatch_fails_contract(tmp_path):
     target = _copy_fixture(tmp_path)
-
-    def mutate(payload):
-        payload["dimensions"]["GROWTH"]["score"] = None
-
-    _rewrite(target / "macro_state.json", mutate)
-    bundle = MarcoProvider(target).load_bundle(at=AT)
-    assert bundle.report.status == "DEGRADED"
-    assert bundle.macro_state.dimensions["GROWTH"].score is None
+    path = target / "macro_snapshot.json"
+    path.write_bytes(path.read_bytes() + b" ")
+    report = MarcoProvider(target).validate(at=AS_OF)
+    assert report.status == "FAIL"
     assert any(
-        "no zero imputation" in item for item in bundle.report.warnings
+        "SHA-256 mismatch for macro_snapshot.json" in error
+        for error in report.errors
     )
 
 
-def test_stale_bundle_is_explicitly_degraded(tmp_path):
+def test_schema_mismatch_fails_contract(tmp_path):
     target = _copy_fixture(tmp_path)
-
-    def mutate(payload):
-        payload["status"] = "STALE"
-
-    _rewrite(target / "manifest.json", mutate)
-    report = MarcoProvider(target).validate(at=AT)
-    assert report.status == "DEGRADED"
-    assert report.exit_code == 2
-
-
-def test_schema_mismatch_fails(tmp_path):
-    target = _copy_fixture(tmp_path)
-
-    def mutate(payload):
-        payload["contract_version"] = "2.0"
-
-    _rewrite(target / "macro_state.json", mutate)
-    report = MarcoProvider(target).validate(at=AT)
+    path = target / "integration_manifest.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["schema_version"] = "2.0"
+    path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    report = MarcoProvider(target).validate(at=AS_OF)
     assert report.status == "FAIL"
-    assert report.exit_code == 1
     assert "schema mismatch" in report.errors[0]
+
+
+def test_asset_boundary_keeps_marco_canonical_ids_at_boundary():
+    bundle = MarcoProvider(FIXTURE).load_bundle(at=AS_OF)
+    assert marco_to_cross_asset_id("CN_GOV_BOND") == "CN_BOND"
+    assert marco_to_cross_asset_id("CN_CREDIT") is None
+    assert normalize_asset_id("CN_GOV_BOND") == "CN_BOND"
+    assert (
+        bundle.cross_asset_fundamentals["CN_BOND"].asset_id
+        == "CN_GOV_BOND"
+    )
+    assert (
+        bundle.cross_asset_fundamentals["CN_BOND"].fundamental_score
+        == 0.10
+    )
+    assert "CNY" not in ALLOCATABLE_ASSETS
+    assert "CNY" in VIEWABLE_ASSETS
+    assert [
+        row.asset_id for row in bundle.fundamental_asset_view.fx_views
+    ] == ["CNY"]
 
 
 def test_marco_never_calls_legacy_factory_on_success_or_failure(tmp_path):
@@ -108,87 +167,130 @@ def test_marco_never_calls_legacy_factory_on_success_or_failure(tmp_path):
         calls.append("called")
         return object()
 
-    state = resolve_macro_source(
+    bundle = resolve_macro_source(
         "marco",
         integration_dir=FIXTURE,
         legacy_factory=legacy,
-        at=AT,
+        at=AS_OF,
     )
-    assert state.model_version == "marco_macro_v1"
+    assert bundle.manifest.schema_version == "1.0"
     assert calls == []
 
     broken = _copy_fixture(tmp_path)
-    (broken / "macro_state.json").unlink()
+    (broken / "macro_snapshot.json").unlink()
     with pytest.raises(MarcoIntegrationError):
         resolve_macro_source(
             "marco",
             integration_dir=broken,
             legacy_factory=legacy,
-            at=AT,
+            at=AS_OF,
         )
     assert calls == []
 
 
-def test_full_model_accepts_external_marco_macro_without_legacy_call(
+def test_fundamental_score_enters_asset_macro_directly_and_structure_stays_missing(
     monkeypatch,
 ):
-    macro = MarcoProvider(FIXTURE).load_macro_state(at=AT)
+    bundle = MarcoProvider(FIXTURE).load_bundle(at=AS_OF)
 
     def forbidden(*_args, **_kwargs):
         raise AssertionError(
-            "legacy macro engine must not be called in Marco mode"
+            "legacy build_macro_state must not run in Marco mode"
         )
 
     monkeypatch.setattr(
         "cross_asset.backtest.replay.build_macro_state",
         forbidden,
     )
-    rows = []
-    start = pd.Timestamp("2020-01-01", tz="UTC")
-    for i in range(30):
-        day = start + pd.Timedelta(days=i)
-        for asset, slope in (("A", 1.0), ("B", 0.4)):
-            rows.append(
-                {
-                    "series_id": asset,
-                    "observation_date": day.date(),
-                    "available_at": day,
-                    "value": 100.0 + slope * i,
-                }
-            )
-    info = pd.DataFrame(rows)
     strategy = FullModelStrategy(
-        ["A", "B"],
+        ["CN_EQ"],
+        asset_series_map={"CN_EQ": "CN_EQ_LARGE"},
         asset_signal_map={
-            "A": {"macro": "GROWTH"},
-            "B": {"macro": "GROWTH"},
+            "CN_EQ": {"macro": "SHOULD_NOT_BE_USED"}
         },
     )
-    decision = datetime(2020, 2, 1, tzinfo=UTC)
-    strategy(info, decision, macro_state=macro)
-    assert strategy.last_decision["macro_state"] is macro
+    strategy(
+        _single_asset_observations(),
+        datetime(2026, 9, 2, 23, 59, 59),
+        macro_snapshot=bundle.macro_snapshot,
+        fundamental_asset_view=bundle.fundamental_asset_view,
+        structural_snapshot=bundle.structural_snapshot,
+    )
+    state = strategy.last_decision
+    components = state["signal_components"]["CN_EQ"]
+    assert state["macro_source"] == "marco"
+    assert components["macro"]["score"] == 0.25
+    assert components["macro"]["confidence"] == 0.8
+    assert components["macro"]["coverage"] == 0.75
+    assert components["structure"] is None
     assert (
-        strategy.last_decision["model_versions"]["macro"]
-        == "marco_macro_v1"
+        state["asset_scores"]["CN_EQ"].contributions["macro"]
+        is not None
+    )
+    assert (
+        state["integration_diagnostics"]["structural_snapshot"]
+        is not None
     )
 
 
-def test_cli_validate_and_run_daily_marco():
-    runner = CliRunner()
-    validate = runner.invoke(
+def test_unavailable_marco_fundamental_is_missing_not_zero(monkeypatch):
+    bundle = MarcoProvider(FIXTURE).load_bundle(at=AS_OF)
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError(
+            "legacy build_macro_state must not run in Marco mode"
+        )
+
+    monkeypatch.setattr(
+        "cross_asset.backtest.replay.build_macro_state",
+        forbidden,
+    )
+    rows = _single_asset_observations().copy()
+    rows["series_id"] = "US_EQ"
+    strategy = FullModelStrategy(
+        ["US_EQ"],
+        asset_series_map={"US_EQ": "US_EQ"},
+    )
+    strategy(
+        rows,
+        datetime(2026, 9, 2, 23, 59, 59),
+        macro_snapshot=bundle.macro_snapshot,
+        fundamental_asset_view=bundle.fundamental_asset_view,
+        structural_snapshot=bundle.structural_snapshot,
+    )
+    assert (
+        strategy.last_decision["signal_components"]["US_EQ"]["macro"]
+        is None
+    )
+    assert (
+        strategy.last_decision["asset_scores"]["US_EQ"]
+        .contributions["macro"]
+        is None
+    )
+
+
+def test_cli_validate_reports_contract_pass_with_partial_signals():
+    result = CliRunner().invoke(
         app,
         [
             "validate-integration",
             "--integration-dir",
             str(FIXTURE),
             "--as-of",
-            AT.isoformat(),
+            AS_OF.isoformat(),
         ],
     )
-    assert validate.exit_code == 0, validate.output
-    assert json.loads(validate.output)["status"] == "PASS"
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["status"] == "PASS"
+    assert payload["signal_status"] == "PARTIAL"
+    assert payload["legacy_fallback_used"] is False
 
-    daily = runner.invoke(
+
+def test_run_daily_marco_reaches_asset_score_and_allocation(tmp_path):
+    database = tmp_path / "cross_asset.duckdb"
+    _seed_market_db(database)
+    result = CliRunner().invoke(
         app,
         [
             "run-daily",
@@ -196,18 +298,57 @@ def test_cli_validate_and_run_daily_marco():
             "marco",
             "--integration-dir",
             str(FIXTURE),
+            "--database",
+            str(database),
             "--as-of",
-            AT.isoformat(),
+            AS_OF.isoformat(),
         ],
     )
-    assert daily.exit_code == 0, daily.output
-    payload = json.loads(daily.output)
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["status"] == "SUCCESS"
     assert payload["macro_source"] == "marco"
-    assert payload["legacy_fallback_used"] is False
+    assert payload["contract_status"] == "PASS"
+    assert payload["signal_status"] == "PARTIAL"
+    assert payload["allocation_status"] == "ACTIVE"
+    assert set(payload["asset_scores"]) == set(ALLOCATABLE_ASSETS)
+    assert set(payload["allocation"]) == set(ALLOCATABLE_ASSETS)
     assert (
-        payload["macro_state"]["dimensions"]["GROWTH"]["score"]
-        == 0.6
+        payload["asset_scores"]["US_EQ"]["contributions"]["macro"]
+        is None
     )
+    assert (
+        payload["asset_scores"]["CASH"]["contributions"]["macro"]
+        is None
+    )
+    assert payload["legacy_fallback_used"] is False
+
+
+def test_run_daily_marco_is_explicitly_data_blocked_without_market_history(
+    tmp_path,
+):
+    database = tmp_path / "empty.duckdb"
+    result = CliRunner().invoke(
+        app,
+        [
+            "run-daily",
+            "--macro-source",
+            "marco",
+            "--integration-dir",
+            str(FIXTURE),
+            "--database",
+            str(database),
+            "--as-of",
+            AS_OF.isoformat(),
+        ],
+    )
+    assert result.exit_code == 1, result.output
+    payload = json.loads(result.output)
+    assert payload["status"] == "DATA_BLOCKED"
+    assert payload["allocation_status"] == "DATA_BLOCKED"
+    assert payload["allocation"] is None
+    assert payload["asset_scores"] == {}
+    assert payload["legacy_fallback_used"] is False
 
 
 def test_cli_legacy_behavior_remains_reserved():
