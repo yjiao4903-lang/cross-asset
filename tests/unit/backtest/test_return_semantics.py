@@ -1,0 +1,105 @@
+import copy
+
+import pandas as pd
+import pytest
+
+from cross_asset.backtest.returns import (
+    AssetReturnSpec,
+    period_asset_return,
+    portfolio_period_return,
+)
+from cross_asset.backtest.walk_forward import portfolio_turnover
+from cross_asset.sprint2.config import load_sprint2_config, validate_sprint2_config
+
+
+def test_price_return_uses_full_holding_period_not_first_future_observation():
+    frame = pd.DataFrame(
+        [
+            {"series_id": "A", "observation_date": "2026-01-02", "value": 100.0},
+            {"series_id": "A", "observation_date": "2026-01-05", "value": 101.0},
+            {"series_id": "A", "observation_date": "2026-01-09", "value": 110.0},
+        ]
+    )
+    result = period_asset_return(
+        frame,
+        decision="2026-01-02",
+        next_decision="2026-01-09",
+        spec=AssetReturnSpec("A", "price"),
+    )
+    assert result == pytest.approx(0.10)
+
+
+def test_yield_duration_proxy_does_not_treat_yield_as_price():
+    frame = pd.DataFrame(
+        [
+            {"series_id": "CN10Y", "observation_date": "2026-01-02", "value": 3.0},
+            {"series_id": "CN10Y", "observation_date": "2026-01-09", "value": 2.9},
+        ]
+    )
+    result = period_asset_return(
+        frame,
+        decision="2026-01-02",
+        next_decision="2026-01-09",
+        spec=AssetReturnSpec(
+            "CN10Y",
+            "yield_duration_proxy",
+            duration_years=8.0,
+            yield_scale=100.0,
+        ),
+    )
+    expected = -8.0 * (0.029 - 0.03) + 0.03 * 7 / 365.25
+    assert result == pytest.approx(expected)
+    assert result > 0
+
+
+def test_missing_nonzero_asset_makes_portfolio_period_unavailable():
+    frame = pd.DataFrame(
+        [{"series_id": "A", "observation_date": "2026-01-02", "value": 100.0}]
+    )
+    result = portfolio_period_return(
+        frame,
+        {"A": 0.5, "B": 0.5},
+        "2026-01-02",
+        "2026-01-09",
+        specs={"A": AssetReturnSpec("A"), "B": AssetReturnSpec("B")},
+    )
+    assert result is None
+
+
+def test_cash_return_is_explicit_and_date_based():
+    result = period_asset_return(
+        pd.DataFrame(),
+        decision="2026-01-02",
+        next_decision="2026-01-09",
+        spec=AssetReturnSpec(None, "cash", annual_rate=0.0365),
+    )
+    assert result == pytest.approx(0.0365 * 7 / 365.25)
+
+
+def test_turnover_convention_is_explicit():
+    current = {"A": 0.5, "B": 0.5}
+    previous = {"A": 1.0, "B": 0.0}
+    assert portfolio_turnover(current, previous) == pytest.approx(1.0)
+    assert portfolio_turnover(
+        current, previous, convention="one_way"
+    ) == pytest.approx(0.5)
+    with pytest.raises(ValueError, match="unsupported turnover convention"):
+        portfolio_turnover(current, previous, convention="unknown")
+
+
+def test_sprint2_return_model_and_turnover_are_frozen():
+    raw = load_sprint2_config()
+    protocol, _ = validate_sprint2_config(raw)
+    assert protocol.turnover_convention == "two_sided_notional"
+    assert protocol.return_model["CN_EQ"]["series_id"] == "CN_EQ_LARGE"
+    assert protocol.return_model["CN_BOND"]["kind"] == "yield_duration_proxy"
+
+    changed = copy.deepcopy(raw)
+    changed["protocol"]["return_model"]["CN_BOND"]["duration_years"] = 7.5
+    with pytest.raises(ValueError, match="return_model_is_frozen"):
+        validate_sprint2_config(changed)
+
+    changed = copy.deepcopy(raw)
+    changed["protocol"]["turnover_convention"] = "one_way"
+    with pytest.raises(ValueError, match="turnover_convention_is_frozen"):
+        validate_sprint2_config(changed)

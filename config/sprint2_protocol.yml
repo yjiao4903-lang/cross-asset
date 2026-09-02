@@ -4,6 +4,12 @@ protocol:
   default_mode: expanding
   transaction_cost_bps: [0, 5, 10, 20, 30]
   base_cost_bps: 10
+  turnover_convention: two_sided_notional
+  return_model:
+    CN_EQ: {series_id: CN_EQ_LARGE, kind: price}
+    HK_EQ: {series_id: HK_EQ, kind: price}
+    CN_BOND: {series_id: CN_BOND_10Y, kind: yield_duration_proxy, duration_years: 8.0, yield_scale: 100.0}
+    CASH: {series_id: null, kind: cash, annual_rate: 0.0}
   benchmarks: [STATIC, TREND_ONLY, MACRO_ONLY, RISK_ONLY, FULL_MODEL]
   outputs: [decisions.parquet, returns.parquet, scores.parquet, allocations.parquet, turnover.parquet, costs.parquet, summary.md]
   preliminary: true

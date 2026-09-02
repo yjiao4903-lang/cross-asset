@@ -11,6 +11,8 @@ import pandas as pd
 from cross_asset.backtest.benchmarks import make_benchmark
 from cross_asset.backtest.metrics import performance_metrics
 from cross_asset.backtest.replay import FullModelStrategy
+from cross_asset.backtest.returns import AssetReturnSpec, portfolio_period_return
+from cross_asset.backtest.walk_forward import portfolio_turnover
 from cross_asset.engines.allocation import allocate
 from cross_asset.engines.asset_score import score_asset
 from cross_asset.engines.macro import build_macro_state
@@ -30,12 +32,27 @@ def _strategic_weights() -> dict[str, float]:
     return {asset: weight / total for asset, weight in frozen.items()}
 
 
+def _return_specs(protocol_obj) -> dict[str, AssetReturnSpec]:
+    return {
+        asset: AssetReturnSpec(**definition)
+        for asset, definition in protocol_obj.return_model.items()
+    }
+
+
+def _series_mapping(protocol_obj) -> dict[str, str | None]:
+    return {
+        asset: definition.get("series_id")
+        for asset, definition in protocol_obj.return_model.items()
+    }
+
+
 def _weights(
     benchmark: str,
     frame: pd.DataFrame,
     assets: tuple[str, ...],
     *,
     decision,
+    series_mapping: dict[str, str | None],
     full_strategy: FullModelStrategy | None = None,
 ) -> tuple[dict[str, float], bool, str | None]:
     strategic = _strategic_weights()
@@ -45,17 +62,29 @@ def _weights(
         weights = full_strategy(frame, pd.Timestamp(decision))
         allocation = full_strategy.last_decision["allocation"]
         available = allocation.status == "ACTIVE"
-        reason = None if available else ";".join(allocation.warnings) or "full_model_inputs_unavailable"
+        reason = (
+            None
+            if available
+            else ";".join(allocation.warnings) or "full_model_inputs_unavailable"
+        )
         return dict(weights), available, reason
+
     trend = {asset: 0.0 for asset in assets}
-    mapping = {"CN_EQ": "CN_EQ_LARGE", "HK_EQ": "HK_EQ", "CN_BOND": "CN_BOND_10Y"}
-    for asset, series in mapping.items():
+    for asset, series in series_mapping.items():
+        if series is None:
+            continue
         rows = frame[frame.series_id == series].sort_values("observation_date")
         if len(rows) >= 2:
-            trend[asset] = float(rows.iloc[-1].value / rows.iloc[-2].value - 1.0)
+            direction = -1.0 if asset == "CN_BOND" else 1.0
+            trend[asset] = direction * float(
+                rows.iloc[-1].value / rows.iloc[-2].value - 1.0
+            )
+
     if benchmark == "RISK_ONLY":
         volatility = {}
-        for asset, series in mapping.items():
+        for asset, series in series_mapping.items():
+            if series is None:
+                continue
             rows = frame[frame.series_id == series].sort_values("observation_date")
             returns = rows.value.astype(float).pct_change().dropna().tail(60)
             if len(returns) < 20 or not float(returns.std(ddof=1)):
@@ -67,13 +96,18 @@ def _weights(
         weights = {asset: value * scale for asset, value in inverse.items()}
         weights["CASH"] = cash_weight
         return weights, True, None
+
     info = {"weights": strategic if benchmark == "STATIC" else {}}
     if benchmark == "TREND_ONLY":
         positive = {a: max(trend[a], 0.0) for a in assets}
         if sum(positive.values()) > 0:
-            info["weights"] = {a: positive[a] / sum(positive.values()) for a in assets}
+            info["weights"] = {
+                a: positive[a] / sum(positive.values()) for a in assets
+            }
         else:
-            info["weights"] = {a: 1.0 if a == "CASH" else 0.0 for a in assets}
+            info["weights"] = {
+                a: 1.0 if a == "CASH" else 0.0 for a in assets
+            }
     series = make_benchmark(benchmark, assets, strategic_weights=strategic)(info, None)
     unavailable = bool(series.attrs.get("unavailable", False))
     return (
@@ -84,31 +118,25 @@ def _weights(
 
 
 def _realized_return(
-    frame: pd.DataFrame, weights: dict[str, float], decision, next_decision
+    frame: pd.DataFrame,
+    weights: dict[str, float],
+    decision,
+    next_decision,
+    *,
+    return_specs: dict[str, AssetReturnSpec],
 ) -> float | None:
-    if next_decision is None:
-        return None
-    mapping = {"CN_EQ": "CN_EQ_LARGE", "HK_EQ": "HK_EQ", "CN_BOND": "CN_BOND_10Y"}
-    total = 0.0
-    for asset, weight in weights.items():
-        if asset == "CASH":
-            continue
-        series_id = mapping.get(asset)
-        rows = frame[frame.series_id == series_id].copy()
-        dates = pd.to_datetime(rows.observation_date).dt.date
-        before = rows[dates <= decision].sort_values("observation_date")
-        after = rows[(dates > decision) & (dates <= next_decision)].sort_values("observation_date")
-        if before.empty or after.empty:
-            return None
-        old = float(before.iloc[-1].value)
-        new = float(after.iloc[0].value)
-        if old == 0:
-            return None
-        total += float(weight) * (new / old - 1.0)
-    return total
+    return portfolio_period_return(
+        frame,
+        weights,
+        decision,
+        next_decision,
+        specs=return_specs,
+    )
 
 
-def _macro_only_weights(frame: pd.DataFrame, decision) -> tuple[dict[str, float], bool, str | None]:
+def _macro_only_weights(
+    frame: pd.DataFrame, decision
+) -> tuple[dict[str, float], bool, str | None]:
     macro_series = ("CN_CPI", "CN_PPI", "CN_M1", "CN_M2", "CN_DR007")
     macro_config = {
         "series": {
@@ -124,7 +152,9 @@ def _macro_only_weights(frame: pd.DataFrame, decision) -> tuple[dict[str, float]
         },
     }
     rows = frame[frame.series_id.isin(macro_series)].to_dict("records")
-    state = build_macro_state(rows, pd.Timestamp(decision).to_pydatetime(), macro_config)
+    state = build_macro_state(
+        rows, pd.Timestamp(decision).to_pydatetime(), macro_config
+    )
     liquidity = state.dimensions.get("LIQUIDITY")
     liquidity_score = liquidity.score if liquidity is not None else None
     components = {
@@ -136,7 +166,9 @@ def _macro_only_weights(frame: pd.DataFrame, decision) -> tuple[dict[str, float]
         asset: score_asset(asset, {"macro": value}, data_cutoff=decision)
         for asset, value in components.items()
     }
-    scores["CASH"] = score_asset("CASH", {"risk": 0.0}, data_cutoff=decision)
+    scores["CASH"] = score_asset(
+        "CASH", {"risk": 0.0}, data_cutoff=decision
+    )
     result = allocate(
         scores,
         _strategic_weights(),
@@ -149,7 +181,11 @@ def _macro_only_weights(frame: pd.DataFrame, decision) -> tuple[dict[str, float]
         model_version="macro_only_allocation_v0.1",
     )
     available = result.status == "ACTIVE"
-    reason = None if available else ";".join(result.warnings) or "macro_inputs_unavailable"
+    reason = (
+        None
+        if available
+        else ";".join(result.warnings) or "macro_inputs_unavailable"
+    )
     return dict(result.weights), available, reason
 
 
@@ -164,22 +200,39 @@ def run_preliminary(
 ) -> dict[str, Any]:
     raw = protocol or load_sprint2_config()
     protocol_obj, _ = validate_sprint2_config(raw)
+    return_specs = _return_specs(protocol_obj)
+    series_mapping = _series_mapping(protocol_obj)
     frame = load_wind_engineering_frame(
         connection, decision_time=pd.Timestamp("2100-01-01", tz="UTC")
     )
-    formal_observations = int(connection.execute("SELECT count(*) FROM observations").fetchone()[0])
+    formal_observations = int(
+        connection.execute("SELECT count(*) FROM observations").fetchone()[0]
+    )
     if formal_observations != 0:
         raise Sprint2BlockedError(
             "BLOCKED: preliminary runner requires formal observations to remain empty"
         )
     if frame.empty:
-        raise Sprint2BlockedError("BLOCKED: wind_evidence_staging produced no engineering rows")
-    price_mapping = {"CN_EQ_LARGE", "HK_EQ", "CN_BOND_10Y"}
-    price_starts = frame[frame.series_id.isin(price_mapping)].groupby("series_id").observation_date.min()
+        raise Sprint2BlockedError(
+            "BLOCKED: wind_evidence_staging produced no engineering rows"
+        )
+    price_mapping = {
+        sid for sid in series_mapping.values() if sid is not None
+    }
+    price_starts = (
+        frame[frame.series_id.isin(price_mapping)]
+        .groupby("series_id")
+        .observation_date.min()
+    )
     if len(price_starts) != len(price_mapping):
-        raise Sprint2BlockedError("BLOCKED: partial-universe price history is incomplete")
+        raise Sprint2BlockedError(
+            "BLOCKED: partial-universe price history is incomplete"
+        )
     common_history_start = pd.Timestamp(price_starts.max()).date()
-    first = max(pd.Timestamp(start or common_history_start).date(), common_history_start)
+    first = max(
+        pd.Timestamp(start or common_history_start).date(),
+        common_history_start,
+    )
     last = pd.Timestamp(end or frame.observation_date.max()).date()
     try:
         calendar = cn_hk_calendar(provider=calendar_adapter)
@@ -187,12 +240,17 @@ def run_preliminary(
     except CalendarBlockedError as exc:
         raise Sprint2BlockedError(str(exc)) from exc
     if not dates:
-        raise Sprint2BlockedError("BLOCKED: exchange calendar returned no common sessions")
+        raise Sprint2BlockedError(
+            "BLOCKED: exchange calendar returned no common sessions"
+        )
+
     cfg_hash = config_hash(raw)
     no_tuning = protocol_hash(
         {
             "cost_bps": 10,
             "transaction_costs_bps": [0, 5, 10, 20, 30],
+            "turnover_convention": protocol_obj.turnover_convention,
+            "return_model": protocol_obj.return_model,
             "mode": "expanding",
             "universe": protocol_obj.universe,
         }
@@ -201,39 +259,67 @@ def run_preliminary(
     code_hash = protocol_hash(
         {
             "runner": sha256_file(Path(__file__)),
-            "artifact": sha256_file(Path(__file__).with_name("artifact.py")),
+            "artifact": sha256_file(
+                Path(__file__).with_name("artifact.py")
+            ),
         }
     )
-    raw_hashes = sorted({str(x) for x in frame.source_file_sha256.dropna()})
-    decisions, returns, scores, allocations, turnovers, costs = [], [], [], [], [], []
+    raw_hashes = sorted(
+        {str(x) for x in frame.source_file_sha256.dropna()}
+    )
+    decisions, returns, scores = [], [], []
+    allocations, turnovers, costs = [], [], []
     unavailable = []
+
     for benchmark in protocol_obj.benchmarks:
         previous = {}
         full_strategy = (
-            FullModelStrategy(protocol_obj.universe, strategic_weights=_strategic_weights())
+            FullModelStrategy(
+                protocol_obj.universe,
+                strategic_weights=_strategic_weights(),
+                asset_series_map=series_mapping,
+                return_specs=return_specs,
+            )
             if benchmark == "FULL_MODEL"
             else None
         )
         for index, decision in enumerate(dates):
-            info = frame[pd.to_datetime(frame.available_at, utc=True).dt.date <= decision]
+            info = frame[
+                pd.to_datetime(frame.available_at, utc=True).dt.date
+                <= decision
+            ]
             if benchmark == "MACRO_ONLY":
-                weights, available, reason = _macro_only_weights(info, decision)
+                weights, available, reason = _macro_only_weights(
+                    info, decision
+                )
             else:
                 weights, available, reason = _weights(
                     benchmark,
                     info,
                     protocol_obj.universe,
                     decision=decision,
+                    series_mapping=series_mapping,
                     full_strategy=full_strategy,
                 )
             if not available:
-                unavailable.append(f"{benchmark}:{decision.isoformat()}:{reason}")
+                unavailable.append(
+                    f"{benchmark}:{decision.isoformat()}:{reason}"
+                )
+
             turnover = (
-                sum(abs(weights.get(a, 0.0) - previous.get(a, 0.0)) for a in protocol_obj.universe)
+                portfolio_turnover(
+                    weights,
+                    previous,
+                    convention=protocol_obj.turnover_convention,
+                )
                 if available
                 else None
             )
-            cost = turnover * protocol_obj.base_cost_bps / 10000 if turnover is not None else None
+            cost = (
+                turnover * protocol_obj.base_cost_bps / 10000
+                if turnover is not None
+                else None
+            )
             decisions.append(
                 {
                     "decision_date": decision,
@@ -244,19 +330,32 @@ def run_preliminary(
                 }
             )
             scores.append(
-                {"decision_date": decision, "benchmark": benchmark, "score_available": available}
+                {
+                    "decision_date": decision,
+                    "benchmark": benchmark,
+                    "score_available": available,
+                }
             )
             allocations.extend(
                 {
                     "decision_date": decision,
                     "benchmark": benchmark,
                     "asset": asset,
-                    "weight": weights.get(asset, 0.0) if available else None,
+                    "weight": (
+                        weights.get(asset, 0.0) if available else None
+                    ),
                 }
                 for asset in protocol_obj.universe
             )
             turnovers.append(
-                {"decision_date": decision, "benchmark": benchmark, "turnover": turnover}
+                {
+                    "decision_date": decision,
+                    "benchmark": benchmark,
+                    "turnover": turnover,
+                    "turnover_convention": (
+                        protocol_obj.turnover_convention
+                    ),
+                }
             )
             for cost_bps in protocol_obj.transaction_cost_bps:
                 costs.append(
@@ -264,15 +363,28 @@ def run_preliminary(
                         "decision_date": decision,
                         "benchmark": benchmark,
                         "cost_bps": cost_bps,
-                        "cost": turnover * cost_bps / 10000 if turnover is not None else None,
+                        "turnover_convention": (
+                            protocol_obj.turnover_convention
+                        ),
+                        "cost": (
+                            turnover * cost_bps / 10000
+                            if turnover is not None
+                            else None
+                        ),
                     }
                 )
+
             gross_return = (
                 _realized_return(
                     frame,
                     weights,
                     decision,
-                    dates[index + 1] if index + 1 < len(dates) else None,
+                    (
+                        dates[index + 1]
+                        if index + 1 < len(dates)
+                        else None
+                    ),
+                    return_specs=return_specs,
                 )
                 if available
                 else None
@@ -282,14 +394,20 @@ def run_preliminary(
                     "decision_date": decision,
                     "benchmark": benchmark,
                     "gross_return": gross_return,
-                    "net_return": gross_return - cost
-                    if gross_return is not None and cost is not None
-                    else None,
-                    "available": available and gross_return is not None,
+                    "net_return": (
+                        gross_return - cost
+                        if gross_return is not None
+                        and cost is not None
+                        else None
+                    ),
+                    "available": (
+                        available and gross_return is not None
+                    ),
                 }
             )
             if available:
                 previous = weights
+
     tables = {
         "decisions.parquet": pd.DataFrame(decisions),
         "returns.parquet": pd.DataFrame(returns),
@@ -298,22 +416,42 @@ def run_preliminary(
         "turnover.parquet": pd.DataFrame(turnovers),
         "costs.parquet": pd.DataFrame(costs),
     }
+
     metric_rows = []
     for benchmark in protocol_obj.benchmarks:
         benchmark_returns = tables["returns.parquet"]
-        benchmark_returns = benchmark_returns[benchmark_returns.benchmark == benchmark]
-        gross = benchmark_returns.set_index("decision_date").gross_return.astype(float)
+        benchmark_returns = benchmark_returns[
+            benchmark_returns.benchmark == benchmark
+        ]
+        gross = (
+            benchmark_returns.set_index("decision_date")
+            .gross_return.astype(float)
+        )
         allocation = tables["allocations.parquet"]
-        allocation = allocation[allocation.benchmark == benchmark].pivot(
-            index="decision_date", columns="asset", values="weight"
+        allocation = (
+            allocation[allocation.benchmark == benchmark]
+            .pivot(
+                index="decision_date",
+                columns="asset",
+                values="weight",
+            )
         )
         benchmark_costs = tables["costs.parquet"]
         benchmark_costs = benchmark_costs[
             (benchmark_costs.benchmark == benchmark)
-            & (benchmark_costs.cost_bps == protocol_obj.base_cost_bps)
+            & (
+                benchmark_costs.cost_bps
+                == protocol_obj.base_cost_bps
+            )
         ].set_index("decision_date").cost
-        net = gross - benchmark_costs.reindex(gross.index).fillna(0.0)
-        metrics = performance_metrics(net, allocation.reindex(gross.index))
+        net = gross - benchmark_costs.reindex(
+            gross.index
+        ).fillna(0.0)
+        metrics = performance_metrics(
+            net,
+            allocation.reindex(gross.index),
+            turnover_convention=protocol_obj.turnover_convention,
+        )
         metric_rows.append(
             {
                 "benchmark": benchmark,
@@ -327,6 +465,7 @@ def run_preliminary(
                 "Recovery": metrics["Recovery"],
             }
         )
+
     status = "PARTIAL" if unavailable else "PRELIMINARY"
     gates = {
         "artifacts": True,
@@ -335,8 +474,14 @@ def run_preliminary(
         "calendar": True,
         "benchmarks": not unavailable,
     }
-    required_gates = ("artifacts", "engineering_cutoff", "calendar", "benchmarks")
+    required_gates = (
+        "artifacts",
+        "engineering_cutoff",
+        "calendar",
+        "benchmarks",
+    )
     exit_flag = all(gates[name] for name in required_gates)
+
     metric_lines = [
         "| Benchmark | CAGR | Vol | Sharpe | MaxDD | Turnover | Cost | Worst1M | Recovery |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
@@ -345,21 +490,68 @@ def run_preliminary(
         values = [
             row["benchmark"],
             *[
-                "NA" if row[key] is None or pd.isna(row[key]) else f"{row[key]:.8f}"
-                for key in ("CAGR", "Vol", "Sharpe", "MaxDD", "Turnover", "Cost", "Worst1M")
+                (
+                    "NA"
+                    if row[key] is None or pd.isna(row[key])
+                    else f"{row[key]:.8f}"
+                )
+                for key in (
+                    "CAGR",
+                    "Vol",
+                    "Sharpe",
+                    "MaxDD",
+                    "Turnover",
+                    "Cost",
+                    "Worst1M",
+                )
             ],
-            "NA" if row["Recovery"] is None else str(row["Recovery"]),
+            (
+                "NA"
+                if row["Recovery"] is None
+                else str(row["Recovery"])
+            ),
         ]
         metric_lines.append("| " + " | ".join(values) + " |")
+
     summary = (
         "# Sprint 2 Preliminary\n\n"
-        + f"status: {status}\nPRELIMINARY: true\nPARTIAL_UNIVERSE: true\nPRELIMINARY_WALK_FORWARD_READY: {str(exit_flag).lower()}\nRESEARCH_VALIDATED: false\nFORMAL_PIT: false\nEXIT: {str(exit_flag).lower()}\nobservations: {formal_observations}\ncalendar: {calendar.metadata.provider}\nbenchmarks: {', '.join(protocol_obj.benchmarks)}\nbase_cost_bps: 10\ncost_sensitivity_bps: {list(protocol_obj.transaction_cost_bps)}\nno_tuning_protocol_hash: `{no_tuning}`\nconfig_hash: `{cfg_hash}`\ncode_hash: `{code_hash}`\ndata_hash: `{data_hash}`\nraw_hashes: {', '.join(raw_hashes) or 'none'}\n\ngates: {gates}\n\n## Metrics at 10 bps\n\n"
+        + f"status: {status}\n"
+        + "PRELIMINARY: true\n"
+        + "PARTIAL_UNIVERSE: true\n"
+        + (
+            "PRELIMINARY_WALK_FORWARD_READY: "
+            f"{str(exit_flag).lower()}\n"
+        )
+        + "RESEARCH_VALIDATED: false\n"
+        + "FORMAL_PIT: false\n"
+        + f"EXIT: {str(exit_flag).lower()}\n"
+        + f"observations: {formal_observations}\n"
+        + f"calendar: {calendar.metadata.provider}\n"
+        + f"benchmarks: {', '.join(protocol_obj.benchmarks)}\n"
+        + "base_cost_bps: 10\n"
+        + (
+            "turnover_convention: "
+            f"{protocol_obj.turnover_convention}\n"
+        )
+        + (
+            "cost_sensitivity_bps: "
+            f"{list(protocol_obj.transaction_cost_bps)}\n"
+        )
+        + f"return_model: {protocol_obj.return_model}\n"
+        + f"no_tuning_protocol_hash: {no_tuning}\n"
+        + f"config_hash: {cfg_hash}\n"
+        + f"code_hash: {code_hash}\n"
+        + f"data_hash: {data_hash}\n"
+        + f"raw_hashes: {', '.join(raw_hashes) or 'none'}\n\n"
+        + f"gates: {gates}\n\n"
+        + "## Metrics at 10 bps\n\n"
         + "\n".join(metric_lines)
         + "\n\nNo broker/order path; engineering artifact only.\n"
     )
     result = write_artifacts(output_dir, tables, summary)
-    gates["artifacts"] = len(result["artifacts"]) == 7 and all(
-        Path(path).is_file() for path in result["artifacts"]
+    gates["artifacts"] = (
+        len(result["artifacts"]) == 7
+        and all(Path(path).is_file() for path in result["artifacts"])
     )
     exit_flag = all(gates[name] for name in required_gates)
     result.update(
@@ -368,7 +560,11 @@ def run_preliminary(
             "exit": exit_flag,
             "observations": formal_observations,
             "calendar": calendar.metadata.__dict__,
-            "calendar_coverage": calendar.coverage() if hasattr(calendar, "coverage") else None,
+            "calendar_coverage": (
+                calendar.coverage()
+                if hasattr(calendar, "coverage")
+                else None
+            ),
             "no_tuning_protocol_hash": no_tuning,
             "config_hash": cfg_hash,
             "code_hash": code_hash,
