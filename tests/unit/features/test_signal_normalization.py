@@ -21,7 +21,12 @@ def test_causal_zscore_is_invariant_to_future_append():
         ]
     )
     after = causal_zscore(extended, min_history=10)
-    pd.testing.assert_series_equal(before, after.iloc[: len(before)], check_names=False)
+    pd.testing.assert_series_equal(
+        before,
+        after.iloc[: len(before)],
+        check_names=False,
+        check_freq=False,
+    )
 
 
 def test_flat_history_normalizes_to_zero_after_minimum_history():
