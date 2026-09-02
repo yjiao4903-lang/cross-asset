@@ -269,7 +269,7 @@ def research_run_oos_command(
         for (fold, benchmark), group in fold_rows.groupby(["fold", "benchmark"]):
             valid = group["gross_return"].dropna().astype(float)
             fold_metrics = {
-                "observations": int(len(valid)),
+                "observations": len(valid),
                 "mean_gross_return": float(valid.mean()) if len(valid) else None,
             }
             persist_fold_result(
