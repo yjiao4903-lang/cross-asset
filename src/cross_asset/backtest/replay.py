@@ -271,7 +271,15 @@ class FullModelStrategy:
         self.last_decision = None
         self.last_scores = {}
 
-    def __call__(self, info, decision, *, health=True, component_inputs=None):
+    def __call__(
+        self,
+        info,
+        decision,
+        *,
+        health=True,
+        component_inputs=None,
+        macro_state=None,
+    ):
         market_histories = _market_histories(
             info,
             self.assets,
@@ -280,15 +288,23 @@ class FullModelStrategy:
         )
         market = self.market_engine.build(market_histories, as_of=decision)
 
-        macro_rows = info.to_dict("records")
-        for row in macro_rows:
-            available = pd.Timestamp(row["available_at"])
-            row["available_at"] = (
-                available.tz_localize("UTC")
-                if available.tz is None
-                else available.tz_convert("UTC")
-            )
-        macro = build_macro_state(macro_rows, decision, self.macro_config)
+        if macro_state is None:
+            macro_rows = info.to_dict("records")
+            for row in macro_rows:
+                available = pd.Timestamp(row["available_at"])
+                row["available_at"] = (
+                    available.tz_localize("UTC")
+                    if available.tz is None
+                    else available.tz_convert("UTC")
+                )
+            macro = build_macro_state(macro_rows, decision, self.macro_config)
+        else:
+            decision_timestamp = _utc_timestamp(decision)
+            macro_as_of = _utc_timestamp(getattr(macro_state, "as_of"))
+            macro_cutoff = _utc_timestamp(getattr(macro_state, "data_cutoff"))
+            if macro_as_of > decision_timestamp or macro_cutoff > decision_timestamp:
+                raise ValueError("external macro state is not point-in-time safe")
+            macro = macro_state
         style = self.style_engine.build({}, data_cutoff=decision)
 
         explicit_components = component_inputs or {}
@@ -392,6 +408,15 @@ class FullModelStrategy:
             next_decision,
             specs=self.return_specs,
         )
+
+
+def _utc_timestamp(value):
+    timestamp = pd.Timestamp(value)
+    return (
+        timestamp.tz_localize("UTC")
+        if timestamp.tzinfo is None
+        else timestamp.tz_convert("UTC")
+    )
 
 
 def _scaled_signal(value, scale):
