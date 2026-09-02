@@ -1,19 +1,19 @@
 {
   "attribution": {
     "A": {
-      "confidence": 0.16666666666666666,
-      "confidence_adjusted_tilt": 0.0019904549755730997,
+      "confidence": 0.1666666667,
+      "confidence_adjusted_tilt": 0.001990455,
       "constraint_adjusted_tilt": 0.0,
-      "raw_tilt": 0.0119427298534386,
-      "score": 0.15000000000000013,
+      "raw_tilt": 0.0119427299,
+      "score": 0.15,
       "strategic_weight": 0.5
     },
     "B": {
-      "confidence": 0.16666666666666666,
-      "confidence_adjusted_tilt": 0.00027583688004103707,
+      "confidence": 0.1666666667,
+      "confidence_adjusted_tilt": 0.0002758369,
       "constraint_adjusted_tilt": 0.0,
-      "raw_tilt": 0.0016550212802462225,
-      "score": 0.020689655172413834,
+      "raw_tilt": 0.0016550213,
+      "score": 0.0206896552,
       "strategic_weight": 0.5
     }
   },

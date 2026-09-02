@@ -103,6 +103,12 @@ def snapshot(observations=None):
             "fixture": True,
             "prior": "DEVELOPMENT_PRIOR",
             "weights": {k: _number(v) for k, v in sorted(weights.items())},
-            "attribution": allocation.attribution,
+            "attribution": {
+                asset: {
+                    key: _number(value)
+                    for key, value in sorted(values.items())
+                }
+                for asset, values in sorted(allocation.attribution.items())
+            },
         },
     }

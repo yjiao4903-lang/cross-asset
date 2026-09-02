@@ -1,9 +1,14 @@
 import numpy as np
 
-from .walk_forward import build_turnover_cost_ledger
+from .walk_forward import build_turnover_cost_ledger, portfolio_turnover
 
 
-def performance_metrics(returns, allocations=None, periods_per_year=52):
+def performance_metrics(
+    returns,
+    allocations=None,
+    periods_per_year=52,
+    turnover_convention="two_sided_notional",
+):
     r = returns.dropna().astype(float)
     wealth = (1 + r).cumprod()
     years = len(r) / periods_per_year
@@ -15,8 +20,6 @@ def performance_metrics(returns, allocations=None, periods_per_year=52):
         else None
     )
     dd = wealth / wealth.cummax() - 1
-    # One month is four weekly observations under the project's default
-    # weekly cadence (and approximately periods_per_year / 12 otherwise).
     month_periods = max(1, round(periods_per_year / 12))
     worst_1m = (
         float(
@@ -29,17 +32,24 @@ def performance_metrics(returns, allocations=None, periods_per_year=52):
         else None
     )
     recovery = _recovery_periods(wealth)
-    turnover = (
-        float(allocations.diff().abs().sum(axis=1).mean())
-        if allocations is not None and len(allocations) > 1
-        else 0.0
-    )
+    turnover = 0.0
+    if allocations is not None and len(allocations) > 1:
+        values = [
+            portfolio_turnover(
+                allocations.iloc[i],
+                allocations.iloc[i - 1],
+                convention=turnover_convention,
+            )
+            for i in range(1, len(allocations))
+        ]
+        turnover = float(np.mean(values)) if values else 0.0
     return {
         "CAGR": cagr,
         "annualized_vol": vol,
         "Sharpe": sharpe,
         "max_drawdown": float(dd.min()) if len(dd) else None,
         "turnover": turnover,
+        "turnover_convention": turnover_convention,
         "Worst1M": worst_1m,
         "worst_1m": worst_1m,
         "Recovery": recovery,
@@ -52,26 +62,50 @@ def performance_metrics(returns, allocations=None, periods_per_year=52):
     }
 
 
-def compare_costs(gross_returns, allocations=None, cost_bps=0, periods_per_year=52):
+def compare_costs(
+    gross_returns,
+    allocations=None,
+    cost_bps=0,
+    periods_per_year=52,
+    turnover_convention="two_sided_notional",
+):
     """Return gross/net metrics and a reproducible turnover/cost ledger."""
-    gross = performance_metrics(gross_returns, allocations, periods_per_year)
-    ledger = build_turnover_cost_ledger(gross_returns, allocations, cost_bps=cost_bps)
+
+    gross = performance_metrics(
+        gross_returns,
+        allocations,
+        periods_per_year,
+        turnover_convention,
+    )
+    ledger = build_turnover_cost_ledger(
+        gross_returns,
+        allocations,
+        cost_bps=cost_bps,
+        turnover_convention=turnover_convention,
+    )
     net_returns = ledger["net_return"]
     gross["Cost"] = float(ledger["cost"].sum())
     gross["cost"] = gross["Cost"]
-    net = performance_metrics(net_returns, allocations, periods_per_year)
+    net = performance_metrics(
+        net_returns,
+        allocations,
+        periods_per_year,
+        turnover_convention,
+    )
     net["Cost"] = float(ledger["cost"].sum())
     net["cost"] = net["Cost"]
     return {
         "gross": gross,
         "net": net,
         "cost_bps": cost_bps,
+        "turnover_convention": turnover_convention,
         "ledger": ledger,
     }
 
 
 def _recovery_periods(wealth):
     """Maximum observations needed to recover a prior running high-water mark."""
+
     if len(wealth) == 0:
         return None
     peak = -np.inf
@@ -82,11 +116,13 @@ def _recovery_periods(wealth):
         if value >= peak:
             peak, peak_at = value, i
         else:
-            # A recovery is measured from the prior high-water mark to the
-            # first subsequent observation at/above it; unfinished recovery is
-            # measured through the end of the sample.
-            recovered = next((j for j in range(i + 1, len(wealth)) if wealth.iloc[j] >= peak), None)
+            recovered = next(
+                (j for j in range(i + 1, len(wealth)) if wealth.iloc[j] >= peak),
+                None,
+            )
             durations.append(
-                (recovered - peak_at) if recovered is not None else (len(wealth) - 1 - peak_at)
+                (recovered - peak_at)
+                if recovered is not None
+                else (len(wealth) - 1 - peak_at)
             )
     return int(max(durations, default=0))

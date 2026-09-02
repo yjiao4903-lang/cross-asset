@@ -1,6 +1,6 @@
 """Leakage-safe walk-forward window and transaction ledgers.
 
-This module deliberately does not infer a calendar.  Callers must provide the
+This module deliberately does not infer a calendar. Callers must provide the
 ordered decision dates that are valid for their data and trading venue.
 """
 
@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass
 import pandas as pd
 
 SUPPORTED_COST_BPS = (0, 5, 10, 20, 30)
+SUPPORTED_TURNOVER_CONVENTIONS = ("two_sided_notional", "one_way")
 
 
 @dataclass(frozen=True)
@@ -36,12 +37,6 @@ def build_window_manifest(
     window_type: str = "expanding",
     rolling_window: int | None = None,
 ) -> list[dict]:
-    """Build ordered train/test windows from explicit decision dates.
-
-    The first test block starts after ``train_size`` observations.  When
-    omitted, expanding starts at the second date (one date of history), while
-    rolling requires ``rolling_window``.  No dates are generated or filled.
-    """
     dates = list(decision_dates)
     if not dates:
         return []
@@ -87,22 +82,41 @@ def build_window_manifest(
 
 
 def walk_forward_manifest(decision_dates, **kwargs):
-    """Compatibility alias for :func:`build_window_manifest`."""
     return build_window_manifest(decision_dates, **kwargs)
 
 
-# Descriptive aliases kept intentionally small so callers can use the name
-# used by their protocol without creating a second implementation.
 generate_walk_forward_manifest = build_window_manifest
 make_walk_forward_manifest = build_window_manifest
 
 
+def portfolio_turnover(current, previous, *, convention="two_sided_notional") -> float:
+    """Compute turnover under an explicit and reproducible convention."""
+
+    if convention not in SUPPORTED_TURNOVER_CONVENTIONS:
+        raise ValueError(f"unsupported turnover convention: {convention}")
+    current = pd.Series(current, dtype=float)
+    previous = pd.Series(previous, dtype=float)
+    keys = current.index.union(previous.index)
+    gross_notional = float(
+        (current.reindex(keys, fill_value=0.0) - previous.reindex(keys, fill_value=0.0))
+        .abs()
+        .sum()
+    )
+    return gross_notional if convention == "two_sided_notional" else gross_notional / 2.0
+
+
 def build_turnover_cost_ledger(
-    returns, allocations=None, *, cost_bps: float = 10, base_bps: int = 10
+    returns,
+    allocations=None,
+    *,
+    cost_bps: float = 10,
+    base_bps: int = 10,
+    turnover_convention: str = "two_sided_notional",
 ) -> pd.DataFrame:
-    """Return one row per period with turnover, cost and gross/net returns."""
     if not isinstance(cost_bps, (int, float)) or cost_bps < 0:
         raise ValueError("cost_bps must be a non-negative number")
+    if turnover_convention not in SUPPORTED_TURNOVER_CONVENTIONS:
+        raise ValueError(f"unsupported turnover convention: {turnover_convention}")
     gross = pd.Series(returns, dtype=float).copy()
     if allocations is None:
         turnover = pd.Series(0.0, index=gross.index)
@@ -112,13 +126,15 @@ def build_turnover_cost_ledger(
         ).fillna(0.0)
         if len(a) != len(gross):
             raise ValueError("returns and allocations must have equal length")
-        turnover = a.diff().abs().sum(axis=1).fillna(0.0)
+        multiplier = 1.0 if turnover_convention == "two_sided_notional" else 0.5
+        turnover = a.diff().abs().sum(axis=1).fillna(0.0) * multiplier
         turnover.index = gross.index
     cost = turnover * float(cost_bps) / 10000.0
     return pd.DataFrame(
         {
             "gross_return": gross,
             "turnover": turnover,
+            "turnover_convention": turnover_convention,
             "cost_bps": float(cost_bps),
             "cost": cost,
             "net_return": gross - cost,
@@ -133,12 +149,14 @@ def transaction_cost_ledger(returns, allocations=None, **kwargs):
     return build_turnover_cost_ledger(returns, allocations, **kwargs)
 
 
-def cost_sensitivity_ledger(returns, allocations=None, *, costs=SUPPORTED_COST_BPS, base_bps=10):
-    """Build ledgers for the fixed research sensitivity grid.
-
-    ``base_bps`` is metadata identifying the reference case; it does not alter
-    the supplied cost grid or tune allocations.
-    """
+def cost_sensitivity_ledger(
+    returns,
+    allocations=None,
+    *,
+    costs=SUPPORTED_COST_BPS,
+    base_bps=10,
+    turnover_convention="two_sided_notional",
+):
     costs = tuple(costs)
     unknown = [c for c in costs if c not in SUPPORTED_COST_BPS]
     if unknown:
@@ -146,6 +164,12 @@ def cost_sensitivity_ledger(returns, allocations=None, *, costs=SUPPORTED_COST_B
     if base_bps not in costs:
         raise ValueError("base_bps must be included in costs")
     return {
-        c: build_turnover_cost_ledger(returns, allocations, cost_bps=c, base_bps=base_bps)
+        c: build_turnover_cost_ledger(
+            returns,
+            allocations,
+            cost_bps=c,
+            base_bps=base_bps,
+            turnover_convention=turnover_convention,
+        )
         for c in costs
     }
