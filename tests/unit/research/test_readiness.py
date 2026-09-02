@@ -21,6 +21,7 @@ RAW = {
     "coverage_threshold": 0.95,
     "rebalance": "weekly",
     "transaction_cost_bps": [0, 5, 10, 20, 30],
+    "base_cost_bps": 10,
     "turnover_convention": "two_sided_notional",
     "charge_initial_trade": False,
     "signal_model_version": "full_model_v0.2",
