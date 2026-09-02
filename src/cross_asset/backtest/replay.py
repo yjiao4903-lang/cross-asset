@@ -18,6 +18,7 @@ from cross_asset.engines.asset_score import COMPONENT_WEIGHTS, score_asset
 from cross_asset.engines.macro import build_macro_state
 from cross_asset.engines.market import MarketEngine
 from cross_asset.engines.style import StyleEngine
+from cross_asset.integration.contracts import marco_to_cross_asset_id
 
 
 @dataclass
@@ -278,7 +279,9 @@ class FullModelStrategy:
         *,
         health=True,
         component_inputs=None,
-        macro_state=None,
+        macro_snapshot=None,
+        fundamental_asset_view=None,
+        structural_snapshot=None,
     ):
         market_histories = _market_histories(
             info,
@@ -288,7 +291,31 @@ class FullModelStrategy:
         )
         market = self.market_engine.build(market_histories, as_of=decision)
 
-        if macro_state is None:
+        marco_mode = fundamental_asset_view is not None
+        if marco_mode:
+            decision_date = pd.Timestamp(decision).date()
+            if (
+                fundamental_asset_view.as_of > decision_date
+                or fundamental_asset_view.data_cutoff > decision_date
+            ):
+                raise ValueError("Marco fundamental view is not point-in-time safe")
+            if macro_snapshot is not None and (
+                macro_snapshot.as_of > decision_date
+                or macro_snapshot.data_cutoff > decision_date
+            ):
+                raise ValueError("Marco macro snapshot is not point-in-time safe")
+            if (
+                structural_snapshot is not None
+                and structural_snapshot.as_of > decision_date
+            ):
+                raise ValueError("Marco structural snapshot is not point-in-time safe")
+            macro = macro_snapshot
+            fundamental_by_asset = _marco_fundamentals_by_cross_asset(
+                fundamental_asset_view
+            )
+            macro_source = "marco"
+            effective_data_cutoff = fundamental_asset_view.data_cutoff
+        else:
             macro_rows = info.to_dict("records")
             for row in macro_rows:
                 available = pd.Timestamp(row["available_at"])
@@ -298,13 +325,10 @@ class FullModelStrategy:
                     else available.tz_convert("UTC")
                 )
             macro = build_macro_state(macro_rows, decision, self.macro_config)
-        else:
-            decision_timestamp = _utc_timestamp(decision)
-            macro_as_of = _utc_timestamp(macro_state.as_of)
-            macro_cutoff = _utc_timestamp(macro_state.data_cutoff)
-            if macro_as_of > decision_timestamp or macro_cutoff > decision_timestamp:
-                raise ValueError("external macro state is not point-in-time safe")
-            macro = macro_state
+            fundamental_by_asset = {}
+            macro_source = "legacy"
+            effective_data_cutoff = decision
+
         style = self.style_engine.build({}, data_cutoff=decision)
 
         explicit_components = component_inputs or {}
@@ -325,12 +349,18 @@ class FullModelStrategy:
                     float(self.signal_directions[asset]),
                 )
             risk = signals.get("risk")
-            macro_dimension = self.asset_signal_map.get(asset, {}).get("macro")
-            macro_signal = (
-                macro.dimensions.get(macro_dimension)
-                if macro_dimension is not None
-                else None
-            )
+            if marco_mode:
+                macro_signal = _fundamental_component(
+                    fundamental_by_asset.get(asset)
+                )
+            else:
+                macro_dimension = self.asset_signal_map.get(asset, {}).get("macro")
+                macro_signal = (
+                    macro.dimensions.get(macro_dimension)
+                    if macro_dimension is not None
+                    else None
+                )
+
             components = {
                 "macro": macro_signal,
                 "trend": trend,
@@ -340,6 +370,10 @@ class FullModelStrategy:
                 "structure": None,
             }
             components.update(explicit_components.get(asset, {}))
+            if marco_mode:
+                # Marco structural_risk is diagnostic, not an asset-specific direction.
+                components["structure"] = None
+
             trend_score = _signal_score(components.get("trend"))
             if asset in self.critical_assets and trend_score is None:
                 missing_signal_assets.append(asset)
@@ -348,7 +382,7 @@ class FullModelStrategy:
                 asset,
                 components,
                 component_weights=self.component_weights,
-                data_cutoff=decision,
+                data_cutoff=effective_data_cutoff,
             )
             signal_components[asset] = {
                 name: _signal_audit(value) for name, value in components.items()
@@ -373,12 +407,17 @@ class FullModelStrategy:
             max_weight=float(constraints.get("max_weight", 0.5)),
             previous_valid_weight=self.previous_valid_weight,
             as_of=decision,
-            data_cutoff=decision,
+            data_cutoff=effective_data_cutoff,
             health=effective_health,
         )
         if allocation.status == "ACTIVE":
             self.previous_valid_weight = dict(allocation.weights)
 
+        macro_model_version = (
+            getattr(fundamental_asset_view, "model_version", "marco_v1")
+            if marco_mode
+            else getattr(macro, "model_version", "macro_v0.2")
+        )
         self.last_decision = {
             "market_state": market,
             "macro_state": macro,
@@ -387,15 +426,25 @@ class FullModelStrategy:
             "signal_components": signal_components,
             "allocation": allocation,
             "attribution": allocation.attribution,
+            "integration_diagnostics": {
+                "macro_source": macro_source,
+                "structural_snapshot": (
+                    structural_snapshot.model_dump(mode="json")
+                    if structural_snapshot is not None
+                    and hasattr(structural_snapshot, "model_dump")
+                    else None
+                ),
+            },
             "model_versions": {
                 "market": market.model_version,
-                "macro": getattr(macro, "model_version", "macro_v0.2"),
+                "macro": macro_model_version,
                 "style": self.style_engine.model_version,
                 "asset": "asset_score_v0.2",
                 "allocation": allocation.model_version,
             },
-            "data_cutoff": decision,
+            "data_cutoff": effective_data_cutoff,
             "missing_signal_assets": missing_signal_assets,
+            "macro_source": macro_source,
         }
         self.last_scores = scores
         return allocation.weights
@@ -417,6 +466,29 @@ def _utc_timestamp(value):
         if timestamp.tzinfo is None
         else timestamp.tz_convert("UTC")
     )
+
+
+
+def _marco_fundamentals_by_cross_asset(fundamental_asset_view):
+    mapped = {}
+    for row in fundamental_asset_view.assets:
+        cross_id = marco_to_cross_asset_id(row.asset_id)
+        if cross_id is not None:
+            mapped[cross_id] = row
+    return mapped
+
+
+def _fundamental_component(row):
+    if row is None or row.fundamental_score is None:
+        return None
+    return {
+        "score": float(row.fundamental_score),
+        "confidence": row.confidence,
+        "coverage": row.coverage,
+        "status": row.status.value,
+        "producer_asset_id": row.asset_id,
+        "contributions": row.contributions.model_dump(mode="json"),
+    }
 
 
 def _scaled_signal(value, scale):
