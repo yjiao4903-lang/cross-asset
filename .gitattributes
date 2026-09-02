@@ -1,0 +1,2 @@
+# Marco v1 fixture hashes cover exact producer bytes; never normalize line endings.
+tests/fixtures/marco_integration_v1/*.json -text
