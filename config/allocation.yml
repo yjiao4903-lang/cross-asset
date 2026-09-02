@@ -1,10 +1,23 @@
-version: 0.1
+version: 0.2
 strategic_weights: {CN_EQ: 0.25, HK_EQ: 0.10, US_EQ: 0.20, CN_BOND: 0.20, GOLD: 0.10, COMMODITY: 0.05, CASH: 0.10}
 constraints:
   min_weight: 0.0
   max_weight: 0.5
   max_tactical_tilt: 0.10
 parameter_status: DEVELOPMENT_PRIOR
+component_weights:
+  macro: 0.25
+  trend: 0.30
+  valuation: 0.15
+  carry: 0.10
+  risk: 0.10
+  structure: 0.10
+component_policy:
+  missing_value: unavailable
+  zero_imputation: false
+  renormalize_available_components: true
+  confidence_uses_weighted_coverage: true
+  critical_component: trend
 asset_signal_map:
   CN_EQ: {macro: GROWTH, trend: CN_EQ_LARGE}
   HK_EQ: {macro: GROWTH, trend: HK_EQ}
