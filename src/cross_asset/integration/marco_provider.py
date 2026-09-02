@@ -241,6 +241,18 @@ class MarcoProvider:
                 errors.append(str(exc))
             else:
                 warnings.extend(alias_warnings)
+                for view in normalized_views:
+                    if view.status in {"FAILED", "DEGRADED", "STALE"}:
+                        views_degraded = True
+                        warnings.append(
+                            f"asset view {view.asset_id} is {view.status}"
+                        )
+                    if view.score is None:
+                        views_degraded = True
+                        warnings.append(
+                            f"asset view {view.asset_id} score is missing; "
+                            "no zero imputation"
+                        )
                 if views_contract.status == "FAILED":
                     errors.append("Marco producer marked asset_views FAILED")
                 elif views_contract.status in {"DEGRADED", "STALE"}:
