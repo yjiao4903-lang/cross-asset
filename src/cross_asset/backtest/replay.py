@@ -249,13 +249,15 @@ class FullModelStrategy:
         }
         self.component_weights = dict(component_weights or COMPONENT_WEIGHTS)
         self.allocation_config = dict(allocation_config or {})
+        default_critical_assets = [
+            asset
+            for asset in self.assets
+            if self.asset_series_map.get(asset) is not None
+        ]
         self.critical_assets = set(
-            critical_assets
-            or [
-                asset
-                for asset in self.assets
-                if self.asset_series_map.get(asset) is not None
-            ]
+            default_critical_assets
+            if critical_assets is None
+            else critical_assets
         )
         self.macro_config = macro_config or {"series": {}, "dimensions": {}}
         self.style_engine = StyleEngine(style_definitions or {})
