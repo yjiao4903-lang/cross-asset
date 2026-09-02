@@ -40,7 +40,12 @@ def _raw_hash_matches(record: dict) -> bool:
     return actual == record.get("raw_hash")
 
 
-def validate_research_admission(record: dict, *, policies: dict[str, dict]) -> list[str]:
+def validate_research_admission(
+    record: dict,
+    *,
+    policies: dict[str, dict],
+    require_payload: bool = False,
+) -> list[str]:
     errors = []
     if record.get("usage_status") != "RESEARCH_ADMISSIBLE":
         errors.append("usage_status_requires_research_admissible")
@@ -59,17 +64,18 @@ def validate_research_admission(record: dict, *, policies: dict[str, dict]) -> l
         errors.append("pit_grade_a_b_c_required")
     if not record.get("raw_hash") or not record.get("source_contract"):
         errors.append("raw_hash_and_source_contract_required")
-    if not record.get("raw_file"):
-        errors.append("raw_file_required")
-    if not record.get("provider") or not record.get("source_series_id"):
-        errors.append("provider_and_source_series_required")
     if record.get("pit_grade") == "C" and not record.get("conservative_lag"):
         errors.append("grade_c_conservative_warning_required")
     if record.get("usage_status") == "LIVE_VERIFIED":
         errors.append("live_verified_requires_explicit_separate_gate")
-    observations = record.get("observations")
-    if not isinstance(observations, list) or not observations:
-        errors.append("canonical_observations_required")
+    if require_payload:
+        if not record.get("raw_file"):
+            errors.append("raw_file_required")
+        if not record.get("provider") or not record.get("source_series_id"):
+            errors.append("provider_and_source_series_required")
+        observations = record.get("observations")
+        if not isinstance(observations, list) or not observations:
+            errors.append("canonical_observations_required")
     return sorted(set(errors))
 
 
@@ -175,16 +181,25 @@ def ingest_research_data(
 ) -> dict:
     """Validate and, only after registry PASS, write formal observations idempotently."""
 
+    strict_payload = dry_run or store is not None
     validation = {
         record.get("series_id", "UNKNOWN"): validate_research_admission(
             record,
             policies=policies,
+            require_payload=strict_payload,
         )
         for record in records
     }
     errors = {key: value for key, value in validation.items() if value}
     if errors:
         return {"status": "REJECTED", "written": 0, "errors": errors}
+    if not strict_payload:
+        return {
+            "status": "ADMISSIBLE",
+            "written": 0,
+            "candidate_rows": 0,
+            "errors": {},
+        }
 
     canonical = []
     for record in records:
