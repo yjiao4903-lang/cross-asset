@@ -77,7 +77,7 @@ class Sprint2Protocol:
             raise ProtocolValidationError("return_model_is_frozen")
 
     @classmethod
-    def from_mapping(cls, raw: dict[str, Any]) -> "Sprint2Protocol":
+    def from_mapping(cls, raw: dict[str, Any]) -> Sprint2Protocol:
         try:
             p = cls(
                 tuple(raw["universe"]),
