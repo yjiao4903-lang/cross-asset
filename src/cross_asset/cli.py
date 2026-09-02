@@ -135,14 +135,24 @@ def ingest_research_data_command(
 def research_readiness_command(
     database: str | None = typer.Option(None, "--database"),
     config: str = typer.Option("config/research.yml", "--config"),
+    decision_dates: str | None = typer.Option(None, "--decision-dates"),
 ) -> None:
-    from .research import evaluate_research_readiness, load_research_protocol
+    from .research import (
+        evaluate_research_readiness,
+        load_decision_dates,
+        load_research_protocol,
+    )
     from .storage import init_db
 
     protocol = load_research_protocol(config)
     store = init_db(database or get_settings().database_path)
     try:
-        result = evaluate_research_readiness(store.conn, protocol)
+        dates = load_decision_dates(decision_dates) if decision_dates else None
+        result = evaluate_research_readiness(
+            store.conn,
+            protocol,
+            decision_times=dates,
+        )
         typer.echo(json.dumps(result, ensure_ascii=False, default=str, sort_keys=True))
     finally:
         store.close()
@@ -225,7 +235,12 @@ def research_run_oos_command(
         "config/macro.yml",
     ]
     try:
-        readiness = evaluate_research_readiness(store.conn, protocol)
+        development_dates = dates[: plan.development_count]
+        readiness = evaluate_research_readiness(
+            store.conn,
+            protocol,
+            decision_times=development_dates,
+        )
         if readiness["status"] != "READY_FOR_OOS" or plan.status != "READY_FOR_OOS":
             result = {
                 "status": "BLOCKED",
