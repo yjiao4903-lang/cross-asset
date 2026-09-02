@@ -23,6 +23,7 @@ RAW = {
     "coverage_threshold": 0.95,
     "rebalance": "weekly",
     "transaction_cost_bps": [0, 5, 10, 20, 30],
+    "base_cost_bps": 10,
     "turnover_convention": "two_sided_notional",
     "charge_initial_trade": False,
     "signal_model_version": "full_model_v0.2",
@@ -82,6 +83,6 @@ def test_frozen_approved_protocol_is_ready_with_enough_dates():
 
 def test_decision_date_loader_rejects_duplicates(tmp_path):
     path = tmp_path / "dates.json"
-    path.write_text(json.dumps(["2026-01-02", "2026-01-02"]), encoding="utf-8")
+    path.write_text(json.dumps(["2026-01-02T00:00:00Z", "2026-01-02T00:00:00Z"]), encoding="utf-8")
     with pytest.raises(ValueError, match="unique"):
         load_decision_dates(path)
