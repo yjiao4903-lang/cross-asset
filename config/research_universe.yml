@@ -1,0 +1,30 @@
+version: "0.1"
+status: DEVELOPMENT_PRIOR
+notes:
+  - "Return semantics are frozen before real OOS results are viewed."
+  - "CN_BOND uses a duration proxy until a research-admissible total-return index is available."
+assets:
+  CN_EQ:
+    series_id: CN_EQ_LARGE
+    kind: price
+  HK_EQ:
+    series_id: HK_EQ
+    kind: price
+  US_EQ:
+    series_id: US_EQ
+    kind: price
+  CN_BOND:
+    series_id: CN_BOND_10Y
+    kind: yield_duration_proxy
+    duration_years: 8.0
+    yield_scale: 100.0
+  GOLD:
+    series_id: GOLD
+    kind: price
+  COMMODITY:
+    series_id: COPPER
+    kind: price
+  CASH:
+    series_id: null
+    kind: cash
+    annual_rate: 0.0

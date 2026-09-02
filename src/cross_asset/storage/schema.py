@@ -77,6 +77,20 @@ CREATE TABLE IF NOT EXISTS wind_evidence_staging (
  vintage_date DATE, quality_status VARCHAR NOT NULL, origin VARCHAR NOT NULL,
  metadata_json VARCHAR NOT NULL DEFAULT '{}', ingested_at TIMESTAMP NOT NULL,
  PRIMARY KEY(source_file_sha256, source_series_id, observation_date));
+CREATE TABLE IF NOT EXISTS research_runs (
+ research_run_id VARCHAR PRIMARY KEY, protocol_hash VARCHAR NOT NULL,
+ config_hash VARCHAR NOT NULL, code_version VARCHAR NOT NULL, status VARCHAR NOT NULL,
+ holdout_sealed BOOLEAN NOT NULL, development_start TIMESTAMP, development_end TIMESTAMP,
+ holdout_start TIMESTAMP, holdout_end TIMESTAMP, holdout_count BIGINT NOT NULL,
+ fold_count BIGINT NOT NULL, blockers VARCHAR NOT NULL DEFAULT '[]',
+ plan_json VARCHAR NOT NULL, created_at TIMESTAMP NOT NULL);
+CREATE TABLE IF NOT EXISTS research_fold_results (
+ research_run_id VARCHAR NOT NULL, fold INTEGER NOT NULL, phase VARCHAR NOT NULL,
+ benchmark VARCHAR NOT NULL, train_start TIMESTAMP, train_end TIMESTAMP,
+ test_start TIMESTAMP, test_end TIMESTAMP, observation_count BIGINT NOT NULL,
+ metrics_json VARCHAR NOT NULL, data_snapshot_id VARCHAR, status VARCHAR NOT NULL,
+ created_at TIMESTAMP NOT NULL,
+ PRIMARY KEY(research_run_id, fold, phase, benchmark));
 """
 
 

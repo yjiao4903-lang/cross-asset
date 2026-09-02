@@ -1,4 +1,4 @@
-version: "0.2"
+version: "0.3"
 status: PLANNING_ONLY
 owner: TBD
 reviewer: TBD
@@ -11,7 +11,8 @@ windows:
   step_months: 3
   rolling_years: null
   final_holdout: last_20_percent
-coverage_threshold: TBD
+coverage_threshold: 0.95
+coverage_definition: "for each critical series: eligible decision times with at least one PIT-available observation / eligible decision times"
 rebalance: weekly
 transaction_cost_bps: [0, 5, 10, 20, 30]
 turnover_convention: two_sided_notional
@@ -19,12 +20,23 @@ charge_initial_trade: false
 terminal_period_return: unavailable_without_next_decision
 signal_model_version: full_model_v0.2
 benchmarks: [STATIC, TREND_ONLY, MACRO_ONLY, RISK_ONLY, FULL_MODEL]
+execution:
+  require_protocol_status: FROZEN
+  holdout_release: false
+  required_registry_status: PASS
+  required_usage_status: RESEARCH_ADMISSIBLE
+  require_all_critical_series: true
+evaluation_thresholds:
+  min_oos_observations: 52
+  min_information_ratio_vs_static: 0.0
+  min_annualized_excess_return_vs_static: 0.0
+  max_drawdown_penalty_vs_static: 0.05
 verdict_rules:
-  accept: "frozen inputs, provenance complete, PIT clean, and predeclared metrics pass"
-  reject: "PIT/lookahead, semantic, provenance, safety, or predeclared failure threshold fails"
-  inconclusive: "coverage, sample length, permission, or statistical power is insufficient"
+  accept: "all predeclared OOS thresholds pass on the sealed evaluation sample"
+  reject: "minimum sample is met and one or more predeclared OOS thresholds fail"
+  inconclusive: "minimum sample, data coverage, admission, permission, or statistical power is insufficient"
 data_policy:
-  project_status: DATA_BLOCKED
+  project_status: REAL_DATA_ADMISSION
   zero_imputation: false
   decision_cutoff: "available_at <= decision_time"
   revision_policy: latest_released_revision_per_observation_date

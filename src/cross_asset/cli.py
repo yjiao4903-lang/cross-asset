@@ -102,17 +102,91 @@ def qa_baseline() -> None:
     typer.echo(json.dumps(result, ensure_ascii=False, sort_keys=True))
 
 @app.command("ingest-research-data")
-def ingest_research_data_command(input_json: str = typer.Argument(...)) -> None:
+def ingest_research_data_command(
+    input_json: str = typer.Argument(...),
+    database: str | None = typer.Option(None, "--database"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
     from pathlib import Path
 
     from .ingestion.research import ingest_research_data
+    from .storage import init_db
+
     payload = json.loads(Path(input_json).read_text(encoding="utf-8"))
     records = payload.get("records", []) if isinstance(payload, dict) else payload
     policies = payload.get("policies", {}) if isinstance(payload, dict) else {}
-    result = ingest_research_data(records, policies=policies)
-    typer.echo(json.dumps(result, ensure_ascii=False, sort_keys=True))
-    if result["status"] != "ADMISSIBLE":
+    store = None if dry_run else init_db(database or get_settings().database_path)
+    try:
+        result = ingest_research_data(
+            records,
+            policies=policies,
+            store=store,
+            dry_run=dry_run,
+        )
+        typer.echo(json.dumps(result, ensure_ascii=False, default=str, sort_keys=True))
+    finally:
+        if store is not None:
+            store.close()
+    if result["status"] not in {"ADMISSIBLE", "ADMITTED"}:
         raise typer.Exit(1)
+
+
+@app.command("research-readiness")
+def research_readiness_command(
+    database: str | None = typer.Option(None, "--database"),
+    config: str = typer.Option("config/research.yml", "--config"),
+) -> None:
+    from .research import evaluate_research_readiness, load_research_protocol
+    from .storage import init_db
+
+    protocol = load_research_protocol(config)
+    store = init_db(database or get_settings().database_path)
+    try:
+        result = evaluate_research_readiness(store.conn, protocol)
+        typer.echo(json.dumps(result, ensure_ascii=False, default=str, sort_keys=True))
+    finally:
+        store.close()
+    if result["status"] != "READY_FOR_OOS":
+        raise typer.Exit(2)
+
+
+@app.command("research-plan")
+def research_plan_command(
+    decision_dates: str = typer.Argument(...),
+    config: str = typer.Option("config/research.yml", "--config"),
+    output: str = typer.Option("artifacts/research/research_plan.json", "--output"),
+    database: str | None = typer.Option(None, "--database"),
+) -> None:
+    from pathlib import Path
+
+    from .research import build_research_plan, load_decision_dates, load_research_protocol
+    from .research.storage import persist_research_plan
+    from .storage import code_version, config_hash, init_db
+
+    protocol = load_research_protocol(config)
+    plan = build_research_plan(load_decision_dates(decision_dates), protocol)
+    payload = plan.to_dict()
+    path = Path(output)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, default=str, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    store = init_db(database or get_settings().database_path)
+    try:
+        persisted = persist_research_plan(
+            store,
+            plan=payload,
+            config_hash=config_hash(
+                [config, "config/research_universe.yml", "config/allocation.yml", "config/macro.yml"]
+            ),
+            code_version=code_version("."),
+        )
+    finally:
+        store.close()
+    typer.echo(json.dumps({**payload, **persisted}, ensure_ascii=False, default=str, sort_keys=True))
+    if plan.status != "READY_FOR_OOS":
+        raise typer.Exit(2)
 
 @app.command("data-readiness")
 def data_readiness() -> None:
