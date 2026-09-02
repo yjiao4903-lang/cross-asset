@@ -8,13 +8,10 @@ from .protocol import ResearchProtocol
 
 
 def _columns(connection, table: str) -> set[str]:
-    try:
-        return {
-            row[1]
-            for row in connection.execute(f"PRAGMA table_info('{table}')").fetchall()
-        }
-    except Exception:
-        return set()
+    return {
+        row[1]
+        for row in connection.execute(f"PRAGMA table_info('{table}')").fetchall()
+    }
 
 
 def _required_series(connection) -> list[str]:
