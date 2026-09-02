@@ -14,7 +14,7 @@ from .executor import ResearchModelConfig
 def _mapping(path):
     value = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     if not isinstance(value, dict):
-        raise ValueError(f"config_must_be_mapping:{path}")
+        raise TypeError(f"config_must_be_mapping:{path}")
     return value
 
 
