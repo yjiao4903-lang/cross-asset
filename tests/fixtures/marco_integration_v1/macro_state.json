@@ -1,0 +1,58 @@
+{
+  "contract_version": "1.0",
+  "as_of": "2020-01-31T16:00:00Z",
+  "data_cutoff": "2020-01-31T15:00:00Z",
+  "model_version": "marco_macro_v1",
+  "status": "OK",
+  "score": 0.2,
+  "confidence": 0.8,
+  "dimensions": {
+    "GROWTH": {
+      "score": 0.6,
+      "confidence": 0.9,
+      "coverage": 0.8,
+      "status": "OK",
+      "data_cutoff": "2020-01-31T15:00:00Z",
+      "contributions": {
+        "growth_nowcast": 0.6
+      }
+    },
+    "INFLATION": {
+      "score": -0.1,
+      "confidence": 0.7,
+      "coverage": 0.75,
+      "status": "OK",
+      "data_cutoff": "2020-01-31T15:00:00Z",
+      "contributions": {}
+    },
+    "LIQUIDITY": {
+      "score": 0.3,
+      "confidence": 0.85,
+      "coverage": 0.9,
+      "status": "OK",
+      "data_cutoff": "2020-01-31T15:00:00Z",
+      "contributions": {
+        "liquidity_impulse": 0.3
+      }
+    },
+    "POLICY": {
+      "score": 0.0,
+      "confidence": 0.65,
+      "coverage": 0.7,
+      "status": "OK",
+      "data_cutoff": "2020-01-31T15:00:00Z",
+      "contributions": {}
+    },
+    "RISK_APPETITE": {
+      "score": 0.2,
+      "confidence": 0.75,
+      "coverage": 0.8,
+      "status": "OK",
+      "data_cutoff": "2020-01-31T15:00:00Z",
+      "contributions": {}
+    }
+  },
+  "metadata": {
+    "fixture": true
+  }
+}
