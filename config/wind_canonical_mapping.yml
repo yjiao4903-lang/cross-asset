@@ -1,0 +1,43 @@
+version: 1
+description: Approved Wind source mappings only; null source_series_id remains unresolved.
+CN_EQ_LARGE:
+  instrument_semantics: CSI_300_PRICE_INDEX
+  source_series_id: null
+  value_field: close
+  available_at_rule: CN_EQ_EOD_V1
+  available_at_basis: POLICY_DERIVED
+HK_EQ:
+  instrument_semantics: HANG_SENG_PRICE_INDEX
+  source_series_id: null
+  value_field: close
+  available_at_rule: HK_EQ_EOD_V1
+  available_at_basis: POLICY_DERIVED
+US_EQ:
+  instrument_semantics: SP500_PRICE_INDEX
+  source_series_id: null
+  value_field: close
+  available_at_rule: US_EQ_EOD_V1
+  available_at_basis: POLICY_DERIVED
+CN_BOND_10Y:
+  instrument_semantics: CHINABOND_GOVT_YIELD_10Y
+  source_series_id: null
+  value_field: value
+  unit: yield_percent
+  available_at_rule: CN_BOND_10Y_EOD_V1
+  available_at_basis: POLICY_DERIVED
+GOLD:
+  instrument_semantics: COMEX_GOLD_CONTINUOUS
+  source_series_id: null
+  value_field: settle
+  price_type: settle
+  continuous_adjustment: terminal_confirmation_required
+  available_at_rule: COMEX_EOD_V1
+  available_at_basis: POLICY_DERIVED
+COPPER:
+  instrument_semantics: COMEX_COPPER_CONTINUOUS
+  source_series_id: null
+  value_field: settle
+  price_type: settle
+  continuous_adjustment: terminal_confirmation_required
+  available_at_rule: COMEX_EOD_V1
+  available_at_basis: POLICY_DERIVED
