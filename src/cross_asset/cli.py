@@ -143,6 +143,66 @@ def ingest_production_csv_command(
         raise typer.Exit(1) from exc
     typer.echo(json.dumps(result, ensure_ascii=False, sort_keys=True, default=str))
 
+
+@app.command("canonicalize-wind-export")
+def canonicalize_wind_export_command(
+    file: str = typer.Argument(..., help="Wind raw Excel or CSV export."),
+    mapping: str = typer.Option(
+        "config/wind_canonical_mapping.yml",
+        "--mapping",
+        help="Approved Wind-to-canonical mapping configuration.",
+    ),
+    output: str | None = typer.Option(
+        None,
+        "--output",
+        help="Canonical production CSV path; omitted for dry-run/stdout-only operation.",
+    ),
+    report: str | None = typer.Option(
+        None,
+        "--report",
+        help="Conversion report JSON path.",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Parse and validate without writing CSV or invoking ingestion/DB.",
+    ),
+) -> None:
+    """Convert an approved Wind raw export to the canonical production CSV contract."""
+    import importlib
+
+    try:
+        canonicalizer = importlib.import_module("cross_asset.ingestion.wind_canonicalizer")
+        convert = canonicalizer.canonicalize_wind_export
+        result = convert(
+            file,
+            mapping=mapping,
+            output=output,
+            report=report,
+            dry_run=dry_run,
+        )
+    except Exception as exc:
+        typer.echo(
+            json.dumps(
+                {
+                    "status": "FAIL",
+                    "dry_run": dry_run,
+                    "input_file": file,
+                    "errors": [{"code": "canonicalization_failed", "message": str(exc)}],
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        )
+        raise typer.Exit(1) from exc
+
+    typer.echo(json.dumps(result, ensure_ascii=False, sort_keys=True, default=str))
+    status = str(result.get("status", "FAIL")).upper() if isinstance(result, dict) else "FAIL"
+    if status == "PARTIAL":
+        raise typer.Exit(2)
+    if status not in {"READY", "VALID", "SUCCESS"}:
+        raise typer.Exit(1)
+
 @app.command("data-readiness")
 def data_readiness() -> None:
     from .reports.readiness import generate_readiness
