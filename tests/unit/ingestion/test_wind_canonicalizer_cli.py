@@ -1,11 +1,13 @@
 import json
+import re
 import sys
 import types
 
-from click import unstyle
 from typer.testing import CliRunner
 
 from cross_asset.cli import app
+
+_ANSI_STYLE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def _install_canonicalizer_stub(monkeypatch, result):
@@ -31,7 +33,7 @@ def _install_canonicalizer_stub(monkeypatch, result):
 
 def test_canonicalize_wind_export_help_is_available():
     result = CliRunner().invoke(app, ["canonicalize-wind-export", "--help"])
-    help_output = unstyle(result.output)
+    help_output = _ANSI_STYLE.sub("", result.output)
 
     assert result.exit_code == 0, result.output
     for option in ("--mapping", "--output", "--report", "--dry-run"):
