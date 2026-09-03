@@ -114,6 +114,35 @@ def ingest_research_data_command(input_json: str = typer.Argument(...)) -> None:
     if result["status"] != "ADMISSIBLE":
         raise typer.Exit(1)
 
+
+@app.command("ingest-production-csv")
+def ingest_production_csv_command(
+    file: str = typer.Argument(...),
+    database: str | None = typer.Option(None, "--database"),
+    raw_dir: str | None = typer.Option(None, "--raw-dir"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
+    """Validate or import one canonical production CSV."""
+    from .ingestion.production_csv import ProductionCSVError, ingest_production_csv
+
+    try:
+        result = ingest_production_csv(
+            file,
+            database=database,
+            raw_dir=raw_dir,
+            dry_run=dry_run,
+        )
+    except ProductionCSVError as exc:
+        typer.echo(
+            json.dumps(
+                {"status": "FAIL", "dry_run": dry_run, "file": file, "errors": exc.errors},
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        )
+        raise typer.Exit(1) from exc
+    typer.echo(json.dumps(result, ensure_ascii=False, sort_keys=True, default=str))
+
 @app.command("data-readiness")
 def data_readiness() -> None:
     from .reports.readiness import generate_readiness
