@@ -1,4 +1,6 @@
 import csv
+from datetime import date
+from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
@@ -7,6 +9,7 @@ import yaml
 from cross_asset.ingestion.production_csv import ingest_production_csv
 from cross_asset.ingestion.wind_canonicalizer import (
     WindCanonicalizerError,
+    _as_date,
     canonicalize_wind_export,
 )
 
@@ -47,6 +50,19 @@ def _xlsx(tmp_path, rows):
     return path
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("2026/8/1", date(2026, 8, 1)),
+        ("2026/08/01", date(2026, 8, 1)),
+        ("2026-08-01", date(2026, 8, 1)),
+        ("2026/13/40", None),
+    ],
+)
+def test_as_date_supports_restricted_formats_and_rejects_invalid_dates(value, expected):
+    assert _as_date(value) == expected
+
+
 def test_pattern_d_uses_labels_supports_multiple_series_and_sorts(tmp_path):
     path = _xlsx(tmp_path, [
         ["频率", "日", "日"], ["来源", "Wind", "Wind"], ["指标名称", "沪深300", "沪深300"],
@@ -60,10 +76,135 @@ def test_pattern_d_uses_labels_supports_multiple_series_and_sorts(tmp_path):
         "CN_EQ_SMALL": {"source_series_id": "000301.SH", "available_at_rule": "CN_EQ_EOD_V1", "available_at_basis": "POLICY_DERIVED"},
     }, sort_keys=False), encoding="utf-8")
     result = canonicalize_wind_export(path, mapping=mapping, dry_run=True)
-    assert result["format"] == "WIND_PATTERN_D_V1"
+    assert result["format"] == "WIND_PATTERN_D_XLSX_V1"
     assert {item["status"] for item in result["series"]} == {"READY"}
     assert result["canonical_rows"] == 6
     assert result["series"][0]["date_min"] == "2026-09-01"
+
+
+def test_legacy_wide_header_preserves_raw_ids_and_comparable_staging(tmp_path):
+    path = _xlsx(
+        tmp_path,
+        [
+            ["日期", "300收益['H00300]", "恒生指数(可比)['HSI]", "恒生指数['HSI]"],
+            [43835, 100.0, 200.0, 300.0],
+            [43836, 101.0, 201.0, 301.0],
+            ["数据来源：Wind", None, None, None],
+        ],
+    )
+    # This is a parser-only mapping fixture; it is not production approval.
+    parser_only_mapping = tmp_path / "parser-only-mapping.yml"
+    parser_only_mapping.write_text(
+        yaml.safe_dump(
+            {
+                "CN_EQ_LARGE": {
+                    "source_series_id": "H00300",
+                    "available_at_rule": "CN_EQ_EOD_V1",
+                    "available_at_basis": "POLICY_DERIVED",
+                },
+                "HK_EQ": {
+                    "source_series_id": "HSI",
+                    "available_at_rule": "HK_EQ_EOD_V1",
+                    "available_at_basis": "POLICY_DERIVED",
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = canonicalize_wind_export(path, mapping=parser_only_mapping, dry_run=True)
+
+    assert result["format"] == "WIND_PATTERN_A_HEADER_XLSX_V1"
+    assert result["canonical_rows"] == 4
+    ready = {
+        item["wind_code"]: item
+        for item in result["series"]
+        if item["status"] == "READY"
+    }
+    assert set(ready) == {"H00300", "HSI"}
+    for field in ("frequency", "unit", "field_name", "currency", "return_type"):
+        assert ready["H00300"].get(field) is None
+        assert ready["HSI"].get(field) is None
+    assert all(
+        field not in metadata
+        for metadata in result["metadata_rows"]
+        for field in ("frequency", "unit", "field_name", "currency", "return_type")
+    )
+    assert any(
+        item["wind_code"] == "HSI__COMPARABLE"
+        and item["status"] == "UNRESOLVED_MAPPING"
+        for item in result["series"]
+    )
+    production_mapping = yaml.safe_load(
+        (
+            Path(__file__).resolve().parents[3]
+            / "config"
+            / "wind_canonical_mapping.yml"
+        ).read_text(encoding="utf-8")
+    )
+    assert all(
+        production_mapping[series_id]["source_series_id"] is None
+        for series_id in ("CN_EQ_LARGE", "HK_EQ")
+    )
+
+
+def test_wide_csv_reads_gb18030_metadata_and_skips_non_date_rows(tmp_path):
+    path = tmp_path / "wind-wide.csv"
+    rows = [
+        ["国家", "中国", "中国"],
+        ["指标名称", "沪深300", "中国国债收益率:10年"],
+        ["频率", "日", "日"],
+        ["单位", "点", "%"],
+        ["指标ID", "H00300", "M1001654"],
+        ["时间区间", "2010-01-04:2026-08-31", "2007-12-14:2026-08-31"],
+        ["来源", "中证指数公司", "中国货币网"],
+        ["更新时间", "2026-09-04", "2026-09-04"],
+        ["2026/8/31", "4000", "2.1"],
+        ["数据来源：Wind", "", ""],
+    ]
+    with path.open("w", encoding="gb18030", newline="") as handle:
+        csv.writer(handle).writerows(rows)
+
+    mapping = tmp_path / "mapping.yml"
+    mapping.write_text(
+        yaml.safe_dump(
+            {
+                "CN_EQ_LARGE": {
+                    "source_series_id": "H00300",
+                    "available_at_rule": "CN_EQ_EOD_V1",
+                    "available_at_basis": "POLICY_DERIVED",
+                },
+                "CN_BOND_10Y": {
+                    "source_series_id": "M1001654",
+                    "available_at_rule": "CN_BOND_10Y_EOD_V1",
+                    "available_at_basis": "POLICY_DERIVED",
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = canonicalize_wind_export(path, mapping=mapping, dry_run=True)
+
+    assert result["format"] == "WIND_PATTERN_D_WIDE_CSV_V1"
+    assert result["status"] == "READY"
+    assert result["canonical_rows"] == 2
+    assert {item["wind_code"] for item in result["series"]} == {
+        "H00300",
+        "M1001654",
+    }
+
+
+def test_legacy_xls_is_explicitly_non_blocking_for_supported_inputs(tmp_path):
+    path = tmp_path / "legacy.xls"
+    path.write_bytes(b"legacy workbook is intentionally not parsed")
+
+    with pytest.raises(WindCanonicalizerError, match="UNSUPPORTED_LEGACY") as exc_info:
+        canonicalize_wind_export(path, mapping=_mapping(tmp_path), dry_run=True)
+
+    assert exc_info.value.code == "UNSUPPORTED_LEGACY"
 
 
 def test_blank_is_omitted_without_forward_fill_and_csv_is_importer_valid(tmp_path):
