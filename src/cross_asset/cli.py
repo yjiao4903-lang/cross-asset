@@ -599,6 +599,7 @@ def run_daily_command(
         observations = latest_observations_asof(
             db.conn,
             decision_time,
+            market_data_cutoff=bundle.manifest.data_cutoff,
         ).df()
     finally:
         db.close()
@@ -634,7 +635,7 @@ def run_daily_command(
             observations["series_id"].isin(required_series)
         ]
         if not relevant.empty:
-            cross_cutoff = str(relevant["observation_date"].max())
+            cross_cutoff = str(relevant["observation_date"].max())[:10]
 
     if blocked:
         warnings = list(bundle.report.warnings)

@@ -7,6 +7,7 @@ does not archive files, open DuckDB, or invoke the production importer.
 from __future__ import annotations
 
 import csv
+import io
 import json
 import math
 import posixpath
@@ -79,6 +80,15 @@ def _as_date(value: Any) -> date | None:
         except (TypeError, ValueError, OverflowError):
             return None
     text = str(value).strip()
+    if re.fullmatch(r"\d{4}/\d{2}/\d{2}", text):
+        text = text.replace("/", "-")
+    if re.fullmatch(r"\d+(?:\.\d+)?", text):
+        try:
+            serial = float(text)
+            if 0 <= serial <= 100000:
+                return date(1899, 12, 30) + timedelta(days=serial)
+        except (TypeError, ValueError, OverflowError):
+            return None
     if not text or not _DATE_RE.fullmatch(text):
         return None
     try:
@@ -178,6 +188,67 @@ def _metadata_from_frame(frame: list[list[Any]]) -> tuple[int, dict[int, dict[st
     return data_start, metadata
 
 
+def _read_legacy_wide_header(
+    frame: list[list[Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Read the legacy Wind workbook whose first row embeds IDs in labels."""
+    if not frame:
+        raise WindCanonicalizerError("INVALID_METADATA", "legacy Wind header is missing")
+
+    columns: list[tuple[int, str, str, bool]] = []
+    for column, value in enumerate(frame[0][1:], start=1):
+        label = str(value or "").strip()
+        match = re.search(r"\[([^]]+)\]", label)
+        if not match:
+            continue
+        source_id = match.group(1).strip().strip("'").strip('"')
+        if not source_id:
+            continue
+        comparable = "(可比)" in label or "（可比）" in label
+        staging_id = source_id + "__COMPARABLE" if comparable else source_id
+        columns.append((column, staging_id, label, comparable))
+    if not columns:
+        raise WindCanonicalizerError(
+            "INVALID_METADATA", "legacy Wind header has no indexed series"
+        )
+
+    metadata_rows: list[dict[str, Any]] = []
+    for column, source_id, label, comparable in columns:
+        base_id = source_id.removesuffix("__COMPARABLE")
+        metadata_rows.append(
+            {
+                "column": _excel_column(column + 1),
+                "instrument_name": label,
+                "frequency": "daily",
+                "unit": "index_points",
+                "source_series_id": source_id,
+                "source": "wind",
+                "field_name": "close",
+                "currency": "HKD" if base_id == "HSI" else "CNY",
+                "return_type": (
+                    "total_return"
+                    if base_id == "H00300"
+                    else "price"
+                    if base_id == "HSI"
+                    else None
+                ),
+                "comparable": comparable,
+            }
+        )
+
+    raw: list[dict[str, Any]] = []
+    for row in frame[1:]:
+        day = _as_date(row[0] if row else None)
+        if day is None:
+            continue
+        for (column, _source_id, _label, _comparable), metadata in zip(
+            columns, metadata_rows
+        ):
+            value = row[column] if column < len(row) else None
+            raw.append({"date": day, "value": value, **metadata})
+    return raw, metadata_rows
+
+
 def _read_xlsx(path: Path) -> tuple[list[dict[str, Any]], str, list[dict[str, Any]]]:
     try:
         with zipfile.ZipFile(path) as archive:
@@ -246,7 +317,13 @@ def _read_xlsx(path: Path) -> tuple[list[dict[str, Any]], str, list[dict[str, An
             frame = [[cells.get((row, column)) for column in range(max_col)] for row in range(max_row)]
     except (OSError, KeyError, ValueError, ElementTree.ParseError, zipfile.BadZipFile) as exc:
         raise WindCanonicalizerError("UNSUPPORTED_FORMAT", type(exc).__name__) from exc
-    data_start, metadata = _metadata_from_frame(frame)
+    try:
+        data_start, metadata = _metadata_from_frame(frame)
+    except WindCanonicalizerError as exc:
+        if exc.code != "INVALID_METADATA":
+            raise
+        raw, metadata_rows = _read_legacy_wide_header(frame)
+        return raw, "WIND_PATTERN_A_HEADER_XLSX_V1", metadata_rows
     raw: list[dict[str, Any]] = []
     for row_number in range(data_start, len(frame)):
         day = _as_date(frame[row_number][0] if frame[row_number] else None)
@@ -255,26 +332,69 @@ def _read_xlsx(path: Path) -> tuple[list[dict[str, Any]], str, list[dict[str, An
         for column, meta in metadata.items():
             value = frame[row_number][column] if column < len(frame[row_number]) else None
             raw.append({"date": day, "value": value, "column": _excel_column(column + 1), **meta})
-    return raw, "WIND_PATTERN_D_V1", list(metadata.values())
+    return raw, "WIND_PATTERN_D_XLSX_V1", list(metadata.values())
 
 
 def _read_csv(path: Path) -> tuple[list[dict[str, Any]], str, list[dict[str, Any]]]:
     try:
-        with path.open(encoding="utf-8-sig", newline="") as handle:
-            rows = list(csv.DictReader(handle))
-    except (OSError, UnicodeError, csv.Error) as exc:
+        payload = path.read_bytes()
+    except OSError as exc:
         raise WindCanonicalizerError("UNSUPPORTED_FORMAT", type(exc).__name__) from exc
+    text = None
+    for encoding in ("utf-8-sig", "gb18030"):
+        try:
+            text = payload.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+    if text is None:
+        raise WindCanonicalizerError("UNSUPPORTED_FORMAT", "CSV encoding is unsupported")
+
+    try:
+        rows = list(csv.reader(io.StringIO(text, newline=""), strict=True))
+    except csv.Error as exc:
+        raise WindCanonicalizerError("UNSUPPORTED_FORMAT", type(exc).__name__) from exc
+    if not rows:
+        raise WindCanonicalizerError("UNSUPPORTED_FORMAT", "CSV is empty")
+
     required = {"date", "value", "wind_code"}
-    if not rows or not required.issubset(rows[0]):
-        raise WindCanonicalizerError("UNSUPPORTED_FORMAT", "simple CSV requires date,value,wind_code")
-    raw = []
-    for row in rows:
-        item = dict(row)
-        item["date"] = _as_date(row.get("date"))
-        item["source_series_id"] = row.get("wind_code", "").strip()
-        item["column"] = row.get("field_name", "value") or "value"
-        raw.append(item)
-    return raw, "WIND_SIMPLE_CSV_V1", []
+    header = {str(value).strip() for value in rows[0]}
+    if required.issubset(header):
+        simple_rows = list(csv.DictReader(io.StringIO(text, newline=""), strict=True))
+        raw = []
+        for row in simple_rows:
+            item = dict(row)
+            item["date"] = _as_date(row.get("date"))
+            item["source_series_id"] = row.get("wind_code", "").strip()
+            item["column"] = row.get("field_name", "value") or "value"
+            raw.append(item)
+        return raw, "WIND_SIMPLE_CSV_V1", []
+
+    try:
+        data_start, metadata = _metadata_from_frame(rows)
+    except WindCanonicalizerError as exc:
+        raise WindCanonicalizerError(
+            "UNSUPPORTED_FORMAT",
+            "supported Wind CSV requires date,value,wind_code or wide metadata rows",
+        ) from exc
+
+    wide_metadata: list[dict[str, Any]] = []
+    for column, values in metadata.items():
+        item = dict(values)
+        item.setdefault("source", "wind")
+        item.setdefault("field_name", "value")
+        item["column"] = _excel_column(column + 1)
+        wide_metadata.append(item)
+
+    raw: list[dict[str, Any]] = []
+    for row in rows[data_start:]:
+        day = _as_date(row[0] if row else None)
+        if day is None:
+            continue
+        for column, metadata_item in zip(metadata, wide_metadata):
+            value = row[column] if column < len(row) else None
+            raw.append({"date": day, "value": value, **metadata_item})
+    return raw, "WIND_PATTERN_D_WIDE_CSV_V1", wide_metadata
 
 
 def canonicalize_wind_export(
@@ -291,6 +411,10 @@ def canonicalize_wind_export(
         raw, format_name, metadata_rows = _read_xlsx(path)
     elif path.suffix.lower() == ".csv":
         raw, format_name, metadata_rows = _read_csv(path)
+    elif path.suffix.lower() == ".xls":
+        raise WindCanonicalizerError(
+            "UNSUPPORTED_LEGACY", "legacy .xls is intentionally not parsed"
+        )
     else:
         raise WindCanonicalizerError("UNSUPPORTED_FORMAT", path.suffix or "no extension")
     config = _load_mapping(mapping)
@@ -314,6 +438,8 @@ def canonicalize_wind_export(
             "unit": metadata.get("unit"),
             "field_name": metadata.get("field_name"),
             "currency": metadata.get("currency"),
+            "return_type": metadata.get("return_type"),
+            "comparable": bool(metadata.get("comparable", False)),
             "source": metadata.get("source", "wind") or "wind",
             "raw_column": metadata.get("column"),
             "raw_file": str(path),

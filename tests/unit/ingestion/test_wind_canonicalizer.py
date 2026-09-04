@@ -60,10 +60,117 @@ def test_pattern_d_uses_labels_supports_multiple_series_and_sorts(tmp_path):
         "CN_EQ_SMALL": {"source_series_id": "000301.SH", "available_at_rule": "CN_EQ_EOD_V1", "available_at_basis": "POLICY_DERIVED"},
     }, sort_keys=False), encoding="utf-8")
     result = canonicalize_wind_export(path, mapping=mapping, dry_run=True)
-    assert result["format"] == "WIND_PATTERN_D_V1"
+    assert result["format"] == "WIND_PATTERN_D_XLSX_V1"
     assert {item["status"] for item in result["series"]} == {"READY"}
     assert result["canonical_rows"] == 6
     assert result["series"][0]["date_min"] == "2026-09-01"
+
+
+def test_legacy_wide_header_selects_h00300_total_return_and_hsi_price(tmp_path):
+    path = _xlsx(
+        tmp_path,
+        [
+            ["日期", "300收益['H00300]", "恒生指数(可比)['HSI]", "恒生指数['HSI]"],
+            [43835, 100.0, 200.0, 300.0],
+            [43836, 101.0, 201.0, 301.0],
+            ["数据来源：Wind", None, None, None],
+        ],
+    )
+    mapping = tmp_path / "mapping.yml"
+    mapping.write_text(
+        yaml.safe_dump(
+            {
+                "CN_EQ_LARGE": {
+                    "source_series_id": "H00300",
+                    "available_at_rule": "CN_EQ_EOD_V1",
+                    "available_at_basis": "POLICY_DERIVED",
+                },
+                "HK_EQ": {
+                    "source_series_id": "HSI",
+                    "available_at_rule": "HK_EQ_EOD_V1",
+                    "available_at_basis": "POLICY_DERIVED",
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = canonicalize_wind_export(path, mapping=mapping, dry_run=True)
+
+    assert result["format"] == "WIND_PATTERN_A_HEADER_XLSX_V1"
+    assert result["canonical_rows"] == 4
+    ready = {
+        item["wind_code"]: item
+        for item in result["series"]
+        if item["status"] == "READY"
+    }
+    assert set(ready) == {"H00300", "HSI"}
+    assert ready["H00300"]["return_type"] == "total_return"
+    assert ready["HSI"]["return_type"] == "price"
+    assert any(
+        item["wind_code"] == "HSI__COMPARABLE"
+        and item["status"] == "UNRESOLVED_MAPPING"
+        for item in result["series"]
+    )
+
+
+def test_wide_csv_reads_gb18030_metadata_and_skips_non_date_rows(tmp_path):
+    path = tmp_path / "wind-wide.csv"
+    rows = [
+        ["国家", "中国", "中国"],
+        ["指标名称", "沪深300", "中国国债收益率:10年"],
+        ["频率", "日", "日"],
+        ["单位", "点", "%"],
+        ["指标ID", "H00300", "M1001654"],
+        ["时间区间", "2010-01-04:2026-08-31", "2007-12-14:2026-08-31"],
+        ["来源", "中证指数公司", "中国货币网"],
+        ["更新时间", "2026-09-04", "2026-09-04"],
+        ["2026-08-31", "4000", "2.1"],
+        ["数据来源：Wind", "", ""],
+    ]
+    with path.open("w", encoding="gb18030", newline="") as handle:
+        csv.writer(handle).writerows(rows)
+
+    mapping = tmp_path / "mapping.yml"
+    mapping.write_text(
+        yaml.safe_dump(
+            {
+                "CN_EQ_LARGE": {
+                    "source_series_id": "H00300",
+                    "available_at_rule": "CN_EQ_EOD_V1",
+                    "available_at_basis": "POLICY_DERIVED",
+                },
+                "CN_BOND_10Y": {
+                    "source_series_id": "M1001654",
+                    "available_at_rule": "CN_BOND_10Y_EOD_V1",
+                    "available_at_basis": "POLICY_DERIVED",
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = canonicalize_wind_export(path, mapping=mapping, dry_run=True)
+
+    assert result["format"] == "WIND_PATTERN_D_WIDE_CSV_V1"
+    assert result["status"] == "READY"
+    assert result["canonical_rows"] == 2
+    assert {item["wind_code"] for item in result["series"]} == {
+        "H00300",
+        "M1001654",
+    }
+
+
+def test_legacy_xls_is_explicitly_non_blocking_for_supported_inputs(tmp_path):
+    path = tmp_path / "legacy.xls"
+    path.write_bytes(b"legacy workbook is intentionally not parsed")
+
+    with pytest.raises(WindCanonicalizerError, match="UNSUPPORTED_LEGACY") as exc_info:
+        canonicalize_wind_export(path, mapping=_mapping(tmp_path), dry_run=True)
+
+    assert exc_info.value.code == "UNSUPPORTED_LEGACY"
 
 
 def test_blank_is_omitted_without_forward_fill_and_csv_is_importer_valid(tmp_path):
