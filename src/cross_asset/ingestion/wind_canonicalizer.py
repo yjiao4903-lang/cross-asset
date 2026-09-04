@@ -32,6 +32,7 @@ CANONICAL_COLUMNS = (
     "quality",
 )
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_SLASH_DATE_RE = re.compile(r"^(\d{4})/(\d{1,2})/(\d{1,2})$")
 _LABELS = {
     "instrument_name": {"instrument name", "instrument_name", "指标名称", "名称"},
     "frequency": {"frequency", "频率", "数据频率"},
@@ -80,8 +81,12 @@ def _as_date(value: Any) -> date | None:
         except (TypeError, ValueError, OverflowError):
             return None
     text = str(value).strip()
-    if re.fullmatch(r"\d{4}/\d{2}/\d{2}", text):
-        text = text.replace("/", "-")
+    slash_match = _SLASH_DATE_RE.fullmatch(text)
+    if slash_match:
+        try:
+            return date(*(int(part) for part in slash_match.groups()))
+        except ValueError:
+            return None
     if re.fullmatch(r"\d+(?:\.\d+)?", text):
         try:
             serial = float(text)
@@ -214,24 +219,12 @@ def _read_legacy_wide_header(
 
     metadata_rows: list[dict[str, Any]] = []
     for column, source_id, label, comparable in columns:
-        base_id = source_id.removesuffix("__COMPARABLE")
         metadata_rows.append(
             {
                 "column": _excel_column(column + 1),
                 "instrument_name": label,
-                "frequency": "daily",
-                "unit": "index_points",
                 "source_series_id": source_id,
                 "source": "wind",
-                "field_name": "close",
-                "currency": "HKD" if base_id == "HSI" else "CNY",
-                "return_type": (
-                    "total_return"
-                    if base_id == "H00300"
-                    else "price"
-                    if base_id == "HSI"
-                    else None
-                ),
                 "comparable": comparable,
             }
         )
