@@ -69,8 +69,16 @@ def compare_costs(
     cost_bps=0,
     periods_per_year=52,
     turnover_convention="two_sided_notional",
+    *,
+    asset_returns=None,
+    charge_initial_trade=False,
 ):
-    """Return gross/net metrics and a reproducible turnover/cost ledger."""
+    """Return gross/net metrics and an auditable turnover/cost ledger.
+
+    Supplying asset-level holding returns enables drift-aware rebalancing cost.
+    Without them the ledger retains the legacy target-to-target basis and labels
+    that fallback explicitly; callers must not describe it as drift-aware.
+    """
 
     gross = performance_metrics(
         gross_returns,
@@ -81,25 +89,46 @@ def compare_costs(
     ledger = build_turnover_cost_ledger(
         gross_returns,
         allocations,
+        asset_returns=asset_returns,
         cost_bps=cost_bps,
         turnover_convention=turnover_convention,
+        charge_initial_trade=charge_initial_trade,
     )
     net_returns = ledger["net_return"]
-    gross["Cost"] = float(ledger["cost"].sum())
-    gross["cost"] = gross["Cost"]
+    cost_complete = not bool(ledger["cost"].isna().any())
+    total_cost = float(ledger["cost"].sum()) if cost_complete else np.nan
+    finite_turnover = ledger.loc[ledger["turnover"].notna(), "turnover"]
+    average_turnover = float(finite_turnover.mean()) if len(finite_turnover) else np.nan
+    drift_aware = bool(asset_returns is not None)
+
+    gross["Cost"] = total_cost
+    gross["cost"] = total_cost
+    gross["turnover"] = average_turnover
+    gross["turnover_basis"] = (
+        "drifted_pretrade_holdings" if drift_aware else "target_weights_legacy_fallback"
+    )
+    gross["drift_aware_turnover"] = drift_aware
+
     net = performance_metrics(
         net_returns,
         allocations,
         periods_per_year,
         turnover_convention,
     )
-    net["Cost"] = float(ledger["cost"].sum())
-    net["cost"] = net["Cost"]
+    net["Cost"] = total_cost
+    net["cost"] = total_cost
+    net["turnover"] = average_turnover
+    net["turnover_basis"] = gross["turnover_basis"]
+    net["drift_aware_turnover"] = drift_aware
     return {
         "gross": gross,
         "net": net,
         "cost_bps": cost_bps,
+        "cost_complete": cost_complete,
+        "drift_aware_turnover": drift_aware,
+        "turnover_basis": gross["turnover_basis"],
         "turnover_convention": turnover_convention,
+        "charge_initial_trade": bool(charge_initial_trade),
         "ledger": ledger,
     }
 

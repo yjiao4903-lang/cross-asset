@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import math
 
 import pandas as pd
 
 from cross_asset.backtest.path_metrics import max_drawdown_from_returns
-from cross_asset.backtest.walk_forward import portfolio_turnover
+from cross_asset.backtest.walk_forward import portfolio_turnover, rebalance_turnover
 
 
 def stitch_oos_returns(frame: pd.DataFrame, plan: dict) -> pd.DataFrame:
@@ -129,6 +130,13 @@ def verdict_from_thresholds(metrics: dict, thresholds: dict) -> dict:
 __all__ = ["paired_oos_metrics", "stitch_oos_returns", "verdict_from_thresholds"]
 
 
+def _mapping(value):
+    if isinstance(value, str):
+        return json.loads(value)
+    if isinstance(value, dict):
+        return value
+    return None
+
 
 def stitch_oos_path(
     frame: pd.DataFrame,
@@ -138,7 +146,13 @@ def stitch_oos_path(
     turnover_convention: str,
     charge_initial_trade: bool,
 ) -> pd.DataFrame:
-    """Stitch overlapping fold outputs, then recompute one global turnover/cost path."""
+    """Stitch folds and recompute one global, drift-aware turnover/cost path.
+
+    Formal executor output includes asset-level holding returns. Those returns
+    advance the prior target to current pre-trade holdings before rebalance
+    turnover is measured. Hand-built legacy frames without ``asset_returns``
+    retain explicit target-to-target fallback semantics for compatibility.
+    """
 
     required = {"fold", "decision_date", "benchmark", "gross_return", "weights"}
     missing = required - set(frame.columns)
@@ -163,19 +177,32 @@ def stitch_oos_path(
 
     rows = rows.sort_values(["decision_date", "benchmark", "fold"])
     stitched = rows.drop_duplicates(["decision_date", "benchmark"], keep="last").copy()
-    stitched["turnover"] = 0.0
-    stitched["cost"] = 0.0
+    stitched["turnover"] = float("nan")
+    stitched["cost"] = float("nan")
     stitched["net_return"] = float("nan")
+    stitched["pretrade_weights"] = [None] * len(stitched)
+    stitched["turnover_basis"] = None
+    drift_capable = "asset_returns" in stitched.columns
+    stitched["drift_aware_turnover"] = drift_capable
 
     for indices in stitched.groupby("benchmark").groups.values():
         previous = None
+        previous_asset_returns = None
         ordered = stitched.loc[list(indices)].sort_values("decision_date")
-        for index, row in ordered.iterrows():
-            weights = row["weights"]
-            if isinstance(weights, str):
-                weights = __import__("json").loads(weights)
+        ordered_items = list(ordered.iterrows())
+        for position, (index, row) in enumerate(ordered_items):
+            weights = _mapping(row["weights"])
+            if weights is None:
+                raise ValueError("weights_must_be_mapping")
             gross = row["gross_return"]
-            if previous is None:
+            terminal = position == len(ordered_items) - 1 and pd.isna(gross)
+
+            if terminal:
+                pretrade = None
+                turnover = 0.0
+                basis = "terminal_no_trade"
+            elif previous is None:
+                pretrade = {}
                 turnover = (
                     portfolio_turnover(
                         weights,
@@ -185,16 +212,45 @@ def stitch_oos_path(
                     if charge_initial_trade
                     else 0.0
                 )
+                basis = (
+                    "initial_target_vs_cash"
+                    if charge_initial_trade
+                    else "initial_trade_not_charged"
+                )
+            elif drift_capable:
+                pretrade, turnover = rebalance_turnover(
+                    weights,
+                    previous,
+                    previous_asset_returns,
+                    convention=turnover_convention,
+                )
+                basis = (
+                    "drifted_pretrade_holdings"
+                    if turnover is not None
+                    else "drift_unavailable"
+                )
             else:
+                pretrade = dict(previous)
                 turnover = portfolio_turnover(
                     weights,
                     previous,
                     convention=turnover_convention,
                 )
-            cost = turnover * float(cost_bps) / 10000.0
-            stitched.at[index, "turnover"] = turnover
-            stitched.at[index, "cost"] = cost
-            if pd.notna(gross):
-                stitched.at[index, "net_return"] = float(gross) - cost
+                basis = "target_weights_legacy_fallback"
+
+            stitched.at[index, "pretrade_weights"] = pretrade
+            stitched.at[index, "turnover_basis"] = basis
+            if turnover is not None:
+                cost = float(turnover) * float(cost_bps) / 10000.0
+                stitched.at[index, "turnover"] = float(turnover)
+                stitched.at[index, "cost"] = cost
+                if pd.notna(gross):
+                    stitched.at[index, "net_return"] = float(gross) - cost
+
             previous = weights
+            previous_asset_returns = (
+                _mapping(row["asset_returns"])
+                if drift_capable
+                else None
+            )
     return stitched.sort_values(["decision_date", "benchmark"]).reset_index(drop=True)
