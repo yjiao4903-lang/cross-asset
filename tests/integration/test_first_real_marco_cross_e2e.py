@@ -5,22 +5,27 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from cross_asset.cli import app
-from cross_asset.storage import DuckDBStore, latest_observations_asof
+from cross_asset.storage import (
+    DuckDBStore,
+    latest_formal_observations_asof,
+    latest_observations_asof,
+)
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "marco_integration_v1"
 DECISION_DATE = date(2026, 9, 2)
 MARKET_CUTOFF = date(2026, 8, 31)
+SERIES = {
+    "CN_EQ_LARGE": (100.0, 0.60),
+    "HK_EQ": (100.0, 0.45),
+    "US_EQ": (100.0, 0.50),
+    "CN_BOND_10Y": (2.5, -0.002),
+    "GOLD": (1800.0, 1.20),
+    "COPPER": (4.0, 0.006),
+}
 
 
 def _seed_minimal_real_style_db(path: Path) -> None:
-    series = {
-        "CN_EQ_LARGE": (100.0, 0.60),
-        "HK_EQ": (100.0, 0.45),
-        "US_EQ": (100.0, 0.50),
-        "CN_BOND_10Y": (2.5, -0.002),
-        "GOLD": (1800.0, 1.20),
-        "COPPER": (4.0, 0.006),
-    }
+    series = SERIES
     start = date(2026, 7, 20)
     rows = []
     for index in range((MARKET_CUTOFF - start).days + 1):
@@ -69,15 +74,28 @@ def _seed_minimal_real_style_db(path: Path) -> None:
     store = DuckDBStore(path)
     try:
         store.insert_observations(rows, run_id="first-real-marco-cross-regression")
+        # Fabricated LIVE_VERIFIED provenance: this regression proves the
+        # approved-consumption and market-cutoff mechanics of run-daily inside
+        # an ephemeral test database. It is not real acceptance evidence.
+        from conftest import approve_test_series
+
+        approve_test_series(
+            store,
+            series_ids=series,
+            provider="minimal-real-style",
+        )
     finally:
         store.close()
 
 
-def test_marco_provider_score_allocation_respects_market_cutoff(tmp_path):
-    database = tmp_path / "cross_asset.duckdb"
-    _seed_minimal_real_style_db(database)
+def _run_daily(tmp_path, database, extra_args=()):
+    from conftest import write_test_calendar_configs
 
-    result = CliRunner().invoke(
+    calendar_config, series_calendar_config = write_test_calendar_configs(
+        tmp_path,
+        series_ids=list(SERIES),
+    )
+    return CliRunner().invoke(
         app,
         [
             "run-daily",
@@ -89,8 +107,20 @@ def test_marco_provider_score_allocation_respects_market_cutoff(tmp_path):
             str(database),
             "--as-of",
             DECISION_DATE.isoformat(),
+            "--calendar-config",
+            str(calendar_config),
+            "--series-calendar-config",
+            str(series_calendar_config),
+            *extra_args,
         ],
     )
+
+
+def test_marco_provider_score_allocation_respects_market_cutoff(tmp_path):
+    database = tmp_path / "cross_asset.duckdb"
+    _seed_minimal_real_style_db(database)
+
+    result = _run_daily(tmp_path, database)
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
@@ -106,7 +136,17 @@ def test_marco_provider_score_allocation_respects_market_cutoff(tmp_path):
             datetime(2026, 9, 2, 23, 59, 59, tzinfo=UTC),
             market_data_cutoff=MARKET_CUTOFF,
         ).df()
+        formal = latest_formal_observations_asof(
+            store.conn,
+            datetime(2026, 9, 2, 23, 59, 59, tzinfo=UTC),
+            required_usage_status="LIVE_VERIFIED",
+            market_data_cutoff=MARKET_CUTOFF,
+        )
     finally:
         store.close()
     assert not selected.empty
     assert selected["observation_date"].max().date() == MARKET_CUTOFF
+    # The formal approved selection agrees with the raw PIT selection here and
+    # never includes the post-cutoff observation date.
+    assert not formal.empty
+    assert formal["observation_date"].max().date() == MARKET_CUTOFF

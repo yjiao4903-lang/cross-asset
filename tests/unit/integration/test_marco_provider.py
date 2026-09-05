@@ -66,6 +66,15 @@ def _seed_market_db(path, *, rows_per_series=80):
     store = DuckDBStore(path)
     try:
         store.insert_observations(rows, run_id="marco-run-daily-fixture")
+        # Fabricated LIVE_VERIFIED provenance so the run-daily positive path
+        # exercises the approved-consumption gate inside an ephemeral test DB.
+        from conftest import approve_test_series
+
+        approve_test_series(
+            store,
+            series_ids=series,
+            provider="fixture",
+        )
     finally:
         store.close()
 
@@ -320,6 +329,19 @@ def test_cli_validate_reports_contract_pass_with_partial_signals():
 def test_run_daily_marco_reaches_asset_score_and_allocation(tmp_path):
     database = tmp_path / "cross_asset.duckdb"
     _seed_market_db(database)
+    from conftest import write_test_calendar_configs
+
+    calendar_config, series_calendar_config = write_test_calendar_configs(
+        tmp_path,
+        series_ids=[
+            "CN_EQ_LARGE",
+            "HK_EQ",
+            "US_EQ",
+            "CN_BOND_10Y",
+            "GOLD",
+            "COPPER",
+        ],
+    )
     result = CliRunner().invoke(
         app,
         [
@@ -332,6 +354,10 @@ def test_run_daily_marco_reaches_asset_score_and_allocation(tmp_path):
             str(database),
             "--as-of",
             AS_OF.isoformat(),
+            "--calendar-config",
+            str(calendar_config),
+            "--series-calendar-config",
+            str(series_calendar_config),
         ],
     )
     assert result.exit_code == 0, result.output
