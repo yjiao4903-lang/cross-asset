@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
 import yaml
@@ -15,6 +15,8 @@ from .calendar import MarketCalendar
 _MAX_SESSION_WALK_DAYS = 370
 _SUPPORTED_EFFECTIVE_RULE = "next_available_session"
 _SUPPORTED_PRICE_RULE = "next_available_session_close"
+RESEARCH_PROXY_RETURN_TIMING_BASIS = "decision_to_next_decision_research_proxy"
+RESEARCH_PROXY_PERFORMANCE_SEMANTICS = "research_proxy_not_investor_realizable"
 
 
 @dataclass(frozen=True)
@@ -149,9 +151,84 @@ def resolve_market_execution(
     return blocked("calendar_walk_exhausted", calendar)
 
 
+def portfolio_execution_timing_disclosure(
+    decision_at: datetime,
+    return_specs: Mapping[str, Any],
+    asset_market_map: Mapping[str, str] | None = None,
+    *,
+    policy: ExecutionTimingPolicy | None = None,
+    policy_path: str | Path = "config/execution_timing.yml",
+    calendar_config: str | Path | None = None,
+) -> dict[str, Any]:
+    """Build auditable per-asset timing disclosure without inventing market mappings.
+
+    Cash return specs are explicitly not applicable. Every other asset requires
+    an explicit asset-to-market mapping and a resolvable VERIFIED calendar.
+    Any unresolved non-cash asset blocks the portfolio timing status. The
+    disclosure deliberately labels current returns as a research proxy because
+    return calculation has not yet been moved to execution-price timestamps.
+    """
+
+    mapping = dict(asset_market_map or {})
+    by_asset: dict[str, dict[str, Any]] = {}
+    blockers: list[str] = []
+    for asset, spec in return_specs.items():
+        if getattr(spec, "kind", None) == "cash":
+            by_asset[str(asset)] = {
+                "status": "NOT_APPLICABLE",
+                "reason": "cash_return_no_market_execution",
+                "decision_at": decision_at,
+                "market": None,
+                "effective_at": None,
+                "execution_price_at": None,
+            }
+            continue
+        market = mapping.get(str(asset))
+        if not market:
+            reason = "market_mapping_missing"
+            blockers.append(f"{asset}:{reason}")
+            by_asset[str(asset)] = {
+                "status": "BLOCKED",
+                "reason": reason,
+                "decision_at": decision_at,
+                "market": None,
+                "effective_at": None,
+                "execution_price_at": None,
+            }
+            continue
+        result = resolve_market_execution(
+            decision_at,
+            str(market),
+            policy=policy,
+            policy_path=policy_path,
+            calendar_config=calendar_config,
+        )
+        by_asset[str(asset)] = result.to_dict()
+        if not result.resolved:
+            blockers.append(f"{asset}:{result.reason}")
+
+    status = "RESOLVED" if not blockers else "BLOCKED"
+    return {
+        "status": status,
+        "reason": (
+            "all_non_cash_asset_execution_times_resolved"
+            if not blockers
+            else "asset_execution_timing_unresolved"
+        ),
+        "decision_at": decision_at,
+        "by_asset": by_asset,
+        "blockers": blockers,
+        "return_timing_basis": RESEARCH_PROXY_RETURN_TIMING_BASIS,
+        "performance_semantics": RESEARCH_PROXY_PERFORMANCE_SEMANTICS,
+    }
+
+
 __all__ = [
     "ExecutionTimingPolicy",
     "ExecutionTimingResult",
+    "RESEARCH_PROXY_PERFORMANCE_SEMANTICS",
+    "RESEARCH_PROXY_RETURN_TIMING_BASIS",
     "load_execution_timing_policy",
+    "portfolio_execution_timing_disclosure",
     "resolve_market_execution",
 ]
