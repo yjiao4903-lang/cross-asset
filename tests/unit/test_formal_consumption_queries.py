@@ -156,6 +156,29 @@ def test_non_ok_or_unknown_quality_is_never_formal(quality):
     assert frame.empty
 
 
+@pytest.mark.parametrize("latest_quality", ["stale", "failed", "unknown"])
+def test_latest_bad_vintage_never_falls_back_to_older_ok(latest_quality):
+    store = DuckDBStore(":memory:")
+    try:
+        _accept(store)
+        _observe(
+            store,
+            value=1.0,
+            available_at=datetime(2026, 9, 1, 12, tzinfo=UTC),
+            quality="ok",
+        )
+        _observe(
+            store,
+            value=2.0,
+            available_at=datetime(2026, 9, 1, 18, tzinfo=UTC),
+            quality=latest_quality,
+        )
+        frame = _formal(store)
+    finally:
+        store.close()
+    assert frame.empty
+
+
 def test_future_available_at_is_not_read():
     store = DuckDBStore(":memory:")
     try:
