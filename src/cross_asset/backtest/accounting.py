@@ -37,8 +37,6 @@ _BLOCKED_QUALITIES = {"stale", "failed", "unknown", "bad", "missing", "unapprove
 
 @dataclass(frozen=True)
 class FXConversionSpec:
-    """One explicit FX quote contract; quote direction is never inferred."""
-
     series_id: str
     local_currency: str
     reporting_currency: str
@@ -115,18 +113,18 @@ class PortfolioAccountingPolicy:
         return asdict(self)
 
     def required_series_ids(self) -> set[str]:
-        series_ids: set[str] = set()
+        result: set[str] = set()
         for spec in self.assets.values():
             if spec.fx is not None:
-                series_ids.add(spec.fx.series_id)
+                result.add(spec.fx.series_id)
             if spec.hedge_return_series_id:
-                series_ids.add(spec.hedge_return_series_id)
-        return series_ids
+                result.add(spec.hedge_return_series_id)
+        return result
 
 
 @dataclass(frozen=True)
 class ReturnAccountingResult:
-    status: str  # RESOLVED | BLOCKED | NOT_APPLICABLE
+    status: str
     reporting_currency: str
     gross_return: float | None
     asset_returns: dict[str, float]
@@ -204,13 +202,73 @@ def load_return_accounting_policy(
     return policy
 
 
+def embedded_accounting_required_series_ids(
+    return_specs: Mapping[str, AssetReturnSpec],
+) -> set[str]:
+    """Declare FX/hedge inputs that must pass the same #18 formal query."""
+    result: set[str] = set()
+    for spec in return_specs.values():
+        accounting = spec.accounting
+        if not isinstance(accounting, Mapping):
+            continue
+        fx = accounting.get("fx")
+        if isinstance(fx, Mapping) and fx.get("series_id"):
+            result.add(str(fx["series_id"]))
+        hedge_series = accounting.get("hedge_return_series_id")
+        if hedge_series:
+            result.add(str(hedge_series))
+    return result
+
+
+def embedded_accounting_disclosure(
+    return_specs: Mapping[str, AssetReturnSpec],
+) -> dict[str, Any] | None:
+    """Expose the frozen D2 policy without recomputing return logic."""
+    payloads = {
+        asset: dict(spec.accounting)
+        for asset, spec in return_specs.items()
+        if isinstance(spec.accounting, Mapping)
+    }
+    if not payloads:
+        return None
+    if len(payloads) != len(return_specs):
+        raise ValueError("accounting_policy_must_cover_all_assets")
+    global_fields = (
+        "policy_version",
+        "reporting_currency",
+        "supported_currencies",
+        "pricing_basis",
+        "performance_semantics",
+    )
+    first = next(iter(payloads.values()))
+    global_values = {field: first.get(field) for field in global_fields}
+    for payload in payloads.values():
+        if any(payload.get(field) != global_values[field] for field in global_fields):
+            raise ValueError("embedded_accounting_policy_inconsistent")
+    assets = {
+        asset: {key: value for key, value in payload.items() if key not in global_fields}
+        for asset, payload in payloads.items()
+    }
+    return {**global_values, "assets": assets}
+
+
 def _utc(value) -> pd.Timestamp:
-    return pd.Timestamp(value).tz_localize("UTC") if pd.Timestamp(value).tzinfo is None else pd.Timestamp(value).tz_convert("UTC")
+    timestamp = pd.Timestamp(value)
+    return (
+        timestamp.tz_localize("UTC")
+        if timestamp.tzinfo is None
+        else timestamp.tz_convert("UTC")
+    )
 
 
 def _compatible_return_type(spec: AssetReturnSpec, accounting: AssetAccountingSpec) -> bool:
     allowed = {
-        "price": {"PRICE_RETURN", "TOTAL_RETURN", "FUTURES_CONTINUOUS_ROLL_PROXY", "UNRESOLVED"},
+        "price": {
+            "PRICE_RETURN",
+            "TOTAL_RETURN",
+            "FUTURES_CONTINUOUS_ROLL_PROXY",
+            "UNRESOLVED",
+        },
         "yield_duration_proxy": {"BOND_YIELD_DURATION_PROXY"},
         "cash": {"CASH_RATE"},
     }
@@ -289,14 +347,6 @@ def portfolio_reporting_currency_return(
     fx_start_at=None,
     fx_end_at=None,
 ) -> ReturnAccountingResult:
-    """Convert asset holding-period returns into one explicit reporting currency.
-
-    FX endpoints must match the asset pricing endpoints exactly. Current callers
-    use decision-to-next-decision observation boundaries and therefore remain a
-    research proxy; this function must not be used to relabel them as realized
-    execution-price performance.
-    """
-
     policy.validate()
     price_start = _utc(pricing_start_at if pricing_start_at is not None else decision)
     if next_decision is None:
@@ -339,7 +389,6 @@ def portfolio_reporting_currency_return(
     local_returns: dict[str, float] = {}
     reporting_returns: dict[str, float] = {}
     by_asset: dict[str, dict[str, Any]] = {}
-
     for asset, weight in allocation.items():
         if float(weight) == 0.0:
             continue
@@ -377,12 +426,7 @@ def portfolio_reporting_currency_return(
             detail["status"] = "BLOCKED"
             continue
 
-        local_return = period_asset_return(
-            observations,
-            return_spec,
-            price_start,
-            price_end,
-        )
+        local_return = period_asset_return(observations, return_spec, price_start, price_end)
         if local_return is None:
             blockers.append(f"{asset}:local_return_unavailable")
             detail["status"] = "BLOCKED"
@@ -481,6 +525,8 @@ __all__ = [
     "FXConversionSpec",
     "PortfolioAccountingPolicy",
     "ReturnAccountingResult",
+    "embedded_accounting_disclosure",
+    "embedded_accounting_required_series_ids",
     "load_return_accounting_policy",
     "portfolio_reporting_currency_return",
 ]
