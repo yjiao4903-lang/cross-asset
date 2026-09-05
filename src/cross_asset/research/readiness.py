@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 
 import pandas as pd
 
+from cross_asset.storage import approved_observations_asof
+
 from .protocol import ResearchProtocol
 
 
@@ -46,17 +48,45 @@ def _series_freshness_hours(connection, series_id: str) -> float | None:
     return value if value > 0 else None
 
 
+def _accepted_registry_rows(
+    connection,
+    series_id: str,
+    protocol: ResearchProtocol,
+):
+    return connection.execute(
+        """SELECT status,usage_status,pit_grade,reviewer,approved_at,provider,source_series_id
+           FROM data_acceptance_registry
+           WHERE series_id=?
+             AND status=?
+             AND usage_status=?
+             AND tech_gate='PASS'
+             AND legal_gate='PASS'
+             AND pit_gate='PASS'
+             AND stability_gate='PASS'
+             AND pit_grade IN ('A','B')
+             AND semantic_equivalence IS TRUE
+             AND origin IN ('LIVE','MANUAL')
+             AND source_series_id IS NOT NULL
+             AND trim(source_series_id) <> ''
+             AND reviewer IS NOT NULL
+             AND trim(reviewer) NOT IN ('','TBD')
+             AND approved_at IS NOT NULL
+           ORDER BY provider,source_series_id""",
+        [
+            series_id,
+            protocol.required_registry_status,
+            protocol.required_usage_status,
+        ],
+    ).fetchall()
+
+
 def _pit_coverage(
     connection,
     series_id: str,
     decision_times: pd.DatetimeIndex,
+    approved_observations: pd.DataFrame,
 ) -> dict:
-    """Measure usable PIT coverage over explicit research decision times.
-
-    A decision is covered when at least one observation was available by the
-    decision time. When stale_after_hours is declared in the series catalog,
-    the most recent PIT observation must also remain fresh at that decision.
-    """
+    """Measure PIT coverage using only formally approved source observations."""
 
     stale_after_hours = _series_freshness_hours(connection, series_id)
     if len(decision_times) == 0:
@@ -67,14 +97,13 @@ def _pit_coverage(
             "stale_after_hours": stale_after_hours,
         }
 
-    rows = connection.execute(
-        """SELECT available_at FROM observations
-           WHERE series_id=? ORDER BY available_at""",
-        [series_id],
-    ).fetchall()
+    rows = approved_observations[
+        approved_observations["series_id"] == series_id
+    ]
     available = pd.DatetimeIndex(
-        pd.to_datetime([row[0] for row in rows], utc=True)
+        pd.to_datetime(rows["available_at"].tolist(), utc=True)
     )
+    available = available.sort_values()
     covered = 0
     for decision in decision_times:
         position = int(available.searchsorted(decision, side="right")) - 1
@@ -102,18 +131,24 @@ def evaluate_research_readiness(
     required_series: list[str] | tuple[str, ...] | None = None,
     decision_times=None,
 ) -> dict:
-    """Evaluate protocol, registry, formal observations, history and PIT coverage."""
+    """Evaluate protocol, approved observations, history and PIT coverage."""
 
     catalog_critical = _required_series(connection)
-    required = sorted(
-        set(catalog_critical)
-        | set(required_series or ())
-    )
+    required = sorted(set(catalog_critical) | set(required_series or ()))
     research_decisions = _decision_times(decision_times)
     blockers = list(protocol.execution_blockers)
-    formal_count = int(
-        connection.execute("SELECT count(*) FROM observations").fetchone()[0]
+
+    readiness_asof = (
+        research_decisions[-1].to_pydatetime()
+        if len(research_decisions)
+        else datetime.now(UTC)
     )
+    approved = approved_observations_asof(
+        connection,
+        readiness_asof,
+        required_usage_status=protocol.required_usage_status,
+    ).df()
+    formal_count = int(len(approved))
     if formal_count == 0:
         blockers.append("formal_observations_empty")
     if not required:
@@ -123,37 +158,38 @@ def evaluate_research_readiness(
     ready_count = 0
     coverage_ready_count = 0
     for series_id in required:
-        registry = connection.execute(
-            """SELECT status,usage_status,pit_grade,reviewer,approved_at,provider,source_series_id
-               FROM data_acceptance_registry
-               WHERE series_id=?
-               ORDER BY updated_at DESC""",
-            [series_id],
-        ).fetchall()
-        accepted = [
-            row
+        registry = _accepted_registry_rows(connection, series_id, protocol)
+        identities = {
+            (str(row[5]).lower(), str(row[6]))
             for row in registry
-            if row[0] == protocol.required_registry_status
-            and row[1] == protocol.required_usage_status
-            and row[3] not in (None, "", "TBD")
-            and row[4] is not None
-        ]
-        stats = connection.execute(
-            """SELECT count(*),min(observation_date),max(observation_date),max(available_at)
-               FROM observations WHERE series_id=?""",
-            [series_id],
-        ).fetchone()
-        count = int(stats[0])
-        start, end, max_available = stats[1], stats[2], stats[3]
-        history_years = (
-            (end - start).days / 365.25
-            if count and start is not None and end is not None
-            else 0.0
+        }
+        registry_ready = len(identities) == 1
+        selected_registry = registry[0] if registry_ready else None
+
+        rows = approved[approved["series_id"] == series_id].copy()
+        count = int(len(rows))
+        if count:
+            start = rows["observation_date"].min()
+            end = rows["observation_date"].max()
+            max_available = rows["available_at"].max()
+            history_years = (
+                pd.Timestamp(end) - pd.Timestamp(start)
+            ).days / 365.25
+        else:
+            start = end = max_available = None
+            history_years = 0.0
+
+        coverage = _pit_coverage(
+            connection,
+            series_id,
+            research_decisions,
+            approved,
         )
-        coverage = _pit_coverage(connection, series_id, research_decisions)
         item_blockers = []
-        if not accepted:
+        if not registry:
             item_blockers.append("registry_pass_research_admissible_required")
+        elif not registry_ready:
+            item_blockers.append("formal_source_identity_ambiguous")
         if count == 0:
             item_blockers.append("formal_observations_missing")
         elif history_years < protocol.train_min_years:
@@ -171,10 +207,10 @@ def evaluate_research_readiness(
         series.append(
             {
                 "series_id": series_id,
-                "registry_ready": bool(accepted),
-                "pit_grade": accepted[0][2] if accepted else None,
-                "provider": accepted[0][5] if accepted else None,
-                "source_series_id": accepted[0][6] if accepted else None,
+                "registry_ready": registry_ready,
+                "pit_grade": selected_registry[2] if selected_registry else None,
+                "provider": selected_registry[5] if selected_registry else None,
+                "source_series_id": selected_registry[6] if selected_registry else None,
                 "observation_count": count,
                 "history_start": start,
                 "history_end": end,
