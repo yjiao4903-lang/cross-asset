@@ -206,12 +206,12 @@ def run_oos_command(
             protocol=protocol,
             model_config=model_config,
         )
+        asset_market_map = load_research_asset_market_map()
         fold_rows = annotate_research_execution_timing(
             fold_rows,
             model_config.return_specs,
-            load_research_asset_market_map(),
+            asset_market_map,
         )
-        execution_timing = research_execution_timing_summary(fold_rows)
         stitched = stitch_oos_path(
             fold_rows,
             plan.to_dict(),
@@ -219,6 +219,13 @@ def run_oos_command(
             turnover_convention=protocol.turnover_convention,
             charge_initial_trade=protocol.charge_initial_trade,
         )
+        stitched = annotate_research_execution_timing(
+            stitched,
+            model_config.return_specs,
+            asset_market_map,
+            terminal_group_columns=("benchmark",),
+        )
+        execution_timing = research_execution_timing_summary(stitched)
         pivot = stitched.pivot(
             index="decision_date",
             columns="benchmark",
