@@ -141,6 +141,42 @@ def return_index_from_series(series: pd.Series, spec: AssetReturnSpec) -> pd.Ser
     return result.replace([np.inf, -np.inf], np.nan).dropna()
 
 
+def portfolio_asset_returns(
+    observations: pd.DataFrame,
+    allocation: Mapping[str, float],
+    decision,
+    next_decision,
+    *,
+    specs: Mapping[str, AssetReturnSpec] | None = None,
+) -> dict[str, float] | None:
+    """Resolve asset-level holding returns for every non-zero portfolio leg.
+
+    These returns are the accounting input used to advance a target allocation
+    into the next decision's pre-trade holdings. Missing returns on any non-zero
+    leg fail closed because drift and rebalance turnover would otherwise be
+    unknowable. Zero-weight assets do not require a holding-period return.
+    """
+
+    if next_decision is None:
+        return None
+    configured = specs or {}
+    resolved: dict[str, float] = {}
+    for asset, weight in allocation.items():
+        if abs(float(weight)) <= 1e-15:
+            continue
+        spec = configured.get(asset, AssetReturnSpec(series_id=asset))
+        result = period_asset_return(
+            observations,
+            decision=decision,
+            next_decision=next_decision,
+            spec=spec,
+        )
+        if result is None or not np.isfinite(float(result)):
+            return None
+        resolved[str(asset)] = float(result)
+    return resolved
+
+
 def portfolio_period_return(
     observations: pd.DataFrame,
     allocation: Mapping[str, float],
@@ -151,30 +187,22 @@ def portfolio_period_return(
 ) -> float | None:
     """Aggregate strict asset returns; missing non-zero legs make the period unavailable."""
 
-    if next_decision is None:
+    asset_returns = portfolio_asset_returns(
+        observations,
+        allocation,
+        decision,
+        next_decision,
+        specs=specs,
+    )
+    if asset_returns is None:
         return None
-    configured = specs or {}
-    total = 0.0
-    for asset, weight in allocation.items():
-        weight = float(weight)
-        if abs(weight) <= 1e-15:
-            continue
-        spec = configured.get(asset, AssetReturnSpec(series_id=asset))
-        result = period_asset_return(
-            observations,
-            decision=decision,
-            next_decision=next_decision,
-            spec=spec,
-        )
-        if result is None:
-            return None
-        total += weight * result
-    return total
+    return sum(float(allocation[asset]) * value for asset, value in asset_returns.items())
 
 
 __all__ = [
     "AssetReturnSpec",
     "period_asset_return",
+    "portfolio_asset_returns",
     "portfolio_period_return",
     "return_index_from_series",
 ]
