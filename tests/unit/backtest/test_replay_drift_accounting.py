@@ -6,12 +6,11 @@ from cross_asset.backtest.returns import AssetReturnSpec
 
 
 class _DriftStrategy:
-    return_specs = {
-        "A": AssetReturnSpec("A", kind="price"),
-        "B": AssetReturnSpec("B", kind="price"),
-    }
-
     def __init__(self):
+        self.return_specs = {
+            "A": AssetReturnSpec("A", kind="price"),
+            "B": AssetReturnSpec("B", kind="price"),
+        }
         self.last_scores = {}
         self.last_decision = None
 
