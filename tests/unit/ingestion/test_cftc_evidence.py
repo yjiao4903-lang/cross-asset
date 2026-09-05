@@ -42,6 +42,7 @@ def test_cftc_evidence_sidecar_records_full_hash_and_parser_version(tmp_path):
     assert health.raw_archive_path is not None
     assert evidence.raw_sha256 == hashlib.sha256(payload).hexdigest()
     assert evidence.parser_version == PARSER_VERSION
+    assert evidence.source_year == 2025
     assert evidence.row_count == health.row_count
     assert evidence.latest_observation == health.latest_observation
     assert evidence.latest_available_at == health.latest_available_at
@@ -52,6 +53,7 @@ def test_cftc_evidence_sidecar_records_full_hash_and_parser_version(tmp_path):
     persisted = json.loads(sidecar.read_text(encoding="utf-8"))
     assert persisted["raw_sha256"] == hashlib.sha256(payload).hexdigest()
     assert persisted["parser_version"] == PARSER_VERSION
+    assert persisted["source_year"] == 2025
     assert persisted["source_status"] == health.source_status.value
 
 
