@@ -20,6 +20,7 @@ def annotate_research_execution_timing(
     return_specs: Mapping[str, Any],
     asset_market_map: Mapping[str, str] | None = None,
     *,
+    terminal_group_columns: tuple[str, ...] | None = ("fold", "benchmark"),
     policy_path: str | Path = "config/execution_timing.yml",
     calendar_config: str | Path | None = None,
 ) -> pd.DataFrame:
@@ -30,10 +31,11 @@ def annotate_research_execution_timing(
     rows = frame.copy()
     normalized = pd.to_datetime(rows["decision_date"], utc=True)
     terminal = pd.Series(False, index=rows.index)
-    if {"fold", "benchmark"}.issubset(rows.columns):
+    group_columns = tuple(terminal_group_columns or ())
+    if group_columns and set(group_columns).issubset(rows.columns):
         terminal = normalized.eq(
             rows.assign(_decision=normalized)
-            .groupby(["fold", "benchmark"])["_decision"]
+            .groupby(list(group_columns))["_decision"]
             .transform("max")
         )
 
