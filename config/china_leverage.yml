@@ -1,0 +1,17 @@
+version: 1
+status: CANDIDATE_ONLY
+canonical_series_id: POS_CN_RZRQ
+availability_policy: CONSERVATIVE_T_PLUS_1_0900_ASIA_SHANGHAI
+sources:
+  - provider: sse
+    source_series_id: SSE_MARGIN_SUM
+    source_reference: https://www.sse.com.cn/market/othersdata/margin/sum/
+    scope: exchange_margin_summary
+  - provider: szse
+    source_series_id: SZSE_MARGIN_SUM
+    source_reference: official_exchange_margin_disclosure_pending_endpoint_binding
+    scope: exchange_margin_summary
+  - provider: csf
+    source_series_id: CSF_MARGIN_SUM
+    source_reference: official_csf_margin_disclosure_pending_endpoint_binding
+    scope: market_margin_summary
