@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+
 from cross_asset.research.evaluation import stitch_oos_path
 
 
