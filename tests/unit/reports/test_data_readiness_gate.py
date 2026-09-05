@@ -104,7 +104,10 @@ def test_missing_one_required_observation_keeps_data_blocked(tmp_path):
     assert result["ready_series_count"] == len(FIRST_REAL_E2E_PROFILE) - 1
     assert detail["acceptance_pass"] is True
     assert detail["accepted_observation_rows"] == 0
-    assert detail["blockers"] == ["ACCEPTED_SOURCE_OBSERVATIONS_MISSING"]
+    assert detail["blockers"] == [
+        "ACCEPTED_SOURCE_OBSERVATIONS_MISSING",
+        "APPROVED_PROVENANCE_OBSERVATIONS_MISSING",
+    ]
 
 
 def test_all_six_exact_accepted_wind_sources_unlock_data_ready(tmp_path):

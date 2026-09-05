@@ -41,3 +41,15 @@ A global `DATA_READY` state must not be unlocked by an unrelated observation or 
 For each required series, readiness requires an exact Wind acceptance-registry entry with `status=PASS`, all four gates at `PASS`, a non-empty accepted `source_series_id`, and at least one formal observation whose `series_id`, provider/source, and `source_series_id` match that accepted provenance. Observations from another provider or another source series do not satisfy the gate.
 
 This aggregate is deliberately narrower than P0-B/P0-C completion. It does **not** prove the required 2014-to-latest complete-day backfill, does not produce `HISTORY_READY`, and does not establish a successful First Real Marco-to-Cross E2E. Those remain separate acceptance gates under `NEXT_PHASE_IMPLEMENTATION_PLAN_v1.md`.
+
+## Formal consumption gate (Issue #18)
+
+Existence of a row in `observations` never makes it formally consumable. All formal consumers (run-daily, research readiness, the walk-forward executor, readiness/coverage/data-health reports) read market data only through the shared approved-observation query (`latest_formal_observations_asof` / `approved_observations_asof`), which binds every row to one exact, unambiguous approved registry identity `(series_id, provider, source_series_id, usage_status)` and enforces `available_at <= decision_time` and the market-data cutoff.
+
+On top of the approved query, formal consumption additionally requires:
+
+- **Row quality**: `quality` in the formal set `{ok, closed}`. `stale`, `failed`, `missing`, `fallback`, and any unrecognized value fail closed.
+- **Freshness**: per-series calendar mapping with a `VERIFIED` calendar and an explicit `max_lag_sessions` budget (`config/series_calendars.yml`). Missing mappings, unverified calendars, uncovered years, and lag beyond the budget block the formal path. Until Issue #21 supplies real calendar evidence, formal consumers stay `DATA_BLOCKED`/`FROZEN`; no weekend heuristic is used.
+- **Health propagation**: real data health reaches the allocator; unhealthy critical data yields `DATA_BLOCKED` or a frozen allocation, never a fresh `ACTIVE`.
+
+Fixture/simulated data may still drive offline tests, but `origin FIXTURE/SIMULATED` cannot pass the formal query and can never satisfy real-data readiness.

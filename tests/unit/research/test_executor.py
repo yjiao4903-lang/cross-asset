@@ -6,6 +6,40 @@ from cross_asset.research.executor import ResearchModelConfig, execute_walk_forw
 from cross_asset.research.plan import build_research_plan
 from cross_asset.research.protocol import ResearchProtocol
 from cross_asset.storage import init_db
+from cross_asset.storage.acceptance_registry import upsert_data_acceptance
+
+
+def _accept_fixture_series(store, series_id="A", provider="fixture"):
+    """Fabricate an approved RESEARCH_ADMISSIBLE provenance for the test rows.
+
+    The row only proves the executor's approved-provenance binding inside an
+    ephemeral test database; it makes no claim about real data acceptance.
+    """
+    from datetime import UTC, datetime
+
+    upsert_data_acceptance(
+        store,
+        {
+            "series_id": series_id,
+            "provider": provider,
+            "source_series_id": series_id,
+            "status": "PASS",
+            "tech_gate": "PASS",
+            "legal_gate": "PASS",
+            "pit_gate": "PASS",
+            "stability_gate": "PASS",
+            "pit_grade": "B",
+            "origin": "MANUAL",
+            "permission_scope": "research",
+            "semantic_equivalence": True,
+            "manifest_hash": f"manifest-{series_id}",
+            "reviewer": "reviewer",
+            "approved_at": datetime(2017, 1, 1, tzinfo=UTC),
+            "evidence_json": "{}",
+            "updated_at": datetime(2017, 1, 1, tzinfo=UTC),
+            "usage_status": "RESEARCH_ADMISSIBLE",
+        },
+    )
 
 
 def _protocol():
@@ -84,6 +118,7 @@ def test_executor_runs_only_development_folds_and_keeps_holdout_sealed():
         protocol = _protocol()
         plan = build_research_plan(dates, protocol)
         assert plan.status == "READY_FOR_OOS"
+        _accept_fixture_series(store)
         config = ResearchModelConfig(
             assets=("A", "CASH"),
             strategic_weights={"A": 0.5, "CASH": 0.5},

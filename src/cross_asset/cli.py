@@ -142,6 +142,10 @@ def ingest_production_csv_command(
         )
         raise typer.Exit(1) from exc
     typer.echo(json.dumps(result, ensure_ascii=False, sort_keys=True, default=str))
+    # EMPTY/PARTIAL provider-level outcomes are never reported as plain SUCCESS;
+    # a dry-run VALIDation stays a successful exit.
+    if str(result.get("status", "FAIL")).upper() not in {"SUCCESS", "VALID"}:
+        raise typer.Exit(1)
 
 
 @app.command("canonicalize-wind-export")
@@ -490,6 +494,16 @@ def run_live(retry: bool = typer.Option(False, "--retry", help="Explicitly rerun
     lock.release()
 
 
+def _as_naive_utc(value):
+    """Normalize a timestamp cell from DuckDB/pandas to naive UTC datetime."""
+    import pandas as pd
+
+    timestamp = pd.Timestamp(value)
+    if timestamp.tzinfo is not None:
+        timestamp = timestamp.tz_convert("UTC").tz_localize(None)
+    return timestamp.to_pydatetime()
+
+
 def _reserved(name: str):
     def command() -> None:
         _not_implemented(name)
@@ -528,8 +542,18 @@ def run_daily_command(
     integration_dir: str | None = typer.Option(None, "--integration-dir"),
     as_of: str | None = typer.Option(None, "--as-of"),
     database: str | None = typer.Option(None, "--database"),
+    calendar_config: str = typer.Option("config/calendars.yml", "--calendar-config"),
+    series_calendar_config: str = typer.Option(
+        "config/series_calendars.yml", "--series-calendar-config"
+    ),
 ) -> None:
-    """Run the daily Cross model chain with an explicit macro source."""
+    """Run the daily Cross model chain with an explicit macro source.
+
+    Market observations are consumed only through the shared formal selection:
+    approved acceptance provenance, formal row quality, PIT availability and
+    the market-data cutoff. Any required series that is unapproved, stale,
+    unhealthy or calendar-blocked fails closed to DATA_BLOCKED.
+    """
     from dataclasses import asdict
     from datetime import date, datetime, time
     from pathlib import Path
@@ -548,8 +572,9 @@ def run_daily_command(
         )
 
     from .backtest.replay import FullModelStrategy
+    from .engines.freshness import evaluate_freshness
     from .integration.marco_provider import MarcoIntegrationError, MarcoProvider
-    from .storage import init_db, latest_observations_asof
+    from .storage import init_db, latest_formal_observations_asof
 
     requested_date = date.fromisoformat(as_of[:10]) if as_of else None
     provider = MarcoProvider(integration_dir)
@@ -594,16 +619,6 @@ def run_daily_command(
         for asset in assets
     }
 
-    db = init_db(database or settings.database_path)
-    try:
-        observations = latest_observations_asof(
-            db.conn,
-            decision_time,
-            market_data_cutoff=bundle.manifest.data_cutoff,
-        ).df()
-    finally:
-        db.close()
-
     required_series = sorted(
         {
             series_id
@@ -611,42 +626,91 @@ def run_daily_command(
             if series_id is not None
         }
     )
+
+    db = init_db(database or settings.database_path)
+    try:
+        observations = latest_formal_observations_asof(
+            db.conn,
+            decision_time,
+            required_usage_status="LIVE_VERIFIED",
+            series_ids=required_series,
+            market_data_cutoff=bundle.manifest.data_cutoff,
+        )
+        stale_after_hours = {
+            row[0]: row[1]
+            for row in db.conn.execute(
+                "SELECT series_id, stale_after_hours FROM series_catalog "
+                "WHERE stale_after_hours IS NOT NULL"
+            ).fetchall()
+        }
+    finally:
+        db.close()
+
     if observations.empty:
         counts = {}
+        latest_dates = {}
+        latest_available = {}
     else:
-        relevant = observations[
-            observations["series_id"].isin(required_series)
-        ].copy()
         counts = (
-            relevant.groupby("series_id")["observation_date"]
+            observations.groupby("series_id")["observation_date"]
             .nunique()
             .to_dict()
         )
+        latest_dates = {
+            series_id: (group["observation_date"].max().date())
+            for series_id, group in observations.groupby("series_id")
+        }
+        latest_available = {
+            series_id: (group["available_at"].max())
+            for series_id, group in observations.groupby("series_id")
+        }
 
     minimum_market_observations = 22
-    blocked = [
-        series_id
-        for series_id in required_series
-        if int(counts.get(series_id, 0)) < minimum_market_observations
-    ]
+    blocked: dict[str, str] = {}
+    for series_id in required_series:
+        count = int(counts.get(series_id, 0))
+        if count < minimum_market_observations:
+            blocked[series_id] = (
+                f"insufficient_approved_observations: {series_id}="
+                f"{count}/{minimum_market_observations}"
+            )
+            continue
+        freshness = evaluate_freshness(
+            [series_id],
+            latest_observation_dates={
+                series_id: latest_dates.get(series_id)
+            },
+            market_data_cutoff=bundle.manifest.data_cutoff,
+            calendar_config=calendar_config,
+            series_calendar_config=series_calendar_config,
+        )[series_id]
+        if not freshness.healthy:
+            blocked[series_id] = (
+                f"freshness_blocked: {series_id}="
+                f"{freshness.status}:{freshness.reason}"
+            )
+            continue
+        threshold = stale_after_hours.get(series_id)
+        latest_at = latest_available.get(series_id)
+        if threshold is not None and latest_at is not None:
+            age_hours = (
+                decision_time - _as_naive_utc(latest_at)
+            ).total_seconds() / 3600.0
+            if age_hours > float(threshold):
+                blocked[series_id] = (
+                    f"stale_observations: {series_id}={age_hours:.1f}h>"
+                    f"{float(threshold)}h"
+                )
+
     cross_cutoff = None
     if not observations.empty:
-        relevant = observations[
-            observations["series_id"].isin(required_series)
-        ]
-        if not relevant.empty:
-            cross_cutoff = str(relevant["observation_date"].max())[:10]
+        cross_cutoff = str(observations["observation_date"].max())[:10]
 
     if blocked:
-        warnings = list(bundle.report.warnings)
-        warnings.append(
-            "insufficient local market observations: "
-            + ", ".join(
-                f"{series_id}={int(counts.get(series_id, 0))}/"
-                f"{minimum_market_observations}"
-                for series_id in blocked
-            )
-        )
+        warnings = [
+            *bundle.report.warnings,
+            *(blocked[series_id] for series_id in required_series if series_id in blocked),
+        ]
         typer.echo(
             json.dumps(
                 {
@@ -686,9 +750,13 @@ def run_daily_command(
         ],
     )
     try:
+        # Every required series already passed the formal approval, quality,
+        # freshness and history gates above; the verified-healthy state is
+        # passed explicitly instead of relying on the strategy default.
         strategy(
             observations,
             decision_time,
+            health=True,
             macro_snapshot=bundle.macro_snapshot,
             fundamental_asset_view=bundle.fundamental_asset_view,
             structural_snapshot=bundle.structural_snapshot,
