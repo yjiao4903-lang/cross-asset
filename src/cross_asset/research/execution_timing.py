@@ -11,6 +11,7 @@ from cross_asset.operations.execution_timing import (
     RESEARCH_PROXY_PERFORMANCE_SEMANTICS,
     RESEARCH_PROXY_RETURN_TIMING_BASIS,
     portfolio_execution_timing_disclosure,
+    terminal_no_trade_timing_disclosure,
 )
 
 
@@ -27,24 +28,32 @@ def annotate_research_execution_timing(
     if "decision_date" not in frame.columns:
         raise ValueError("decision_date_required_for_execution_timing")
     rows = frame.copy()
+    normalized = pd.to_datetime(rows["decision_date"], utc=True)
+    terminal = pd.Series(False, index=rows.index)
+    if {"fold", "benchmark"}.issubset(rows.columns):
+        terminal = normalized.eq(
+            rows.assign(_decision=normalized)
+            .groupby(["fold", "benchmark"])["_decision"]
+            .transform("max")
+        )
+
     cache: dict[pd.Timestamp, dict[str, Any]] = {}
     disclosures = []
-    for raw_decision in rows["decision_date"]:
+    for index, raw_decision in zip(rows.index, normalized, strict=True):
         decision = pd.Timestamp(raw_decision)
-        if decision.tzinfo is None:
-            decision = decision.tz_localize("UTC")
+        if bool(terminal.loc[index]):
+            disclosure = terminal_no_trade_timing_disclosure(decision.to_pydatetime())
         else:
-            decision = decision.tz_convert("UTC")
-        disclosure = cache.get(decision)
-        if disclosure is None:
-            disclosure = portfolio_execution_timing_disclosure(
-                decision.to_pydatetime(),
-                return_specs,
-                asset_market_map,
-                policy_path=policy_path,
-                calendar_config=calendar_config,
-            )
-            cache[decision] = disclosure
+            disclosure = cache.get(decision)
+            if disclosure is None:
+                disclosure = portfolio_execution_timing_disclosure(
+                    decision.to_pydatetime(),
+                    return_specs,
+                    asset_market_map,
+                    policy_path=policy_path,
+                    calendar_config=calendar_config,
+                )
+                cache[decision] = disclosure
         disclosures.append(disclosure)
 
     rows["execution_timing_status"] = [item["status"] for item in disclosures]
@@ -64,8 +73,9 @@ def research_execution_timing_summary(frame: pd.DataFrame) -> dict[str, Any]:
     for item in frame["execution_timing"]:
         if isinstance(item, dict):
             blockers.update(str(value) for value in item.get("blockers", []))
+    active_statuses = statuses - {"NOT_APPLICABLE"}
     return {
-        "status": "RESOLVED" if statuses == {"RESOLVED"} else "BLOCKED",
+        "status": "RESOLVED" if active_statuses == {"RESOLVED"} else "BLOCKED",
         "blockers": sorted(blockers),
         "return_timing_basis": RESEARCH_PROXY_RETURN_TIMING_BASIS,
         "performance_semantics": RESEARCH_PROXY_PERFORMANCE_SEMANTICS,
