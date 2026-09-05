@@ -68,7 +68,8 @@ CREATE TABLE IF NOT EXISTS data_acceptance_registry (
  pit_gate VARCHAR NOT NULL, stability_gate VARCHAR NOT NULL, pit_grade VARCHAR,
  origin VARCHAR NOT NULL, permission_scope VARCHAR, semantic_equivalence BOOLEAN,
  manifest_hash VARCHAR, reviewer VARCHAR, approved_at TIMESTAMP, evidence_json VARCHAR NOT NULL DEFAULT '{}',
- updated_at TIMESTAMP NOT NULL, usage_status VARCHAR DEFAULT 'EVIDENCE_ONLY', PRIMARY KEY(series_id, provider, source_series_id));
+ updated_at TIMESTAMP NOT NULL, usage_status VARCHAR NOT NULL DEFAULT 'EVIDENCE_ONLY',
+ PRIMARY KEY(series_id, provider, source_series_id, usage_status));
 CREATE TABLE IF NOT EXISTS wind_evidence_staging (
  source_file_sha256 VARCHAR NOT NULL, source_series_id VARCHAR NOT NULL,
  canonical_candidate VARCHAR, indicator_name VARCHAR NOT NULL, country VARCHAR,
@@ -109,7 +110,7 @@ def initialize_schema(connection):
             "ALTER TABLE data_snapshots ADD COLUMN IF NOT EXISTS manifest_hash VARCHAR",
             "ALTER TABLE data_snapshots ADD COLUMN IF NOT EXISTS manifest_json VARCHAR DEFAULT '{}'",
             "ALTER TABLE data_snapshots ADD COLUMN IF NOT EXISTS config_hash VARCHAR",
-            "ALTER TABLE data_acceptance_registry ADD COLUMN IF NOT EXISTS usage_status VARCHAR",
+            "ALTER TABLE data_acceptance_registry ADD COLUMN IF NOT EXISTS usage_status VARCHAR DEFAULT 'EVIDENCE_ONLY'",
             "ALTER TABLE wind_evidence_staging ADD COLUMN IF NOT EXISTS metadata_json VARCHAR DEFAULT '{}'",
             "ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS run_mode VARCHAR",
             "ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS universe_status VARCHAR",
@@ -119,7 +120,11 @@ def initialize_schema(connection):
             "ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR",
         ):
             connection.execute(statement)
-        connection.execute("UPDATE data_acceptance_registry SET usage_status='EVIDENCE_ONLY' WHERE usage_status IS NULL")
+        connection.execute(
+            "UPDATE data_acceptance_registry "
+            "SET usage_status='EVIDENCE_ONLY' WHERE usage_status IS NULL"
+        )
+        _migrate_acceptance_registry_usage_identity(connection)
         connection.execute("COMMIT")
     except Exception:
         connection.execute("ROLLBACK")
@@ -129,6 +134,49 @@ def initialize_schema(connection):
 
 def _columns(connection, table):
     return {row[1] for row in connection.execute(f"PRAGMA table_info('{table}')").fetchall()}
+
+
+def _primary_key_columns(connection, table):
+    """Return columns participating in a table primary key."""
+    return {
+        row[1]
+        for row in connection.execute(f"PRAGMA table_info('{table}')").fetchall()
+        if bool(row[5])
+    }
+
+
+def _migrate_acceptance_registry_usage_identity(connection):
+    """Promote usage_status into the registry identity without losing legacy rows."""
+    if "usage_status" in _primary_key_columns(connection, "data_acceptance_registry"):
+        return
+
+    replacement = "data_acceptance_registry_usage_identity_v2"
+    connection.execute(f"DROP TABLE IF EXISTS {replacement}")
+    connection.execute(
+        f"""CREATE TABLE {replacement} (
+            series_id VARCHAR NOT NULL, provider VARCHAR NOT NULL, source_series_id VARCHAR NOT NULL,
+            status VARCHAR NOT NULL, tech_gate VARCHAR NOT NULL, legal_gate VARCHAR NOT NULL,
+            pit_gate VARCHAR NOT NULL, stability_gate VARCHAR NOT NULL, pit_grade VARCHAR,
+            origin VARCHAR NOT NULL, permission_scope VARCHAR, semantic_equivalence BOOLEAN,
+            manifest_hash VARCHAR, reviewer VARCHAR, approved_at TIMESTAMP,
+            evidence_json VARCHAR NOT NULL DEFAULT '{{}}', updated_at TIMESTAMP NOT NULL,
+            usage_status VARCHAR NOT NULL DEFAULT 'EVIDENCE_ONLY',
+            PRIMARY KEY(series_id, provider, source_series_id, usage_status))"""
+    )
+    connection.execute(
+        f"""INSERT INTO {replacement} (
+            series_id, provider, source_series_id, status, tech_gate, legal_gate,
+            pit_gate, stability_gate, pit_grade, origin, permission_scope,
+            semantic_equivalence, manifest_hash, reviewer, approved_at,
+            evidence_json, updated_at, usage_status)
+        SELECT series_id, provider, source_series_id, status, tech_gate, legal_gate,
+            pit_gate, stability_gate, pit_grade, origin, permission_scope,
+            semantic_equivalence, manifest_hash, reviewer, approved_at,
+            evidence_json, updated_at, COALESCE(usage_status, 'EVIDENCE_ONLY')
+        FROM data_acceptance_registry"""
+    )
+    connection.execute("DROP TABLE data_acceptance_registry")
+    connection.execute(f"ALTER TABLE {replacement} RENAME TO data_acceptance_registry")
 
 
 def _migrate_experiment_result_tables(connection):
