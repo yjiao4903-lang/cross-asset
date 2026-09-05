@@ -1,4 +1,5 @@
 """Auditable, configuration-backed market calendar contract."""
+
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
@@ -9,7 +10,17 @@ import yaml
 
 
 def validate_calendar_entry(entry: dict) -> list[str]:
-    required = ("calendar_id", "source", "source_version", "timezone", "regular_close", "verified", "evidence", "reviewer", "approved_at")
+    required = (
+        "calendar_id",
+        "source",
+        "source_version",
+        "timezone",
+        "regular_close",
+        "verified",
+        "evidence",
+        "reviewer",
+        "approved_at",
+    )
     errors = [f"missing_{key}" for key in required if key not in entry]
     if entry.get("verified") is not True or entry.get("capability_status") != "VERIFIED":
         errors.append("calendar_unverified")
@@ -24,13 +35,19 @@ class MarketCalendar:
             raise KeyError(f"calendar not configured: {name}")
         self.name, self.timezone = name, item.get("timezone", "UTC")
         self.capability_status = item.get("capability_status", "UNVERIFIED")
-        self.source, self.version = item.get("source", "UNVERIFIED"), item.get("version", "TBD")
+        self.source, self.version = item.get("source", "UNVERIFIED"), item.get(
+            "version", "TBD"
+        )
         self.calendar_id = item.get("calendar_id", name)
-        self.verified = item.get("verified", self.capability_status == "VERIFIED") is True and self.capability_status == "VERIFIED"
+        self.verified = (
+            item.get("verified", self.capability_status == "VERIFIED") is True
+            and self.capability_status == "VERIFIED"
+        )
         self.evidence = item.get("evidence") or []
         self.reviewer, self.approved_at = item.get("reviewer"), item.get("approved_at")
         self.open_time = time.fromisoformat(item.get("open_time", "00:00"))
-        self.close_time = time.fromisoformat(item.get("close_time", "23:59"))
+        close_value = item.get("close_time", item.get("regular_close", "23:59"))
+        self.close_time = time.fromisoformat(str(close_value))
         self.covered_years = set(item.get("covered_years") or [])
         self.holidays = {date.fromisoformat(str(x)) for x in item.get("holidays", [])}
         self.early_closes = dict(item.get("early_closes") or {})
@@ -42,6 +59,22 @@ class MarketCalendar:
 
     def is_session(self, day: date) -> bool:
         return self.session_status(day) == "OPEN"
+
+    def session_close_time(self, day: date) -> time | None:
+        """Return the configured close for an open verified session."""
+
+        if self.session_status(day) != "OPEN":
+            return None
+        value = self.early_closes.get(day.isoformat(), self.close_time.isoformat())
+        return time.fromisoformat(str(value))
+
+    def session_close_at(self, day: date) -> datetime | None:
+        """Return an aware market-local close timestamp for an open session."""
+
+        close = self.session_close_time(day)
+        if close is None:
+            return None
+        return datetime.combine(day, close, tzinfo=ZoneInfo(self.timezone))
 
     def previous_session(self, day: date) -> date | None:
         for offset in range(1, 370):
@@ -63,7 +96,11 @@ class MarketCalendar:
                 return None
             local = decision_time.astimezone(ZoneInfo(self.timezone))
             day = local.date()
-            close = time.fromisoformat(self.early_closes.get(str(day), self.early_closes.get(day.isoformat(), self.close_time.isoformat())))
+            close = self.session_close_time(day)
+            if close is None:
+                if self.session_status(day) == "UNKNOWN":
+                    return None
+                return self.previous_session(day)
             if local.time() < close:
                 return self.previous_session(day)
         else:
@@ -73,7 +110,9 @@ class MarketCalendar:
         return day if self.is_session(day) else self.previous_session(day)
 
 
-def last_common_session(decision_time: datetime | date, calendars: list[MarketCalendar]) -> date | None:
+def last_common_session(
+    decision_time: datetime | date, calendars: list[MarketCalendar]
+) -> date | None:
     if not calendars:
         return None
     if isinstance(decision_time, datetime) and decision_time.tzinfo is None:
@@ -89,7 +128,9 @@ def last_common_session(decision_time: datetime | date, calendars: list[MarketCa
     return None
 
 
-def calendar_status(name: str, day: date, config_path: str | Path = "config/calendars.yml") -> str:
+def calendar_status(
+    name: str, day: date, config_path: str | Path = "config/calendars.yml"
+) -> str:
     return MarketCalendar(name, config_path).session_status(day)
 
 
@@ -97,4 +138,5 @@ def calendar_status(name: str, day: date, config_path: str | Path = "config/cale
 # calendars and reports remain usable without third-party calendar packages.
 def real_cnhk_weekly_decision_dates(start: date, end: date, *, provider=None) -> list[date]:
     from .exchange_calendar import weekly_decision_dates
+
     return weekly_decision_dates(start, end, provider=provider)

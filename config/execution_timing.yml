@@ -1,0 +1,9 @@
+version: "1.0"
+# Conservative research execution contract. A decision never trades in the
+# same market session; the first VERIFIED open session after the decision date
+# is used. The execution price timestamp is that session's official configured
+# close (including an explicit early close when present).
+effective_from: next_available_session
+execution_price_rule: next_available_session_close
+require_verified_calendar: true
+calendar_config: config/calendars.yml
