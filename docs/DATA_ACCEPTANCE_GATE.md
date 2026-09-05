@@ -26,3 +26,18 @@ Calendar status is separately governed: only an explicit `capability_status: VER
 ## Manual rule and origin boundary
 
 Manual data may be a formal source only after at least **three consecutive evidenced batches** using fixed `template_version`, source identity, distinct batch IDs and file SHA-256, exported_at, reviewer, timezone-aware `approved_at`, explicit `available_at`/vintage and cross-source reconciliation. A numeric `batch_count` alone is insufficient. `MANUAL`, `LIVE`, `FIXTURE`, and `SIMULATED` are not interchangeable. `^TNX` is auxiliary only and cannot replace FRED DGS10. Missing data must remain missing/unavailable, never zero-filled.
+
+## Readiness aggregation for the first formal Marco -> Cross E2E
+
+A global `DATA_READY` state must not be unlocked by an unrelated observation or by a `PASS` registry row for only one series. The `FIRST_REAL_MARCO_CROSS_E2E_V1` readiness profile requires all six current formal Wind market series:
+
+- `CN_EQ_LARGE`
+- `HK_EQ`
+- `US_EQ`
+- `CN_BOND_10Y`
+- `GOLD`
+- `COPPER`
+
+For each required series, readiness requires an exact Wind acceptance-registry entry with `status=PASS`, all four gates at `PASS`, a non-empty accepted `source_series_id`, and at least one formal observation whose `series_id`, provider/source, and `source_series_id` match that accepted provenance. Observations from another provider or another source series do not satisfy the gate.
+
+This aggregate is deliberately narrower than P0-B/P0-C completion. It does **not** prove the required 2014-to-latest complete-day backfill, does not produce `HISTORY_READY`, and does not establish a successful First Real Marco-to-Cross E2E. Those remain separate acceptance gates under `NEXT_PHASE_IMPLEMENTATION_PLAN_v1.md`.
