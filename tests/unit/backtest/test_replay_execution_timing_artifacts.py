@@ -8,12 +8,11 @@ from cross_asset.backtest.returns import AssetReturnSpec
 
 
 class _AuditedStrategy:
-    return_specs = {
-        "A": AssetReturnSpec("A", kind="price"),
-        "CASH": AssetReturnSpec(None, kind="cash"),
-    }
-
     def __init__(self):
+        self.return_specs = {
+            "A": AssetReturnSpec("A", kind="price"),
+            "CASH": AssetReturnSpec(None, kind="cash"),
+        }
         self.last_scores = {}
         self.last_decision = None
 
