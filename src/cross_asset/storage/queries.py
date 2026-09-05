@@ -74,6 +74,16 @@ def _registry_approval_sql(alias: str) -> str:
       AND {alias}.approved_at IS NOT NULL"""
 
 
+def _quality_filter(allowed_quality, *, column: str) -> tuple[str, list[str]]:
+    if allowed_quality is None:
+        return "", []
+    qualities = sorted(str(value).lower() for value in allowed_quality)
+    if not qualities:
+        raise ValueError("allowed_quality_empty")
+    placeholders = ",".join("?" for _ in qualities)
+    return f"lower({column}) IN ({placeholders})", qualities
+
+
 def _approved_observation_predicates(
     decision_time,
     required_usage_status,
@@ -82,7 +92,7 @@ def _approved_observation_predicates(
     series_id=None,
     allowed_quality=None,
 ):
-    """Build the formal-consumption predicate shared by approved queries.
+    """Build the formal provenance/PIT predicate shared by approved queries.
 
     Candidate observations remain stored in ``observations``. Formal consumers
     bind each row to one exact, unambiguous approved registry identity instead
@@ -90,9 +100,9 @@ def _approved_observation_predicates(
     simultaneously approved for the same canonical series/usage, the series is
     excluded rather than silently switching or mixing sources.
 
-    ``allowed_quality`` optionally restricts row-quality values *before* the
-    latest-vintage selection so a failed or stale latest vintage can never be
-    silently traded down to an older vintage by formal consumers.
+    ``allowed_quality`` is used only by all-vintage queries. Latest-vintage
+    queries rank the newest approved PIT row first and apply quality afterwards,
+    so a bad latest vintage can never silently fall back to an older good row.
     """
 
     usage_status = validate_usage_status(required_usage_status)
@@ -129,13 +139,13 @@ def _approved_observation_predicates(
         )""",
     ]
     params = [decision_time, usage_status, usage_status]
-    if allowed_quality is not None:
-        qualities = sorted(str(value).lower() for value in allowed_quality)
-        if not qualities:
-            raise ValueError("allowed_quality_empty")
-        placeholders = ",".join("?" for _ in qualities)
-        clauses.append(f"lower(o.quality) IN ({placeholders})")
-        params.extend(qualities)
+    quality_clause, quality_params = _quality_filter(
+        allowed_quality,
+        column="o.quality",
+    )
+    if quality_clause:
+        clauses.append(quality_clause)
+        params.extend(quality_params)
     if market_data_cutoff is not None:
         clauses.append("o.observation_date <= ?")
         params.append(market_data_cutoff)
@@ -182,14 +192,19 @@ def latest_approved_observations_asof(
     market_data_cutoff=None,
     allowed_quality=None,
 ):
-    """Return latest PIT vintages from unambiguous approved source identities."""
+    """Return latest PIT vintages from unambiguous approved source identities.
+
+    The latest approved PIT vintage is selected before row-quality filtering.
+    Therefore a stale/failed/unknown newest vintage removes that observation
+    date from formal consumption instead of falling back to an older ``ok`` row.
+    """
 
     clauses, params = _approved_observation_predicates(
         decision_time,
         required_usage_status,
         market_data_cutoff=market_data_cutoff,
         series_id=series_id,
-        allowed_quality=allowed_quality,
+        allowed_quality=None,
     )
     sql = """SELECT * EXCLUDE (rn) FROM (
         SELECT o.*, row_number() OVER (
@@ -198,7 +213,15 @@ def latest_approved_observations_asof(
         ) rn
         FROM observations o
         WHERE """ + " AND ".join(clauses)
-    sql += ") WHERE rn=1 ORDER BY series_id, observation_date, available_at"
+    sql += ") WHERE rn=1"
+    quality_clause, quality_params = _quality_filter(
+        allowed_quality,
+        column="quality",
+    )
+    if quality_clause:
+        sql += " AND " + quality_clause
+        params.extend(quality_params)
+    sql += " ORDER BY series_id, observation_date, available_at"
     return connection.execute(sql, params)
 
 
@@ -212,13 +235,11 @@ def latest_formal_observations_asof(
 ):
     """Single shared selection for every formal consumer (daily and research).
 
-    This is the only sanctioned read path for formal market-data consumption.
-    It binds each observation to one exact approved registry identity (the
-    PR #24 contract), applies the formal row-quality gate, PIT
-    ``available_at <= decision_time``, and the optional market-data cutoff,
-    and returns the latest surviving vintage per series and observation date
-    as a DataFrame. Formal consumers must not re-derive their own admission
-    rules on top of raw ``observations``.
+    This is the sanctioned read path for formal market-data consumption. It
+    binds each observation to one exact approved registry identity, selects the
+    latest approved PIT vintage, then applies the formal row-quality gate. A bad
+    latest vintage cannot trade down to an older good row. The optional market
+    data cutoff is applied before ranking.
     """
 
     frame = latest_approved_observations_asof(
