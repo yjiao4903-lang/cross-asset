@@ -151,6 +151,20 @@ def resolve_market_execution(
     return blocked("calendar_walk_exhausted", calendar)
 
 
+def terminal_no_trade_timing_disclosure(decision_at: datetime) -> dict[str, Any]:
+    """Represent the existing terminal-no-trade convention without fake timestamps."""
+
+    return {
+        "status": "NOT_APPLICABLE",
+        "reason": "terminal_no_trade",
+        "decision_at": decision_at,
+        "by_asset": {},
+        "blockers": [],
+        "return_timing_basis": RESEARCH_PROXY_RETURN_TIMING_BASIS,
+        "performance_semantics": RESEARCH_PROXY_PERFORMANCE_SEMANTICS,
+    }
+
+
 def portfolio_execution_timing_disclosure(
     decision_at: datetime,
     return_specs: Mapping[str, Any],
@@ -231,4 +245,5 @@ __all__ = [
     "load_execution_timing_policy",
     "portfolio_execution_timing_disclosure",
     "resolve_market_execution",
+    "terminal_no_trade_timing_disclosure",
 ]
