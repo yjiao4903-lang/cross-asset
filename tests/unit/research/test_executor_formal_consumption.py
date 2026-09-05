@@ -212,5 +212,73 @@ def test_executor_blocks_when_only_unapproved_provenance_exists():
         store.close()
 
 
+def _observe_with_stale_overlay(store, *, source, value_base, ok_hour, stale_hour):
+    """Every observation date gets an older *ok* vintage and a later *stale* one."""
+    dates = pd.date_range("2018-01-05T23:00:00Z", "2026-12-25T23:00:00Z", freq="W-FRI")
+    rows = []
+    for index, decision in enumerate(dates):
+        day = decision.tz_convert("UTC").tz_localize(None)
+        ok_at = day + pd.Timedelta(hours=ok_hour)
+        stale_at = day + pd.Timedelta(hours=stale_hour)
+        for available_at, quality in ((ok_at, "ok"), (stale_at, "stale")):
+            rows.append(
+                {
+                    "series_id": "A",
+                    "observation_date": decision.date(),
+                    "available_at": available_at.to_pydatetime(),
+                    "value": value_base + index,
+                    "source": source,
+                    "source_series_id": "A",
+                    "vintage_date": None,
+                    "ingested_at": available_at.to_pydatetime(),
+                    "quality": quality,
+                    "raw_file": "consistency-fixture",
+                }
+            )
+    store.insert_observations(rows, run_id=f"consistency-{source}-stale-overlay")
+
+
+def test_executor_does_not_fall_back_to_older_ok_vintage_when_latest_is_stale():
+    store = _store()
+    try:
+        # The approved provenance is present and was healthy at an older
+        # vintage, but the latest vintage of every observation is stale: the
+        # executor must not mistake the surviving older ok rows for healthy
+        # market observations.
+        _observe_with_stale_overlay(
+            store,
+            source="srcA",
+            value_base=100.0,
+            ok_hour=1,
+            stale_hour=5,
+        )
+        _approve(store, provider="srcA")
+
+        formal = latest_formal_observations_asof(
+            store.conn,
+            datetime.now(UTC),
+            required_usage_status="RESEARCH_ADMISSIBLE",
+        )
+        assert formal.empty
+
+        dates = pd.date_range("2018-01-05T23:00:00Z", "2026-12-25T23:00:00Z", freq="W-FRI")
+        protocol = _protocol()
+        plan = build_research_plan(dates, protocol)
+        try:
+            execute_walk_forward(
+                store.conn,
+                decision_dates=dates,
+                plan=plan.to_dict(),
+                protocol=protocol,
+                model_config=_config(),
+            )
+        except ValueError as exc:
+            assert "formal_observations_empty" in str(exc)
+        else:
+            raise AssertionError("executor fell back to an older ok vintage")
+    finally:
+        store.close()
+
+
 def _store():
     return init_db(":memory:")

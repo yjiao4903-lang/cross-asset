@@ -7,6 +7,7 @@ Core principle under test:
 
 from datetime import UTC, date, datetime, timedelta
 
+import pandas as pd
 import pytest
 
 from cross_asset.reports.readiness import generate_readiness
@@ -221,6 +222,56 @@ def test_approved_and_healthy_observation_is_formally_consumable():
     assert len(frame) == 1
     assert frame.iloc[0]["value"] == 10.0
     assert frame.iloc[0]["source_series_id"] == "A.WIND"
+
+
+def test_latest_ok_vintage_is_returned_even_when_older_vintage_was_stale():
+    store = DuckDBStore(":memory:")
+    try:
+        _accept(store)
+        _observe(
+            store,
+            value=1.0,
+            available_at=datetime(2026, 9, 1, 12, tzinfo=UTC),
+            quality="stale",
+        )
+        _observe(
+            store,
+            value=2.0,
+            available_at=datetime(2026, 9, 1, 18, tzinfo=UTC),
+            quality="ok",
+        )
+        frame = _formal(store)
+    finally:
+        store.close()
+    assert len(frame) == 1
+    assert frame.iloc[0]["value"] == 2.0
+    assert frame.iloc[0]["quality"] == "ok"
+
+
+def test_only_the_true_latest_ok_vintage_is_returned():
+    store = DuckDBStore(":memory:")
+    try:
+        _accept(store)
+        _observe(
+            store,
+            value=1.0,
+            available_at=datetime(2026, 9, 1, 12, tzinfo=UTC),
+            quality="ok",
+        )
+        _observe(
+            store,
+            value=2.0,
+            available_at=datetime(2026, 9, 1, 18, tzinfo=UTC),
+            quality="ok",
+        )
+        frame = _formal(store)
+    finally:
+        store.close()
+    assert len(frame) == 1
+    assert frame.iloc[0]["value"] == 2.0
+    assert pd.Timestamp(frame.iloc[0]["available_at"]) == pd.Timestamp(
+        "2026-09-01 18:00:00"
+    )
 
 
 def test_fixture_origin_registry_row_cannot_satisfy_formal_readiness(tmp_path):
