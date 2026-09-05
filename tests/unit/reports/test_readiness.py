@@ -1,5 +1,5 @@
-from datetime import UTC, date, datetime
 import json
+from datetime import UTC, date, datetime
 
 from cross_asset.reports.readiness import FIRST_REAL_E2E_PROFILE, generate_readiness
 from cross_asset.storage import DuckDBStore
