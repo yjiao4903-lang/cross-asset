@@ -9,20 +9,20 @@ from pathlib import Path
 
 import pytest
 
-from cross_asset.ingestion.raw_archive import ImmutableRawArchive
 from cross_asset.ingestion import risk_stress as rs
+from cross_asset.ingestion.raw_archive import ImmutableRawArchive
 from cross_asset.ingestion.risk_stress import (
     CANONICAL_SERIES,
     PARSER_VERSION,
-    PreHistoryObservationError,
     RESEARCH_EVIDENCE_37,
+    VIX3M_OFFICIAL_HISTORY_START,
+    PreHistoryObservationError,
     RiskStressError,
     RiskStressSeries,
     SourceRole,
     SourceStatus,
     SpliceViolationError,
     UnapprovedSourceError,
-    VIX3M_OFFICIAL_HISTORY_START,
     asof_records,
     check_series_identity,
     classify_term_structure,
@@ -688,7 +688,7 @@ def test_vix3m_source_health_expresses_official_boundary(tmp_path):
 def test_risk_stress_coexists_with_main_ingestion_modules():
     """The #41/#40 ingestion modules merged into main must coexist with the
     refreshed risk-stress module (no import or namespace collisions)."""
-    from cross_asset.ingestion import cftc_positioning, china_leverage  # noqa: F401
+    from cross_asset.ingestion import cftc_positioning, china_leverage
 
     assert rs.PARSER_VERSION.startswith("risk_stress_parser_")
     assert china_leverage is not cftc_positioning
