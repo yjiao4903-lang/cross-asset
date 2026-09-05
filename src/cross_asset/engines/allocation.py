@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from math import tanh
 
+_TOLERANCE = 1e-12
+
 
 @dataclass(frozen=True)
 class AllocationResult:
@@ -19,29 +21,67 @@ class AllocationResult:
 
 def bounded_projection(values, minimum, maximum, total=1.0):
     keys = list(values)
-    n = len(keys)
-    if n * minimum > total + 1e-12 or n * maximum < total - 1e-12:
+    return project_weights(
+        values,
+        {key: minimum for key in keys},
+        {key: maximum for key in keys},
+        total=total,
+    )
+
+
+def project_weights(values, lower_bounds, upper_bounds, total=1.0):
+    keys = list(values)
+    for key in keys:
+        if lower_bounds[key] > upper_bounds[key] + _TOLERANCE:
+            raise ValueError(f"infeasible allocation bounds for asset {key}")
+    if sum(lower_bounds[key] for key in keys) > total + _TOLERANCE or sum(
+        upper_bounds[key] for key in keys
+    ) < total - _TOLERANCE:
         raise ValueError("infeasible allocation constraints")
-    out = {key: max(minimum, min(maximum, float(values[key]))) for key in keys}
-    for _ in range(n * 4 + 10):
+    out = {
+        key: max(lower_bounds[key], min(upper_bounds[key], float(values[key])))
+        for key in keys
+    }
+    for _ in range(len(keys) * 4 + 10):
         diff = total - sum(out.values())
         if abs(diff) < 1e-10:
             return out
         free = [
             key
             for key in keys
-            if minimum + 1e-12 < out[key] < maximum - 1e-12
-            or (diff > 0 and out[key] < maximum - 1e-12)
-            or (diff < 0 and out[key] > minimum + 1e-12)
+            if lower_bounds[key] + _TOLERANCE < out[key] < upper_bounds[key] - _TOLERANCE
+            or (diff > 0 and out[key] < upper_bounds[key] - _TOLERANCE)
+            or (diff < 0 and out[key] > lower_bounds[key] + _TOLERANCE)
         ]
         if not free:
             break
         step = diff / len(free)
         for key in free:
-            out[key] = max(minimum, min(maximum, out[key] + step))
+            out[key] = max(
+                lower_bounds[key], min(upper_bounds[key], out[key] + step)
+            )
     if abs(total - sum(out.values())) > 1e-8:
         raise ValueError("allocation constraints cannot satisfy sum=1")
     return out
+
+
+def tactical_bounds(strategic_weights, *, max_tilt, min_weight, max_weight):
+    """Per-asset feasible band: absolute min/max intersected with strategic +/- tilt."""
+    return {
+        key: (
+            max(min_weight, float(strategic_weights[key]) - max_tilt),
+            min(max_weight, float(strategic_weights[key]) + max_tilt),
+        )
+        for key in strategic_weights
+    }
+
+
+def _within_bounds(weights, lower_bounds, upper_bounds, tolerance=1e-9):
+    total = sum(weights.values())
+    return abs(total - 1.0) <= tolerance and all(
+        lower_bounds[key] - tolerance <= weights[key] <= upper_bounds[key] + tolerance
+        for key in weights
+    )
 
 
 def allocate(
@@ -60,6 +100,19 @@ def allocate(
     keys = list(strategic_weights)
     if set(scores) - set(keys):
         raise ValueError("scores contain unknown assets")
+    strategic = {key: float(strategic_weights[key]) for key in keys}
+    tilt = float(max_tilt)
+    if tilt < 0:
+        raise ValueError("max_tilt must be non-negative")
+    bands = tactical_bounds(
+        strategic,
+        max_tilt=tilt,
+        min_weight=min_weight,
+        max_weight=max_weight,
+    )
+    lower_bounds = {key: bands[key][0] for key in keys}
+    upper_bounds = {key: bands[key][1] for key in keys}
+
     unhealthy = health is False or str(health).upper() in (
         "UNHEALTHY",
         "FAILED",
@@ -71,7 +124,7 @@ def allocate(
         signal = scores.get(key)
         score = getattr(signal, "score", signal)
         conf = float(getattr(signal, "confidence", 1.0) if signal is not None else 0.0)
-        raw_tilt = 0.0 if score is None else max_tilt * tanh(float(score) / 1.25)
+        raw_tilt = 0.0 if score is None else tilt * tanh(float(score) / 1.25)
         adjusted_tilt = raw_tilt * max(0.0, min(1.0, conf))
         raw[key] = float(strategic_weights[key]) + adjusted_tilt
         attr[key] = {
@@ -84,13 +137,26 @@ def allocate(
         }
 
     if unhealthy:
-        base = previous_valid_weight or strategic_weights
-        weights = bounded_projection(base, min_weight, max_weight)
+        warnings = ["critical data unhealthy"]
+        base = strategic
+        if previous_valid_weight:
+            previous = {
+                key: float(value) for key, value in previous_valid_weight.items()
+            }
+            if set(previous) == set(keys):
+                base = previous
+                if not _within_bounds(previous, lower_bounds, upper_bounds):
+                    warnings.append(
+                        "previous_valid_allocation_outside_current_constraints_projected"
+                    )
+            else:
+                warnings.append(
+                    "previous_valid_allocation_keys_differ_from_current_universe"
+                )
+        weights = project_weights(base, lower_bounds, upper_bounds)
         for key in keys:
             attr[key]["projection_adjustment"] = weights[key] - float(base[key])
-            attr[key]["constraint_adjusted_tilt"] = (
-                weights[key] - float(strategic_weights[key])
-            )
+            attr[key]["constraint_adjusted_tilt"] = weights[key] - strategic[key]
         return AllocationResult(
             weights=weights,
             status="FROZEN",
@@ -98,15 +164,13 @@ def allocate(
             data_cutoff=data_cutoff,
             model_version=model_version,
             attribution=attr,
-            warnings=("critical data unhealthy",),
+            warnings=tuple(warnings),
         )
 
-    weights = bounded_projection(raw, min_weight, max_weight)
+    weights = project_weights(raw, lower_bounds, upper_bounds)
     for key in keys:
         attr[key]["projection_adjustment"] = weights[key] - raw[key]
-        attr[key]["constraint_adjusted_tilt"] = weights[key] - float(
-            strategic_weights[key]
-        )
+        attr[key]["constraint_adjusted_tilt"] = weights[key] - strategic[key]
     return AllocationResult(
         weights=weights,
         status="ACTIVE",
