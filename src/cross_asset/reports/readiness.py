@@ -5,6 +5,8 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+from cross_asset.storage import approved_observations_asof
+
 READINESS_PROFILE = "FIRST_REAL_MARCO_CROSS_E2E_V1"
 FIRST_REAL_E2E_PROFILE = {
     "CN_EQ_LARGE": "wind",
@@ -15,6 +17,8 @@ FIRST_REAL_E2E_PROFILE = {
     "COPPER": "wind",
 }
 _REQUIRED_GATES = ("tech_gate", "legal_gate", "pit_gate", "stability_gate")
+# The first REAL Marco -> Cross E2E consumes live-verified provenance only.
+_FORMAL_USAGE_STATUS = "LIVE_VERIFIED"
 
 
 def _accepted_sources(store, series_id: str, provider: str) -> list[str]:
@@ -34,6 +38,22 @@ def _accepted_sources(store, series_id: str, provider: str) -> list[str]:
         [series_id, provider],
     ).fetchall()
     return [str(row[0]) for row in rows]
+
+
+def _approved_observation_count(store, series_id: str) -> int:
+    """Count observations bound to one unambiguous approved provenance identity.
+
+    This reuses the PR #24 shared approved-consumption query so the six-series
+    readiness gate cannot be satisfied by rows that merely share a series_id.
+    """
+
+    rows = approved_observations_asof(
+        store.conn,
+        datetime.now(UTC),
+        required_usage_status=_FORMAL_USAGE_STATUS,
+        series_id=series_id,
+    ).fetchall()
+    return len(rows)
 
 
 def _series_readiness(store, series_id: str, provider: str) -> dict[str, object]:
@@ -65,11 +85,15 @@ def _series_readiness(store, series_id: str, provider: str) -> dict[str, object]
         date_min = row[1].isoformat() if row[1] is not None else None
         date_max = row[2].isoformat() if row[2] is not None else None
 
+    approved_observation_rows = _approved_observation_count(store, series_id)
+
     blockers: list[str] = []
     if not acceptance_pass:
         blockers.append("ACCEPTANCE_NOT_PASS")
     if accepted_observation_rows == 0:
         blockers.append("ACCEPTED_SOURCE_OBSERVATIONS_MISSING")
+    if approved_observation_rows == 0:
+        blockers.append("APPROVED_PROVENANCE_OBSERVATIONS_MISSING")
 
     return {
         "series_id": series_id,
@@ -78,6 +102,7 @@ def _series_readiness(store, series_id: str, provider: str) -> dict[str, object]
         "accepted_source_series_ids": accepted_sources,
         "observation_rows": observation_rows,
         "accepted_observation_rows": accepted_observation_rows,
+        "approved_observation_rows": approved_observation_rows,
         "date_min": date_min,
         "date_max": date_max,
         "status": "READY" if not blockers else "BLOCKED",

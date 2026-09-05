@@ -2,12 +2,37 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import yaml
 
 from cross_asset.operations.calendar import MarketCalendar
+from cross_asset.storage import approved_observations_asof
+
+
+def _sessions(calendar, start, end):
+    values, day = [], start
+    while day <= end:
+        if calendar.is_session(day):
+            values.append(day)
+        day += timedelta(days=1)
+    return values
+
+
+def _approved_row_counts(conn, as_of) -> dict[str, int]:
+    """Approved-provenance observation counts via the shared formal query."""
+
+    counts: dict[str, int] = {}
+    for usage_status in ("LIVE_VERIFIED", "RESEARCH_ADMISSIBLE"):
+        rows = approved_observations_asof(
+            conn,
+            as_of,
+            required_usage_status=usage_status,
+        ).fetchall()
+        for row in rows:
+            counts[row[0]] = counts.get(row[0], 0) + 1
+    return counts
 
 
 def _sessions(calendar, start, end):
@@ -24,6 +49,7 @@ def generate_coverage_report(conn, as_of=None, output=None, calendar_config="con
     params = [cutoff] if cutoff else []
     where = "WHERE available_at <= ?" if cutoff else ""
     rows = conn.execute(f"SELECT series_id, MIN(observation_date), MAX(observation_date), COUNT(*), COUNT(DISTINCT observation_date) FROM observations {where} GROUP BY series_id ORDER BY series_id", params).fetchall()
+    approved_counts = _approved_row_counts(conn, cutoff or datetime.now(UTC).replace(tzinfo=None))
     catalog = {r[0]: r for r in conn.execute("SELECT series_id, frequency FROM series_catalog").fetchall()}
     mappings = {}
     for row in conn.execute("SELECT series_id, provider, source_series_id FROM source_mapping WHERE enabled=TRUE ORDER BY priority").fetchall():
@@ -55,10 +81,10 @@ def generate_coverage_report(conn, as_of=None, output=None, calendar_config="con
                 warnings.append(f"{sid}: calendar not verified")
         else:
             warnings.append(f"{sid}: calendar mapping missing")
-        report.append({"series": sid, "start": str(start), "end": str(end), "n_obs": count, "n_dates": distinct, "missing_pct": missing_pct, "max_gap_sessions": max_gap, "pit_grade": reg[2], "provider": mappings.get(sid, ("UNKNOWN",))[0], "origin": reg[3], "acceptance_status": reg[1], "calendar_status": cal_status, "usable_from": str(start), "warnings": sorted(set(warnings))})
+        report.append({"series": sid, "start": str(start), "end": str(end), "n_obs": count, "n_dates": distinct, "approved_observation_rows": approved_counts.get(sid, 0), "missing_pct": missing_pct, "max_gap_sessions": max_gap, "pit_grade": reg[2], "provider": mappings.get(sid, ("UNKNOWN",))[0], "origin": reg[3], "acceptance_status": reg[1], "calendar_status": cal_status, "usable_from": str(start), "warnings": sorted(set(warnings))})
     for sid in sorted(set(catalog) - observed_ids):
         reg = registry.get(sid, (None, "UNKNOWN", None, "UNAVAILABLE"))
-        report.append({"series": sid, "start": None, "end": None, "n_obs": 0, "n_dates": 0, "missing_pct": None, "max_gap_sessions": None, "pit_grade": reg[2], "provider": mappings.get(sid, ("UNKNOWN",))[0], "origin": reg[3], "acceptance_status": reg[1], "calendar_status": "UNKNOWN", "usable_from": None, "warnings": [f"{sid}: no observations"]})
+        report.append({"series": sid, "start": None, "end": None, "n_obs": 0, "n_dates": 0, "approved_observation_rows": 0, "missing_pct": None, "max_gap_sessions": None, "pit_grade": reg[2], "provider": mappings.get(sid, ("UNKNOWN",))[0], "origin": reg[3], "acceptance_status": reg[1], "calendar_status": "UNKNOWN", "usable_from": None, "warnings": [f"{sid}: no observations"]})
     has_data = any(row["n_obs"] for row in report)
     status = "EMPTY" if not report or not has_data else ("PARTIAL" if any(row["acceptance_status"] != "PASS" or row["calendar_status"] == "UNKNOWN" for row in report) else "PASS")
     payload = {"as_of": as_of, "status": status, "time_basis": "observations with available_at <= as_of; UTC comparison", "warnings": sorted(set(warnings)), "series": sorted(report, key=lambda row: row["series"])}

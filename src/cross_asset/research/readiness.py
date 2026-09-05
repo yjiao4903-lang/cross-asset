@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 
 import pandas as pd
 
+from cross_asset.storage import latest_formal_observations_asof
+
 from .protocol import ResearchProtocol
 
 
@@ -46,19 +48,34 @@ def _series_freshness_hours(connection, series_id: str) -> float | None:
     return value if value > 0 else None
 
 
-def _pit_coverage(
+def _formal_series_frame(
     connection,
     series_id: str,
+    usage_status: str,
+) -> pd.DataFrame:
+    """Approved-provenance formal rows for one series (shared consumption query)."""
+
+    return latest_formal_observations_asof(
+        connection,
+        datetime.now(UTC),
+        required_usage_status=usage_status,
+        series_ids=[series_id],
+    )
+
+
+def _pit_coverage(
+    formal_rows: pd.DataFrame,
+    stale_after_hours: float | None,
     decision_times: pd.DatetimeIndex,
 ) -> dict:
     """Measure usable PIT coverage over explicit research decision times.
 
-    A decision is covered when at least one observation was available by the
-    decision time. When stale_after_hours is declared in the series catalog,
-    the most recent PIT observation must also remain fresh at that decision.
+    A decision is covered when at least one approved formal observation was
+    available by the decision time. When stale_after_hours is declared in the
+    series catalog, the most recent PIT observation must also remain fresh at
+    that decision.
     """
 
-    stale_after_hours = _series_freshness_hours(connection, series_id)
     if len(decision_times) == 0:
         return {
             "eligible_decisions": 0,
@@ -67,14 +84,12 @@ def _pit_coverage(
             "stale_after_hours": stale_after_hours,
         }
 
-    rows = connection.execute(
-        """SELECT available_at FROM observations
-           WHERE series_id=? ORDER BY available_at""",
-        [series_id],
-    ).fetchall()
-    available = pd.DatetimeIndex(
-        pd.to_datetime([row[0] for row in rows], utc=True)
-    )
+    if formal_rows.empty:
+        available = pd.DatetimeIndex([])
+    else:
+        available = pd.DatetimeIndex(
+            pd.to_datetime(formal_rows["available_at"], utc=True)
+        ).sort_values()
     covered = 0
     for decision in decision_times:
         position = int(available.searchsorted(decision, side="right")) - 1
@@ -111,8 +126,13 @@ def evaluate_research_readiness(
     )
     research_decisions = _decision_times(decision_times)
     blockers = list(protocol.execution_blockers)
+    usage_status = protocol.required_usage_status
     formal_count = int(
-        connection.execute("SELECT count(*) FROM observations").fetchone()[0]
+        latest_formal_observations_asof(
+            connection,
+            datetime.now(UTC),
+            required_usage_status=usage_status,
+        ).shape[0]
     )
     if formal_count == 0:
         blockers.append("formal_observations_empty")
@@ -134,23 +154,28 @@ def evaluate_research_readiness(
             row
             for row in registry
             if row[0] == protocol.required_registry_status
-            and row[1] == protocol.required_usage_status
+            and row[1] == usage_status
             and row[3] not in (None, "", "TBD")
             and row[4] is not None
         ]
-        stats = connection.execute(
-            """SELECT count(*),min(observation_date),max(observation_date),max(available_at)
-               FROM observations WHERE series_id=?""",
-            [series_id],
-        ).fetchone()
-        count = int(stats[0])
-        start, end, max_available = stats[1], stats[2], stats[3]
+        formal_rows = _formal_series_frame(connection, series_id, usage_status)
+        count = int(formal_rows.shape[0])
+        if count:
+            start = formal_rows["observation_date"].min()
+            end = formal_rows["observation_date"].max()
+            max_available = formal_rows["available_at"].max()
+        else:
+            start = end = max_available = None
         history_years = (
-            (end - start).days / 365.25
+            (pd.Timestamp(end) - pd.Timestamp(start)).days / 365.25
             if count and start is not None and end is not None
             else 0.0
         )
-        coverage = _pit_coverage(connection, series_id, research_decisions)
+        coverage = _pit_coverage(
+            formal_rows,
+            _series_freshness_hours(connection, series_id),
+            research_decisions,
+        )
         item_blockers = []
         if not accepted:
             item_blockers.append("registry_pass_research_admissible_required")

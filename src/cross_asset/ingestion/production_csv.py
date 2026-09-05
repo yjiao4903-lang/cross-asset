@@ -255,8 +255,12 @@ def ingest_production_csv(
         store.close()
 
     rows_written = int(result["rows_written"])
+    # Passing CSV syntax makes rows *candidate* observations only. Formal
+    # consumption requires a matching acceptance-registry provenance (Issue #18);
+    # the marker below keeps that boundary explicit in the command output.
     return {
-        "status": "SUCCESS",
+        "status": str(result.get("status", "failed")).upper(),
+        "consumption_status": "CANDIDATE",
         "dry_run": False,
         "run_id": result["run_id"],
         "source": metadata["source"],

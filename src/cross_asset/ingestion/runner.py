@@ -1,9 +1,26 @@
 """Provider-independent ingestion orchestration."""
 
 import inspect
+import math
 from uuid import uuid4
 
 from .normalization import normalize_observation
+
+
+def _series_counts(rows):
+    """Split returned rows into distinct series and series with a valid value."""
+
+    returned = {str(row.get("series_id")) for row in rows if row.get("series_id")}
+    valid = set()
+    for row in rows:
+        value = row.get("value")
+        if row.get("series_id") and value is not None:
+            try:
+                if math.isfinite(float(value)):
+                    valid.add(str(row["series_id"]))
+            except (TypeError, ValueError):
+                continue
+    return returned, valid
 
 
 class IngestionRunner:
@@ -45,6 +62,9 @@ class IngestionRunner:
                 return {
                     "run_id": run_id,
                     "status": "failed",
+                    "requested_series_count": requested,
+                    "returned_series_count": 0,
+                    "valid_series_count": 0,
                     "rows_written": 0,
                     "error": provider_error,
                 }
@@ -69,15 +89,32 @@ class IngestionRunner:
                 for row in rows:
                     row.setdefault("raw_file", raw_file)
             written = self.store.insert_observations(rows, run_id)
-            success = requested if requested is not None else (1 if rows else 0)
+            # Requested, returned, valid and persisted series counts are kept
+            # distinct: an empty or partial provider return must never be
+            # recorded as an unqualified success (Issue #18).
+            returned_series, valid_series = _series_counts(rows)
+            if not rows:
+                run_status = "empty"
+            elif requested is not None and len(returned_series) < requested:
+                run_status = "partial"
+            else:
+                run_status = "success"
+            success = len(valid_series)
             self.store.finish_run(
                 run_id,
-                "success",
+                run_status,
                 success_series=success,
-                failed_series=failed,
+                failed_series=max(0, len(returned_series) - len(valid_series)),
                 rows_written=written,
             )
-            return {"run_id": run_id, "status": "success", "rows_written": written}
+            return {
+                "run_id": run_id,
+                "status": run_status,
+                "requested_series_count": requested,
+                "returned_series_count": len(returned_series),
+                "valid_series_count": len(valid_series),
+                "rows_written": written,
+            }
         except Exception as exc:
             self.store.finish_run(
                 run_id,

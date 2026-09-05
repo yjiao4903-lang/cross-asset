@@ -4,7 +4,25 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+from cross_asset.storage import approved_observations_asof
+
 STATUSES = {"OK", "CLOSED", "STALE", "MISSING", "FAILED", "FALLBACK", "UNAVAILABLE"}
+
+
+def _approved_observation_count(conn, series_id: str, as_of) -> int:
+    """Approved-provenance rows via the shared formal query (either usage scope)."""
+
+    total = 0
+    for usage_status in ("LIVE_VERIFIED", "RESEARCH_ADMISSIBLE"):
+        total += len(
+            approved_observations_asof(
+                conn,
+                as_of,
+                required_usage_status=usage_status,
+                series_id=series_id,
+            ).fetchall()
+        )
+    return total
 
 def provider_reliability(conn, series_id, as_of=None, window_days=30):
     """Aggregate attempts; absent history returns None fields, never synthetic zeroes."""
@@ -98,10 +116,17 @@ def data_health(conn, as_of=None):
             "quality": q,
             "status": status,
             "reason": reason,
+            "approved_observation_rows": _approved_observation_count(conn, sid, as_of),
+            "formally_consumable": False,
             "critical_unhealthy": bool(spec.get("critical")) and status not in ("OK", "CLOSED"),
             "primary_source": mappings[0]['provider'] if mappings else None,
             "active_source": latest.get('source') if latest else None,
         }
+        # Raw observations without an approved provenance identity are never
+        # formally consumable, whatever their row quality looks like.
+        out["formally_consumable"] = out["approved_observation_rows"] > 0 and status in ("OK", "CLOSED")
+        if out["approved_observation_rows"] == 0 and latest is not None:
+            out["reason"] = (out["reason"] + "; no approved provenance identity").lstrip("; ")
         out.update(reliability)
         result.append(out)
     return result

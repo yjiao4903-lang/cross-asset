@@ -21,6 +21,7 @@ from cross_asset.engines.allocation import allocate
 from cross_asset.engines.asset_score import score_asset
 from cross_asset.engines.macro import build_macro_state
 from cross_asset.engines.market import MarketEngine
+from cross_asset.storage import latest_formal_observations_asof
 
 
 @dataclass(frozen=True)
@@ -238,13 +239,16 @@ def execute_walk_forward(
         }
         | set(model_config.macro_config.get("series", {}))
     )
-    placeholders = ",".join("?" for _ in series_ids)
-    observations = connection.execute(
-        f"""SELECT * FROM observations
-            WHERE series_id IN ({placeholders})
-            ORDER BY available_at,observation_date,series_id""",
-        series_ids,
-    ).fetchdf()
+    # Formal research consumes market data only through the same shared
+    # approved-provenance selection as the daily path (Issue #18); raw
+    # observations that are unapproved, ambiguous or quality-gated never
+    # enter a walk-forward fold. The research usage scope is protocol-bound.
+    observations = latest_formal_observations_asof(
+        connection,
+        dates.max().to_pydatetime(),
+        required_usage_status=protocol.required_usage_status,
+        series_ids=series_ids,
+    )
     if observations.empty:
         raise ValueError("formal_observations_empty")
     observations["_available"] = pd.to_datetime(observations["available_at"], utc=True)
