@@ -62,7 +62,7 @@ def load_execution_timing_policy(
 ) -> ExecutionTimingPolicy:
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
-        raise ValueError("execution_timing_config_must_be_mapping")
+        raise TypeError("execution_timing_config_must_be_mapping")
     try:
         policy = ExecutionTimingPolicy(
             version=str(raw["version"]),
