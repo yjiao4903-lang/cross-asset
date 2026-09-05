@@ -135,7 +135,7 @@ def test_calendar_coverage_gap_blocks_without_skipping_unknown_dates(tmp_path):
 def test_naive_decision_timestamp_is_rejected(tmp_path):
     config = _write_calendar(tmp_path)
     result = resolve_market_execution(
-        datetime(2026, 9, 5, 12, 0),
+        datetime.fromisoformat("2026-09-05T12:00:00"),
         "CN",
         policy=_policy(),
         calendar_config=config,
