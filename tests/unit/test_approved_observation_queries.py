@@ -1,5 +1,7 @@
 from datetime import UTC, date, datetime
 
+import pytest
+
 from cross_asset.storage import (
     DuckDBStore,
     approved_observations_asof,
@@ -16,6 +18,7 @@ def _accept(
     source_series_id: str = "A.WIND",
     usage_status: str = "LIVE_VERIFIED",
     semantic_equivalence: bool = True,
+    origin: str = "LIVE",
 ) -> None:
     now = datetime(2026, 9, 1, tzinfo=UTC)
     upsert_data_acceptance(
@@ -30,7 +33,7 @@ def _accept(
             "pit_gate": "PASS",
             "stability_gate": "PASS",
             "pit_grade": "B",
-            "origin": "LIVE",
+            "origin": origin,
             "permission_scope": "research",
             "semantic_equivalence": semantic_equivalence,
             "manifest_hash": f"manifest-{source_series_id}",
@@ -106,6 +109,26 @@ def test_unapproved_alternative_source_is_never_consumed():
     assert latest[0][3] == 1.0
 
 
+def test_multiple_approved_sources_are_blocked_as_ambiguous():
+    store = DuckDBStore(":memory:")
+    try:
+        _accept(store, source_series_id="APPROVED.A")
+        _accept(store, source_series_id="APPROVED.B")
+        _observe(store, source="wind", source_series_id="APPROVED.A", value=1.0)
+        _observe(store, source="wind", source_series_id="APPROVED.B", value=2.0)
+
+        rows = approved_observations_asof(
+            store.conn,
+            datetime(2026, 9, 2, tzinfo=UTC),
+            required_usage_status="LIVE_VERIFIED",
+            series_id="A",
+        ).fetchall()
+    finally:
+        store.close()
+
+    assert rows == []
+
+
 def test_usage_status_is_part_of_formal_consumption_identity():
     store = DuckDBStore(":memory:")
     try:
@@ -131,6 +154,36 @@ def test_usage_status_is_part_of_formal_consumption_identity():
 
     assert live == []
     assert len(research) == 1
+
+
+def test_nonformal_usage_status_cannot_use_approved_consumption_query():
+    store = DuckDBStore(":memory:")
+    try:
+        with pytest.raises(ValueError, match="formal_usage_status_required"):
+            approved_observations_asof(
+                store.conn,
+                datetime(2026, 9, 2, tzinfo=UTC),
+                required_usage_status="ENGINEERING_ONLY",
+            )
+    finally:
+        store.close()
+
+
+def test_fixture_or_simulated_origin_cannot_be_formally_consumed():
+    store = DuckDBStore(":memory:")
+    try:
+        _accept(store, source_series_id="FIXTURE.A", origin="FIXTURE")
+        _observe(store, source="wind", source_series_id="FIXTURE.A")
+
+        rows = approved_observations_asof(
+            store.conn,
+            datetime(2026, 9, 2, tzinfo=UTC),
+            required_usage_status="LIVE_VERIFIED",
+        ).fetchall()
+    finally:
+        store.close()
+
+    assert rows == []
 
 
 def test_provider_matches_case_insensitively_but_source_series_id_is_exact():
