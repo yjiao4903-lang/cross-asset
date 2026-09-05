@@ -20,7 +20,19 @@ series `POS_CN_RZRQ`:
 - as-of filtering and explicit revision/duplicate handling;
 - financing balance, daily change, 20-observation change, 60-observation
   change, and causal rolling-percentile diagnostics;
-- C0 source-health output and reuse of the existing immutable raw archive.
+- C0 source-health output and reuse of the existing immutable raw archive;
+- an immutable `.meta.json` sidecar through
+  `src/cross_asset/ingestion/china_leverage_evidence.py`, recording the full
+  raw SHA-256, parser version, archive path, provider/source identity, fetch
+  time, row count, coverage, latest observation/availability, warnings, and
+  failure status.
+
+The evidence-bearing C0 entry point is
+`ingest_china_leverage_snapshot_with_evidence`. It requires an
+`ImmutableRawArchive`, delegates parsing/source-health behavior to the existing
+C0 ingest, and persists the deterministic provenance sidecar next to the raw
+snapshot. Repeated writes of the same evidence are idempotent; a conflicting
+sidecar fails closed.
 
 The implementation does not introduce a second financing series, a free-float
 market-cap denominator, CFFEX member positioning, Northbound net-buy data, or
@@ -55,7 +67,9 @@ is preserved when supplied.
   same-time conflicts are explicit failures;
 - missing as-of rows are `DATA_BLOCKED`, stale rows are `STALE`, parser errors
   are `FAILED`, and unapproved identities are `UNAPPROVED`;
-- fixture origin remains visible and cannot satisfy real-data admission.
+- fixture origin remains visible and cannot satisfy real-data admission;
+- archived candidate snapshots carry a complete SHA-256/parser-version
+  provenance sidecar rather than relying on a truncated hash in the filename.
 
 ## Gate boundary and non-goals
 
@@ -67,4 +81,6 @@ WEB-CONTROL.
 
 The fixtures in `tests/fixtures/china_leverage/` are synthetic engineering
 inputs only. Real source capture, entitlement, historical calendar coverage,
-and production stability remain separate evidence work.
+and production stability remain separate evidence work. The provenance
+sidecar proves engineering traceability only and does not upgrade real-data or
+PIT admission status.
