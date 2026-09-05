@@ -6,6 +6,7 @@ import math
 
 import pandas as pd
 
+from cross_asset.backtest.path_metrics import max_drawdown_from_returns
 from cross_asset.backtest.walk_forward import portfolio_turnover
 
 
@@ -48,14 +49,6 @@ def _cagr(returns: pd.Series, periods_per_year: int) -> float | None:
     return wealth ** (1.0 / years) - 1.0 if years > 0 and wealth > 0 else None
 
 
-def _max_drawdown(returns: pd.Series) -> float | None:
-    values = returns.dropna().astype(float)
-    if values.empty:
-        return None
-    wealth = (1.0 + values).cumprod()
-    return float((wealth / wealth.cummax() - 1.0).min())
-
-
 def paired_oos_metrics(
     model_returns: pd.Series,
     benchmark_returns: pd.Series,
@@ -82,8 +75,8 @@ def paired_oos_metrics(
         if tracking_error not in (None, 0.0) and annualized_excess is not None
         else None
     )
-    model_dd = _max_drawdown(aligned["model"])
-    benchmark_dd = _max_drawdown(aligned["benchmark"])
+    model_dd = max_drawdown_from_returns(aligned["model"])
+    benchmark_dd = max_drawdown_from_returns(aligned["benchmark"])
     return {
         "observations": len(aligned),
         "model_cagr": _cagr(aligned["model"], periods_per_year),
