@@ -18,8 +18,18 @@ This package provides an isolated parser and research transform for:
   participant category, long/short/spreading/open interest, source file/year,
   publication, availability, ingestion, and origin fields;
 - raw snapshot archiving through the existing immutable archive interface;
+- an immutable `.meta.json` sidecar through
+  `src/cross_asset/ingestion/cftc_evidence.py`, recording the complete raw
+  SHA-256, parser version, archive path, source identity, fetch time, row count,
+  coverage, latest observation/availability, warnings, and failure status;
 - as-of filtering, revision selection, source health, net position, percent of
   open interest, rolling percentile, and causal z-score diagnostics.
+
+The evidence-bearing C0 entry point is `ingest_cftc_snapshot_with_evidence`.
+It requires an `ImmutableRawArchive`, delegates parsing/source-health behavior
+to `ingest_cftc_snapshot`, and persists the provenance sidecar adjacent to the
+content-addressed raw snapshot. Repeated writes of identical evidence are
+idempotent; conflicting content at the same sidecar path fails closed.
 
 The output is diagnostic/crowding data only. It does not create `LONG`,
 `SHORT`, `BUY`, `SELL`, or directional-alpha decisions.
@@ -43,7 +53,10 @@ The accepted evidence record in [Cross #37](https://github.com/yjiao4903-lang/cr
 binds contract identity to `CFTC_Contract_Market_Code`, including Gold
 `088691`, Copper `085692`, S&P 500 `13874A`/`13874+`, and US 10Y Treasury
 `043602`. It also confirms that source suitability is not a production
-admission decision.
+admission decision. Historical multi-year archive naming and special delayed
+publication episodes remain live-source/release-calendar integration work; the
+C0 parser deliberately consumes caller-supplied source bytes and actual
+publication timestamps rather than guessing them.
 
 ## Failure and health behavior
 
@@ -57,7 +70,10 @@ admission decision.
 - missing expected series are `PARTIAL`, stale latest reports are `STALE`,
   parser failures are `FAILED`, unapproved providers are `UNAPPROVED`, and no
   admissible records are `DATA_BLOCKED`;
-- fixture origin is retained and cannot be interpreted as real-data evidence.
+- fixture origin is retained and cannot be interpreted as real-data evidence;
+- raw SHA-256 and parser-version provenance is persisted independently of
+  source-health success, so a failed/partial candidate never loses its raw
+  evidence trail when an archive path exists.
 
 ## Gate boundary and non-goals
 
@@ -69,5 +85,5 @@ related audit gates are accepted by WEB-CONTROL.
 
 The CFTC network fetch/release-calendar integration and historical live
 validation remain separate evidence work. The synthetic fixtures in
-`tests/fixtures/cftc_positioning/` prove parser and PIT behavior only; they do
-not satisfy a real-data gate.
+`tests/fixtures/cftc_positioning/` prove parser, PIT, source-health, and raw
+provenance behavior only; they do not satisfy a real-data gate.
