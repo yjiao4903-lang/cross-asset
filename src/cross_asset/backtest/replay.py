@@ -20,6 +20,12 @@ from cross_asset.engines.macro import build_macro_state
 from cross_asset.engines.market import MarketEngine
 from cross_asset.engines.style import StyleEngine
 from cross_asset.integration.contracts import marco_to_cross_asset_id
+from cross_asset.operations.execution_timing import (
+    RESEARCH_PROXY_PERFORMANCE_SEMANTICS,
+    RESEARCH_PROXY_RETURN_TIMING_BASIS,
+    portfolio_execution_timing_disclosure,
+    terminal_no_trade_timing_disclosure,
+)
 
 
 @dataclass
@@ -31,8 +37,8 @@ class ReplayResult:
     assumptions: list[str] = field(
         default_factory=lambda: [
             "weekly deterministic calendar",
-            "next-period effective",
-            "terminal decision has no realized return",
+            "decision-to-next-decision returns are a research timing proxy",
+            "terminal decision has no realized return or execution",
             "initial allocation trade cost disabled unless explicitly requested",
             "cost is research placeholder",
         ]
@@ -43,6 +49,7 @@ class ReplayResult:
     scores: pd.DataFrame = field(default_factory=pd.DataFrame)
     decisions: list[dict] = field(default_factory=list)
     benchmark_metadata: dict = field(default_factory=dict)
+    execution_timing: list[dict] = field(default_factory=list)
 
     def write_artifacts(self, output_dir="artifacts/backtests"):
         out = Path(output_dir)
@@ -58,11 +65,27 @@ class ReplayResult:
         (out / "decisions.json").write_text(
             json.dumps(self.decisions, default=str, indent=2), encoding="utf-8"
         )
+        (out / "execution_timing.json").write_text(
+            json.dumps(self.execution_timing, default=str, indent=2), encoding="utf-8"
+        )
+        active_timing = [
+            item.get("status")
+            for item in self.execution_timing
+            if item.get("status") != "NOT_APPLICABLE"
+        ]
+        execution_timing_status = (
+            "RESOLVED"
+            if active_timing and all(status == "RESOLVED" for status in active_timing)
+            else "BLOCKED"
+        )
         (out / "summary.md").write_text(
             "# Backtest Artifacts\n\n"
-            "Offline fixture artifacts; not investment performance.\n\n"
+            "Research proxy artifacts; not investor-realizable investment performance.\n\n"
             f"- model_version: {self.model_version}\n- config_hash: {self.config_hash}\n"
             f"- data_cutoff: {self.data_cutoff}\n- fixture: {self.fixture}\n"
+            f"- execution_timing_status: {execution_timing_status}\n"
+            f"- return_timing_basis: {RESEARCH_PROXY_RETURN_TIMING_BASIS}\n"
+            f"- performance_semantics: {RESEARCH_PROXY_PERFORMANCE_SEMANTICS}\n"
             f"- assumptions: {', '.join(self.assumptions)}\n",
             encoding="utf-8",
         )
@@ -82,6 +105,9 @@ class HistoricalReplay:
         model_version="full_model_v0.2",
         config=None,
         fixture=True,
+        asset_market_map=None,
+        execution_timing_policy_path="config/execution_timing.yml",
+        calendar_config=None,
     ):
         self.observations = observations.copy()
         self.strategy = strategy
@@ -91,6 +117,9 @@ class HistoricalReplay:
         self.charge_initial_trade = bool(charge_initial_trade)
         self.model_version = model_version
         self.fixture = fixture
+        self.asset_market_map = dict(asset_market_map or {})
+        self.execution_timing_policy_path = execution_timing_policy_path
+        self.calendar_config = calendar_config
         self.config_hash = hash_config(
             config
             or {
@@ -99,6 +128,9 @@ class HistoricalReplay:
                 "turnover_convention": turnover_convention,
                 "charge_initial_trade": self.charge_initial_trade,
                 "model_version": model_version,
+                "asset_market_map": self.asset_market_map,
+                "execution_timing_policy_path": execution_timing_policy_path,
+                "calendar_config": calendar_config,
             }
         )
 
@@ -114,6 +146,7 @@ class HistoricalReplay:
         allocations = []
         score_rows = []
         decision_records = []
+        execution_timing_records = []
         returns = []
         previous_target = None
         previous_asset_returns = None
@@ -127,6 +160,29 @@ class HistoricalReplay:
             allocation = pd.Series(raw_allocation, dtype=float)
             allocation = allocation / allocation.sum() if allocation.sum() else allocation
             next_decision = dates[index + 1] if index + 1 < len(dates) else None
+            decision_at = pd.Timestamp(decision).to_pydatetime()
+
+            if next_decision is None:
+                execution_timing = terminal_no_trade_timing_disclosure(decision_at)
+            elif return_specs is None:
+                execution_timing = {
+                    "status": "BLOCKED",
+                    "reason": "return_specs_required_for_execution_timing",
+                    "decision_at": decision_at,
+                    "by_asset": {},
+                    "blockers": ["return_specs_required_for_execution_timing"],
+                    "return_timing_basis": RESEARCH_PROXY_RETURN_TIMING_BASIS,
+                    "performance_semantics": RESEARCH_PROXY_PERFORMANCE_SEMANTICS,
+                }
+            else:
+                execution_timing = portfolio_execution_timing_disclosure(
+                    decision_at,
+                    return_specs,
+                    self.asset_market_map,
+                    policy_path=self.execution_timing_policy_path,
+                    calendar_config=self.calendar_config,
+                )
+            execution_timing_records.append(execution_timing)
 
             if next_decision is None:
                 pretrade_weights = None
@@ -233,6 +289,10 @@ class HistoricalReplay:
                 decision_records.append(
                     {
                         "decision": str(decision),
+                        "decision_at": decision_at,
+                        "execution_timing": execution_timing,
+                        "return_timing_basis": RESEARCH_PROXY_RETURN_TIMING_BASIS,
+                        "performance_semantics": RESEARCH_PROXY_PERFORMANCE_SEMANTICS,
                         "allocation": dict(allocation),
                         "scores": {
                             key: getattr(value, "score", None)
@@ -266,6 +326,7 @@ class HistoricalReplay:
             scores=pd.DataFrame(score_rows, index=dates),
             decisions=decision_records,
             benchmark_metadata=benchmark_metadata,
+            execution_timing=execution_timing_records,
         )
 
 
