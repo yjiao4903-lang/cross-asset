@@ -58,10 +58,9 @@ def _latest_boundary_row(rows, boundary, available_boundary=None):
 
 def period_asset_return(
     observations: pd.DataFrame,
-    *,
+    spec: AssetReturnSpec,
     decision,
     next_decision,
-    spec: AssetReturnSpec,
 ) -> float | None:
     """Return the complete PIT-resolved decision-to-next-decision holding return."""
 
@@ -167,7 +166,10 @@ def _embedded_accounting_policy(
     }
     pricing = {str(payload.get("pricing_basis")) for payload in typed_payloads.values()}
     semantics = {str(payload.get("performance_semantics")) for payload in typed_payloads.values()}
-    if not all(len(values) == 1 for values in (reporting, versions, supported_values, pricing, semantics)):
+    if not all(
+        len(values) == 1
+        for values in (reporting, versions, supported_values, pricing, semantics)
+    ):
         raise ValueError("embedded_accounting_policy_inconsistent")
 
     asset_specs = {}
@@ -232,16 +234,18 @@ def portfolio_asset_returns(
         return None
     configured = specs or {}
     nonzero_assets = [
-        str(asset) for asset, weight in allocation.items() if abs(float(weight)) > 1e-15
+        str(asset)
+        for asset, weight in allocation.items()
+        if abs(float(weight)) > 1e-15
     ]
     resolved: dict[str, float] = {}
     for asset in nonzero_assets:
         spec = configured.get(asset, AssetReturnSpec(series_id=asset))
         result = period_asset_return(
             observations,
+            spec=spec,
             decision=decision,
             next_decision=next_decision,
-            spec=spec,
         )
         if result is None or not np.isfinite(float(result)):
             return None
