@@ -29,6 +29,11 @@ from . import (
     stitch_oos_path,
     verdict_from_thresholds,
 )
+from .execution_timing import (
+    annotate_research_execution_timing,
+    research_execution_timing_summary,
+)
+from .model_config import load_research_asset_market_map
 from .storage import persist_fold_result, persist_research_plan
 
 app = typer.Typer(
@@ -201,6 +206,12 @@ def run_oos_command(
             protocol=protocol,
             model_config=model_config,
         )
+        fold_rows = annotate_research_execution_timing(
+            fold_rows,
+            model_config.return_specs,
+            load_research_asset_market_map(),
+        )
+        execution_timing = research_execution_timing_summary(fold_rows)
         stitched = stitch_oos_path(
             fold_rows,
             plan.to_dict(),
@@ -255,6 +266,7 @@ def run_oos_command(
                 "holdout_sealed": True,
                 "protocol_hash": protocol.protocol_hash,
                 "research_run_id": research_run_id,
+                "execution_timing": execution_timing,
                 "metrics_vs_static": metrics,
                 **verdict,
             },
