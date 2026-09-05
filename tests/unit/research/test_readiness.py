@@ -66,10 +66,12 @@ def test_readiness_blocks_empty_formal_store():
         )
         assert result["status"] == "BLOCKED"
         assert "formal_observations_empty" in result["blockers"]
-        assert any("registry_pass_research_admissible_required" in item for item in result["blockers"])
+        assert any(
+            "registry_pass_research_admissible_required" in item
+            for item in result["blockers"]
+        )
     finally:
         store.close()
-
 
 
 def _frozen_protocol():
@@ -163,6 +165,27 @@ def test_readiness_enforces_pit_freshness_coverage_threshold():
             )
         store.insert_observations(observations, run_id="coverage-fixture")
 
+        # Candidate rows at the two missing decision dates must not repair
+        # formal coverage merely because they share the canonical series_id.
+        candidate_rows = []
+        for index in sorted(missing_indices):
+            decision = decisions[index]
+            candidate_rows.append(
+                {
+                    "series_id": "A",
+                    "observation_date": decision.date(),
+                    "available_at": decision.to_pydatetime(),
+                    "value": 1000.0 + index,
+                    "source": "candidate",
+                    "source_series_id": "A.CANDIDATE",
+                    "vintage_date": None,
+                    "ingested_at": now,
+                    "quality": "ok",
+                    "raw_file": "candidate-fixture",
+                }
+            )
+        store.insert_observations(candidate_rows, run_id="coverage-candidate")
+
         blocked = evaluate_research_readiness(
             store.conn,
             _frozen_protocol(),
@@ -170,7 +193,10 @@ def test_readiness_enforces_pit_freshness_coverage_threshold():
         )
         assert blocked["status"] == "BLOCKED"
         assert blocked["series"][0]["pit_coverage"]["coverage"] == 0.9
-        assert any("pit_coverage_below_threshold" in item for item in blocked["blockers"])
+        assert blocked["series"][0]["observation_count"] == len(observations)
+        assert any(
+            "pit_coverage_below_threshold" in item for item in blocked["blockers"]
+        )
 
         fill_rows = []
         for index in sorted(missing_indices):
