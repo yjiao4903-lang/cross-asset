@@ -100,9 +100,9 @@ def test_unapproved_alternative_source_is_never_consumed():
         store.close()
 
     assert len(rows) == 1
-    assert rows[0][6] == "APPROVED.A"
+    assert rows[0][5] == "APPROVED.A"
     assert len(latest) == 1
-    assert latest[0][6] == "APPROVED.A"
+    assert latest[0][5] == "APPROVED.A"
     assert latest[0][3] == 1.0
 
 
@@ -149,7 +149,7 @@ def test_provider_matches_case_insensitively_but_source_series_id_is_exact():
         store.close()
 
     assert len(rows) == 1
-    assert rows[0][6] == "EXACT.A"
+    assert rows[0][5] == "EXACT.A"
     assert rows[0][3] == 2.0
 
 
