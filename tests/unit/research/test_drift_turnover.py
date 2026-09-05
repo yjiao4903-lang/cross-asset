@@ -1,5 +1,3 @@
-import math
-
 import pandas as pd
 import pytest
 
@@ -71,7 +69,7 @@ def test_stitched_path_rebalances_from_drifted_pretrade_holdings():
     assert bool(stitched.iloc[1]["drift_aware_turnover"]) is True
     assert stitched.iloc[2]["turnover"] == 0.0
     assert stitched.iloc[2]["turnover_basis"] == "terminal_no_trade"
-    assert math.isnan(stitched.iloc[2]["net_return"])
+    assert pd.isna(stitched.iloc[2]["net_return"])
 
 
 def test_stitched_path_fails_closed_when_prior_holding_return_is_missing():
@@ -84,6 +82,6 @@ def test_stitched_path_fails_closed_when_prior_holding_return_is_missing():
     )
 
     assert stitched.iloc[1]["turnover_basis"] == "drift_unavailable"
-    assert math.isnan(stitched.iloc[1]["turnover"])
-    assert math.isnan(stitched.iloc[1]["cost"])
-    assert math.isnan(stitched.iloc[1]["net_return"])
+    assert pd.isna(stitched.iloc[1]["turnover"])
+    assert pd.isna(stitched.iloc[1]["cost"])
+    assert pd.isna(stitched.iloc[1]["net_return"])
