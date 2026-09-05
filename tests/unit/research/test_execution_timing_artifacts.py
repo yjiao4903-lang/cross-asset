@@ -99,6 +99,31 @@ def test_research_annotation_can_resolve_explicit_market_but_remains_research_pr
     assert summary["performance_semantics"] == "research_proxy_not_investor_realizable"
 
 
+def test_stitched_terminal_scope_uses_global_benchmark_endpoint():
+    frame = pd.DataFrame(
+        [
+            {"fold": 1, "benchmark": "FULL_MODEL", "decision_date": "2026-09-04T12:00:00Z"},
+            {"fold": 1, "benchmark": "FULL_MODEL", "decision_date": "2026-09-11T12:00:00Z"},
+            {"fold": 2, "benchmark": "FULL_MODEL", "decision_date": "2026-09-11T12:00:00Z"},
+            {"fold": 2, "benchmark": "FULL_MODEL", "decision_date": "2026-09-18T12:00:00Z"},
+        ]
+    )
+    annotated = annotate_research_execution_timing(
+        frame,
+        _specs(),
+        {},
+        terminal_group_columns=("benchmark",),
+    )
+
+    assert list(annotated["execution_timing_status"]) == [
+        "BLOCKED",
+        "BLOCKED",
+        "BLOCKED",
+        "NOT_APPLICABLE",
+    ]
+    assert annotated.iloc[-1]["execution_timing"]["reason"] == "terminal_no_trade"
+
+
 def test_research_universe_market_metadata_is_explicit_and_not_part_of_return_spec(tmp_path):
     universe = tmp_path / "universe.yml"
     allocation = tmp_path / "allocation.yml"
