@@ -21,6 +21,7 @@ from cross_asset.engines.allocation import allocate
 from cross_asset.engines.asset_score import score_asset
 from cross_asset.engines.macro import build_macro_state
 from cross_asset.engines.market import MarketEngine
+from cross_asset.storage import approved_observations_asof
 
 
 @dataclass(frozen=True)
@@ -238,13 +239,14 @@ def execute_walk_forward(
         }
         | set(model_config.macro_config.get("series", {}))
     )
-    placeholders = ",".join("?" for _ in series_ids)
-    observations = connection.execute(
-        f"""SELECT * FROM observations
-            WHERE series_id IN ({placeholders})
-            ORDER BY available_at,observation_date,series_id""",
-        series_ids,
-    ).fetchdf()
+    observations = approved_observations_asof(
+        connection,
+        development[-1].to_pydatetime(),
+        required_usage_status=protocol.required_usage_status,
+    ).df()
+    observations = observations[
+        observations["series_id"].isin(series_ids)
+    ].copy()
     if observations.empty:
         raise ValueError("formal_observations_empty")
     observations["_available"] = pd.to_datetime(observations["available_at"], utc=True)
