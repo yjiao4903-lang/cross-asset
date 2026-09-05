@@ -9,10 +9,11 @@ import pandas as pd
 
 from cross_asset.backtest.returns import (
     AssetReturnSpec,
+    portfolio_asset_returns,
     portfolio_period_return,
     return_index_from_series,
 )
-from cross_asset.backtest.walk_forward import portfolio_turnover
+from cross_asset.backtest.walk_forward import portfolio_turnover, rebalance_turnover
 from cross_asset.engines.allocation import allocate
 from cross_asset.engines.asset_score import COMPONENT_WEIGHTS, score_asset
 from cross_asset.engines.macro import build_macro_state
@@ -114,7 +115,10 @@ class HistoricalReplay:
         score_rows = []
         decision_records = []
         returns = []
-        previous = None
+        previous_target = None
+        previous_asset_returns = None
+        return_specs = getattr(self.strategy, "return_specs", None)
+        drift_capable = return_specs is not None
         benchmark_metadata = {}
         for index, decision in enumerate(dates):
             info = obs[obs._available <= decision]
@@ -125,7 +129,68 @@ class HistoricalReplay:
             next_decision = dates[index + 1] if index + 1 < len(dates) else None
 
             if next_decision is None:
+                pretrade_weights = None
+                turnover = 0.0
+                turnover_basis = "terminal_no_trade"
+            elif previous_target is None:
+                pretrade_weights = {}
+                turnover = (
+                    portfolio_turnover(
+                        allocation,
+                        {},
+                        convention=self.turnover_convention,
+                    )
+                    if self.charge_initial_trade
+                    else 0.0
+                )
+                turnover_basis = (
+                    "initial_target_vs_cash"
+                    if self.charge_initial_trade
+                    else "initial_trade_not_charged"
+                )
+            elif drift_capable:
+                pretrade_weights, turnover_value = rebalance_turnover(
+                    allocation,
+                    previous_target,
+                    previous_asset_returns or {},
+                    convention=self.turnover_convention,
+                )
+                if turnover_value is None:
+                    turnover = float("nan")
+                    turnover_basis = "drift_unavailable"
+                else:
+                    turnover = float(turnover_value)
+                    turnover_basis = "drifted_pretrade_holdings"
+            else:
+                pretrade_weights = dict(previous_target)
+                turnover = portfolio_turnover(
+                    allocation,
+                    previous_target,
+                    convention=self.turnover_convention,
+                )
+                turnover_basis = "target_weights_legacy_fallback"
+
+            asset_returns = None
+            if next_decision is None:
                 gross_return = float("nan")
+            elif drift_capable:
+                asset_returns = portfolio_asset_returns(
+                    obs,
+                    allocation,
+                    decision,
+                    next_decision,
+                    specs=return_specs,
+                )
+                gross_return = (
+                    float("nan")
+                    if asset_returns is None
+                    else float(
+                        sum(
+                            float(allocation.get(asset, 0.0)) * float(value)
+                            for asset, value in asset_returns.items()
+                        )
+                    )
+                )
             elif hasattr(self.strategy, "realized_return"):
                 realized = self.strategy.realized_return(
                     obs,
@@ -145,25 +210,17 @@ class HistoricalReplay:
             else:
                 gross_return = 0.0
 
-            if next_decision is None:
-                turnover = 0.0
-            elif previous is None:
-                turnover = (
-                    portfolio_turnover(
-                        allocation,
-                        {},
-                        convention=self.turnover_convention,
-                    )
-                    if self.charge_initial_trade
-                    else 0.0
-                )
-            else:
-                turnover = portfolio_turnover(
-                    allocation,
-                    previous,
-                    convention=self.turnover_convention,
-                )
-            returns.append(gross_return - turnover * self.cost_bps / 10000)
+            cost = (
+                float("nan")
+                if pd.isna(turnover)
+                else float(turnover) * self.cost_bps / 10000
+            )
+            net_return = (
+                float("nan")
+                if pd.isna(gross_return) or pd.isna(cost)
+                else float(gross_return) - float(cost)
+            )
+            returns.append(net_return)
             allocations.append(allocation)
             score_rows.append(
                 {
@@ -186,10 +243,17 @@ class HistoricalReplay:
                         "model_versions": state["model_versions"],
                         "data_cutoff": str(state["data_cutoff"]),
                         "missing_signal_assets": state.get("missing_signal_assets", []),
+                        "asset_returns": asset_returns,
+                        "pretrade_weights": pretrade_weights,
                         "turnover": turnover,
+                        "turnover_basis": turnover_basis,
+                        "cost": cost,
+                        "gross_return": gross_return,
+                        "net_return": net_return,
                     }
                 )
-            previous = allocation
+            previous_target = allocation.to_dict()
+            previous_asset_returns = asset_returns if drift_capable else None
 
         return ReplayResult(
             pd.Series(returns, index=dates, name="return"),
@@ -478,7 +542,6 @@ def _utc_timestamp(value):
         if timestamp.tzinfo is None
         else timestamp.tz_convert("UTC")
     )
-
 
 
 def _marco_fundamentals_by_cross_asset(fundamental_asset_view):
