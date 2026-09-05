@@ -167,6 +167,9 @@ def build_calendar_window_manifest(
     return folds
 
 
+build_research_window_manifest = build_calendar_window_manifest
+
+
 def portfolio_turnover(current, previous, *, convention="two_sided_notional") -> float:
     """Compute turnover under an explicit and reproducible convention."""
 
