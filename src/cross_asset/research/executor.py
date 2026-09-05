@@ -255,9 +255,6 @@ def execute_walk_forward(
     )
 
     rows = []
-    clean_observations = observations.drop(
-        columns=["_available", "_observation_date"]
-    )
     for fold in plan["folds"]:
         fold_number = int(fold["fold"])
         test_indices = list(fold["test_indices"])
