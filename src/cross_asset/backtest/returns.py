@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -18,6 +19,7 @@ class AssetReturnSpec:
     duration_years: float | None = None
     annual_rate: float = 0.0
     yield_scale: float = 100.0
+    accounting: Mapping[str, Any] | None = None
 
     def validate(self) -> None:
         if self.kind not in {"price", "yield_duration_proxy", "cash"}:
@@ -141,6 +143,74 @@ def return_index_from_series(series: pd.Series, spec: AssetReturnSpec) -> pd.Ser
     return result.replace([np.inf, -np.inf], np.nan).dropna()
 
 
+def _embedded_accounting_policy(
+    configured: Mapping[str, AssetReturnSpec],
+    assets: list[str],
+):
+    from .accounting import (
+        AssetAccountingSpec,
+        FXConversionSpec,
+        PortfolioAccountingPolicy,
+    )
+
+    payloads = {asset: configured[asset].accounting for asset in assets}
+    if not any(payloads.values()):
+        return None
+    if any(payload is None for payload in payloads.values()):
+        raise ValueError("accounting_policy_must_cover_all_nonzero_assets")
+    typed_payloads = {asset: dict(payload or {}) for asset, payload in payloads.items()}
+    reporting = {str(payload.get("reporting_currency")) for payload in typed_payloads.values()}
+    versions = {str(payload.get("policy_version")) for payload in typed_payloads.values()}
+    supported_values = {
+        tuple(str(x) for x in payload.get("supported_currencies", ()))
+        for payload in typed_payloads.values()
+    }
+    pricing = {str(payload.get("pricing_basis")) for payload in typed_payloads.values()}
+    semantics = {str(payload.get("performance_semantics")) for payload in typed_payloads.values()}
+    if not all(len(values) == 1 for values in (reporting, versions, supported_values, pricing, semantics)):
+        raise ValueError("embedded_accounting_policy_inconsistent")
+
+    asset_specs = {}
+    for asset, payload in typed_payloads.items():
+        fx_raw = payload.get("fx")
+        fx = None
+        if isinstance(fx_raw, Mapping):
+            fx = FXConversionSpec(
+                series_id=str(fx_raw["series_id"]),
+                local_currency=str(fx_raw["local_currency"]),
+                reporting_currency=str(fx_raw["reporting_currency"]),
+                quote_direction=str(fx_raw["quote_direction"]),
+                max_age_hours=float(fx_raw["max_age_hours"]),
+            )
+        asset_specs[asset] = AssetAccountingSpec(
+            local_currency=str(payload["local_currency"]),
+            return_type=str(payload["return_type"]),
+            hedge_status=str(payload.get("hedge_status", "UNHEDGED")),
+            fx_mapping_status=str(payload.get("fx_mapping_status", "UNRESOLVED")),
+            fx=fx,
+            hedge_return_series_id=(
+                None
+                if payload.get("hedge_return_series_id") in (None, "")
+                else str(payload["hedge_return_series_id"])
+            ),
+            futures_roll_semantics=(
+                None
+                if payload.get("futures_roll_semantics") in (None, "")
+                else str(payload["futures_roll_semantics"])
+            ),
+        )
+    policy = PortfolioAccountingPolicy(
+        version=next(iter(versions)),
+        reporting_currency=next(iter(reporting)),
+        supported_currencies=next(iter(supported_values)),
+        assets=asset_specs,
+        pricing_basis=next(iter(pricing)),
+        performance_semantics=next(iter(semantics)),
+    )
+    policy.validate()
+    return policy
+
+
 def portfolio_asset_returns(
     observations: pd.DataFrame,
     allocation: Mapping[str, float],
@@ -149,21 +219,23 @@ def portfolio_asset_returns(
     *,
     specs: Mapping[str, AssetReturnSpec] | None = None,
 ) -> dict[str, float] | None:
-    """Resolve asset-level holding returns for every non-zero portfolio leg.
+    """Resolve holding returns for every non-zero portfolio leg.
 
-    These returns are the accounting input used to advance a target allocation
-    into the next decision's pre-trade holdings. Missing returns on any non-zero
-    leg fail closed because drift and rebalance turnover would otherwise be
-    unknowable. Zero-weight assets do not require a holding-period return.
+    Specs without embedded accounting metadata retain the historical local-return
+    utility behavior. Once any non-zero leg carries a D2 accounting contract,
+    every non-zero leg must carry the same policy and the result is converted to
+    the explicit reporting currency through the shared fail-closed accounting
+    function.
     """
 
     if next_decision is None:
         return None
     configured = specs or {}
+    nonzero_assets = [
+        str(asset) for asset, weight in allocation.items() if abs(float(weight)) > 1e-15
+    ]
     resolved: dict[str, float] = {}
-    for asset, weight in allocation.items():
-        if abs(float(weight)) <= 1e-15:
-            continue
+    for asset in nonzero_assets:
         spec = configured.get(asset, AssetReturnSpec(series_id=asset))
         result = period_asset_return(
             observations,
@@ -173,8 +245,22 @@ def portfolio_asset_returns(
         )
         if result is None or not np.isfinite(float(result)):
             return None
-        resolved[str(asset)] = float(result)
-    return resolved
+        resolved[asset] = float(result)
+
+    policy = _embedded_accounting_policy(configured, nonzero_assets)
+    if policy is None:
+        return resolved
+    from .accounting import portfolio_reporting_currency_return
+
+    accounting = portfolio_reporting_currency_return(
+        observations,
+        allocation,
+        decision,
+        next_decision,
+        return_specs=configured,
+        policy=policy,
+    )
+    return accounting.asset_returns if accounting.resolved else None
 
 
 def portfolio_period_return(
