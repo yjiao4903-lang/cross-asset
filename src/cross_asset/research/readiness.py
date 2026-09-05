@@ -148,7 +148,7 @@ def evaluate_research_readiness(
         readiness_asof,
         required_usage_status=protocol.required_usage_status,
     ).df()
-    formal_count = int(len(approved))
+    formal_count = len(approved)
     if formal_count == 0:
         blockers.append("formal_observations_empty")
     if not required:
@@ -167,7 +167,7 @@ def evaluate_research_readiness(
         selected_registry = registry[0] if registry_ready else None
 
         rows = approved[approved["series_id"] == series_id].copy()
-        count = int(len(rows))
+        count = len(rows)
         if count:
             start = rows["observation_date"].min()
             end = rows["observation_date"].max()
