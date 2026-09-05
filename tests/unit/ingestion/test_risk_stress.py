@@ -10,14 +10,19 @@ from pathlib import Path
 import pytest
 
 from cross_asset.ingestion.raw_archive import ImmutableRawArchive
+from cross_asset.ingestion import risk_stress as rs
 from cross_asset.ingestion.risk_stress import (
+    CANONICAL_SERIES,
     PARSER_VERSION,
+    PreHistoryObservationError,
+    RESEARCH_EVIDENCE_37,
     RiskStressError,
     RiskStressSeries,
     SourceRole,
     SourceStatus,
     SpliceViolationError,
     UnapprovedSourceError,
+    VIX3M_OFFICIAL_HISTORY_START,
     asof_records,
     check_series_identity,
     classify_term_structure,
@@ -395,3 +400,295 @@ def test_vix_ts_has_no_direct_source_contract():
         source_contract(RiskStressSeries.VIX_TS)
     leg = vix3m_contract()
     assert ("cboe", "VIX3M") in leg.approved_sources
+
+
+# ---------------------------------------------------------------------------
+# 11. completed #37 evidence linkage (WEB-CONTROL fix 1)
+
+
+def test_all_contracts_cite_completed_37_evidence_not_placeholders():
+    contracts = list(rs._RISK_STRESS_CONTRACTS.values()) + [vix3m_contract()]
+    assert len(contracts) == 5
+    for contract in contracts:
+        evidence = contract.availability.evidence
+        assert evidence, f"{contract.series} must carry availability evidence"
+        assert "pending_research_aux_37" not in evidence
+        assert evidence == RESEARCH_EVIDENCE_37
+        assert "#37" in evidence and "5551061168" in evidence
+        # Evidence linkage is not production admission: pit_grade stays None.
+        assert contract.availability.pit_grade is None
+        contract.availability.validate()
+
+
+def test_37_evidence_reference_contains_acceptance_and_is_research_only():
+    assert "5551061168" in RESEARCH_EVIDENCE_37, "research evidence comment id"
+    assert "5551088799" in RESEARCH_EVIDENCE_37, "WEB-CONTROL acceptance comment id"
+    assert "cross-asset#37" in RESEARCH_EVIDENCE_37
+
+
+def test_37_evidence_linkage_does_not_upgrade_pit_grade_or_role():
+    for contract in list(rs._RISK_STRESS_CONTRACTS.values()) + [vix3m_contract()]:
+        assert contract.availability.pit_grade is None
+    # BAA10Y stays a shadow proxy and HY OAS stays primary despite linkage.
+    assert source_contract(RiskStressSeries.BAA10Y).role is SourceRole.SHADOW_PROXY
+    assert source_contract(RiskStressSeries.HY_OAS).role is SourceRole.PRIMARY
+
+
+# ---------------------------------------------------------------------------
+# 12. VIX3M leg identity end-to-end (WEB-CONTROL fix 2)
+
+
+def test_vix3m_has_own_identity_and_is_not_a_canonical_output():
+    leg = vix3m_contract()
+    assert leg.series is RiskStressSeries.VIX3M
+    assert str(leg.series) == "RISK_VIX3M"
+    assert leg.series is not RiskStressSeries.VIX_LEVEL
+    assert RiskStressSeries.VIX3M not in CANONICAL_SERIES
+    assert tuple(sorted(str(s) for s in CANONICAL_SERIES)) == (
+        "RISK_BAA10Y",
+        "RISK_HY_OAS",
+        "RISK_VIX_LEVEL",
+        "RISK_VIX_TS",
+    )
+    with pytest.raises(ValueError, match="internal leg"):
+        source_contract(RiskStressSeries.VIX3M)
+
+
+def test_vix3m_parser_records_carry_leg_identity_not_vix_level():
+    records = parse_risk_stress_csv(
+        _read("synthetic_vix3m_close.csv"), series=VIX3M_LEG, provider="cboe", origin="FIXTURE"
+    )
+    assert records
+    assert {r.series_id for r in records} == {"RISK_VIX3M"}
+    assert {r.source_series_id for r in records} == {"VIX3M"}
+    # fred/VXVCLS is the #37-evidenced alternate approved pair for the leg.
+    assert ("fred", "VXVCLS") in vix3m_contract().approved_sources
+
+
+def test_vix3m_source_health_and_archive_namespace_keep_leg_identity(tmp_path):
+    archive = ImmutableRawArchive(root=tmp_path / "raw")
+    health = ingest_source_snapshot(
+        _read("synthetic_vix3m_close.csv"),
+        series=VIX3M_LEG,
+        provider="cboe",
+        origin="FIXTURE",
+        fetched_at=DECISION_TIME,
+        decision_time=DECISION_TIME,
+        raw_archive=archive,
+    )
+    assert health.series == "RISK_VIX3M"
+    assert health.series != str(RiskStressSeries.VIX_LEVEL)
+    assert health.source_series_id == "VIX3M"
+    assert health.status is SourceStatus.OK
+    assert health.raw_archive_path
+    assert "RISK_VIX3M" in Path(health.raw_archive_path).parts
+    as_dict = health.as_dict()
+    assert as_dict["series"] == "RISK_VIX3M"
+
+
+def test_vix3m_unapproved_error_names_the_leg_identity():
+    with pytest.raises(UnapprovedSourceError) as excinfo:
+        parse_risk_stress_csv(
+            _read("synthetic_vix3m_close.csv"),
+            series=VIX3M_LEG,
+            provider="yahoo_scraper",
+            origin="FIXTURE",
+        )
+    assert "RISK_VIX3M" in str(excinfo.value)
+    assert excinfo.value.attempted_provider == "yahoo_scraper"
+    assert excinfo.value.attempted_source_series_id == "VIX3M"
+
+
+def test_vix3m_leg_identity_guard_rejects_vix_rows_as_leg():
+    vix_records = _parse_vix(_read("synthetic_vix_close.csv"))
+    with pytest.raises(SpliceViolationError):
+        check_series_identity(vix_records, VIX3M_LEG)
+    vix3m_records = parse_risk_stress_csv(
+        _read("synthetic_vix3m_close.csv"), series=VIX3M_LEG, provider="cboe", origin="FIXTURE"
+    )
+    check_series_identity(vix3m_records, VIX3M_LEG)
+
+
+def test_vix_ts_ratio_semantics_unchanged_from_legs():
+    vix = _parse_vix(_read("synthetic_vix_close.csv"))
+    vix3m = parse_risk_stress_csv(
+        _read("synthetic_vix3m_close.csv"), series=VIX3M_LEG, provider="cboe", origin="FIXTURE"
+    )
+    points = compute_vix_term_structure(vix, vix3m)
+    ok = [p for p in points if p.state == "OK"]
+    assert ok
+    for point in ok:
+        num = next(r for r in vix if r.observation_date == point.observation_date)
+        den = next(r for r in vix3m if r.observation_date == point.observation_date)
+        assert point.ratio == pytest.approx(num.value / den.value)
+        assert point.available_at == max(num.available_at, den.available_at)
+
+
+# ---------------------------------------------------------------------------
+# 13. UNAPPROVED source-health with attempted provenance (WEB-CONTROL fix 3)
+
+
+def test_unapproved_provider_records_unapproved_status_with_attempted_identity(tmp_path):
+    archive = ImmutableRawArchive(root=tmp_path / "raw")
+    health = ingest_source_snapshot(
+        _read("synthetic_vix_close.csv"),
+        series=RiskStressSeries.VIX_LEVEL,
+        provider="random_blog_scraper",
+        origin="FIXTURE",
+        fetched_at=DECISION_TIME,
+        decision_time=DECISION_TIME,
+        raw_archive=archive,
+    )
+    assert health.status is SourceStatus.UNAPPROVED
+    assert health.provider == "random_blog_scraper"
+    assert health.source_series_id == "VIX"
+    assert health.row_count == 0
+    assert health.failure_reason and "random_blog_scraper" in health.failure_reason
+    assert "unapproved_attempted_identity_preserved" in health.warnings
+    # The raw snapshot is still archived for audit even when unapproved.
+    assert health.raw_archive_path and Path(health.raw_archive_path).exists()
+
+
+def test_unapproved_series_id_is_preserved_not_replaced_by_first_approved(tmp_path):
+    # Approved pairs for VIX are cboe/VIX and fred/VIXCLS; the attempted
+    # identity fred/VIX_YAHOO_MIRROR must be recorded verbatim.
+    swapped = _read("synthetic_vix_close.csv").replace(",VIX", ",VIX_YAHOO_MIRROR")
+    health = ingest_source_snapshot(
+        swapped,
+        series=RiskStressSeries.VIX_LEVEL,
+        provider="fred",
+        origin="FIXTURE",
+        fetched_at=DECISION_TIME,
+        decision_time=DECISION_TIME,
+    )
+    assert health.status is SourceStatus.UNAPPROVED
+    assert health.provider == "fred"
+    assert health.source_series_id == "VIX_YAHOO_MIRROR"
+    assert health.source_series_id != "VIX", "first approved id must not be substituted"
+    assert health.source_series_id != "VIXCLS", "first approved id must not be substituted"
+    assert "VIX_YAHOO_MIRROR" in (health.failure_reason or "")
+
+
+def test_generic_failed_health_keeps_attempted_provider_without_substituting_series_id(tmp_path):
+    health = ingest_source_snapshot(
+        _read("synthetic_malformed.csv"),
+        series=RiskStressSeries.VIX_LEVEL,
+        provider="cboe",
+        origin="FIXTURE",
+        fetched_at=DECISION_TIME,
+        decision_time=DECISION_TIME,
+    )
+    assert health.status is SourceStatus.FAILED
+    assert health.provider == "cboe"
+    assert health.source_series_id is None, "unknowable attempted id must stay None"
+    assert health.failure_reason and "invalid_observation_date" in health.failure_reason
+
+
+# ---------------------------------------------------------------------------
+# 14. VIX3M official history boundary 2007-12-04 (WEB-CONTROL fix 4)
+
+
+def test_vix3m_contract_encodes_official_history_start_2007_12_04():
+    assert VIX3M_OFFICIAL_HISTORY_START == date(2007, 12, 4)
+    leg = vix3m_contract()
+    assert leg.official_history_start == date(2007, 12, 4)
+    # The four canonical contracts have no fabricated hard boundary.
+    for series in (RiskStressSeries.VIX_LEVEL, RiskStressSeries.HY_OAS, RiskStressSeries.BAA10Y):
+        assert source_contract(series).official_history_start is None
+
+
+def test_vix3m_pre_history_rows_are_rejected_never_synthesized():
+    with pytest.raises(PreHistoryObservationError) as excinfo:
+        parse_risk_stress_csv(
+            _read("synthetic_vix3m_pre_history.csv"),
+            series=VIX3M_LEG,
+            provider="cboe",
+            origin="FIXTURE",
+        )
+    assert "2007-12-01" in str(excinfo.value)
+    assert "2007-12-04" in str(excinfo.value)
+
+
+def test_vix3m_boundary_date_itself_is_coverable():
+    kept = [
+        line
+        for line in _read("synthetic_vix3m_pre_history.csv").splitlines()
+        if not line.startswith("2007-12-01")
+    ]
+    records = parse_risk_stress_csv(
+        "\n".join(kept), series=VIX3M_LEG, provider="cboe", origin="FIXTURE"
+    )
+    assert [r.observation_date for r in records] == [date(2007, 12, 4), date(2007, 12, 5)]
+
+
+def test_ratio_before_2007_12_04_stays_missing_not_backfilled_from_vix():
+    vix_history = (
+        "observation_date,value,available_at,source_series_id\n"
+        "2006-06-01,17.5,2006-06-02T04:15:00+00:00,VIX\n"
+        "2007-12-05,18.5,2007-12-06T04:15:00+00:00,VIX\n"
+    )
+    vix = parse_risk_stress_csv(
+        vix_history, series=RiskStressSeries.VIX_LEVEL, provider="cboe", origin="FIXTURE"
+    )
+    points = compute_vix_term_structure(vix, vix3m=[])
+    pre = next(p for p in points if p.observation_date == date(2006, 6, 1))
+    assert pre.state == "MISSING_DENOMINATOR"
+    assert pre.ratio is None and pre.available_at is None
+    assert any(w.startswith("pre_history_uncovered") for w in pre.warnings), (
+        "pre-boundary dates must be marked uncovered, not silently dropped"
+    )
+    post = next(p for p in points if p.observation_date == date(2007, 12, 5))
+    assert post.state == "MISSING_DENOMINATOR"
+    assert not any(w.startswith("pre_history_uncovered") for w in post.warnings)
+
+
+def test_vix3m_ingest_of_pre_history_snapshot_fails_with_boundary_reason(tmp_path):
+    archive = ImmutableRawArchive(root=tmp_path / "raw")
+    health = ingest_source_snapshot(
+        _read("synthetic_vix3m_pre_history.csv"),
+        series=VIX3M_LEG,
+        provider="cboe",
+        origin="FIXTURE",
+        fetched_at=DECISION_TIME,
+        decision_time=DECISION_TIME,
+        raw_archive=archive,
+    )
+    assert health.status is SourceStatus.FAILED
+    assert health.row_count == 0
+    assert health.failure_reason and "pre_history_observation" in health.failure_reason
+    assert "2007-12-04" in health.failure_reason
+
+
+def test_vix3m_source_health_expresses_official_boundary(tmp_path):
+    health = ingest_source_snapshot(
+        _read("synthetic_vix3m_close.csv"),
+        series=VIX3M_LEG,
+        provider="cboe",
+        origin="FIXTURE",
+        fetched_at=DECISION_TIME,
+        decision_time=DECISION_TIME,
+    )
+    assert health.official_history_start == date(2007, 12, 4)
+    assert health.as_dict()["official_history_start"] == "2007-12-04"
+    state = evaluate_series_state(
+        parse_risk_stress_csv(
+            _read("synthetic_vix3m_close.csv"), series=VIX3M_LEG, provider="cboe", origin="FIXTURE"
+        ),
+        decision_time=DECISION_TIME,
+        official_history_start=VIX3M_OFFICIAL_HISTORY_START,
+    )
+    assert state["official_history_start"] == date(2007, 12, 4)
+    assert state["coverage_start"] > VIX3M_OFFICIAL_HISTORY_START
+
+
+# ---------------------------------------------------------------------------
+# 15. rebase / main integration regression
+
+
+def test_risk_stress_coexists_with_main_ingestion_modules():
+    """The #41/#40 ingestion modules merged into main must coexist with the
+    refreshed risk-stress module (no import or namespace collisions)."""
+    from cross_asset.ingestion import cftc_positioning, china_leverage  # noqa: F401
+
+    assert rs.PARSER_VERSION.startswith("risk_stress_parser_")
+    assert china_leverage is not cftc_positioning

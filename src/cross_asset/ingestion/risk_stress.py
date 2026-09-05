@@ -4,12 +4,22 @@ This module is the low-coupling foundation for the Cross W1 Risk Stress pack
 (#38, child of #36).  It deliberately stops at C0:
 
 - canonical/source contracts for ``RISK_VIX_LEVEL``, ``RISK_VIX_TS``,
-  ``RISK_HY_OAS`` and ``RISK_BAA10Y``;
+  ``RISK_HY_OAS`` and ``RISK_BAA10Y`` (plus the internal ``RISK_VIX3M``
+  leg, which keeps its own identity end-to-end and is never a canonical
+  output);
 - an isolated CSV parser/normalizer with explicit ``available_at``;
 - point-in-time enforcement (``available_at <= decision_time``);
-- stale/partial/missing/unapproved source-state representation;
+- stale/partial/missing/unapproved source-state representation, with
+  unapproved attempts keeping their actually-attempted provider/source id;
+- official coverage boundaries (VIX3M history starts 2007-12-04 per #37;
+  earlier observations stay missing/uncovered and are never synthesized);
 - source-health records and raw-archive plumbing reusing
   :class:`cross_asset.ingestion.raw_archive.ImmutableRawArchive`.
+
+Availability evidence links to the completed RESEARCH-AUX pass on #37
+(``RESEARCH_EVIDENCE_37``).  That linkage is not production admission:
+``pit_grade`` stays ``None`` and every series remains a C0 candidate until
+#18 acceptance.
 
 It does NOT wire anything into allocation, factors, reports or production
 ingestion.  No production stress thresholds are encoded here beyond the
@@ -40,12 +50,37 @@ DEFAULT_STALENESS_DAYS = 7
 
 ORIGINS = ("FIXTURE", "MANUAL", "LIVE")
 
+#: Durable evidence linkage to the completed RESEARCH-AUX pass (#37): the
+#: research-evidence comment and WEB-CONTROL's acceptance of it.  This is
+#: evidence linkage only -- it is NOT #18 production admission, NOT an
+#: acceptance-registry entry, and does not upgrade any ``pit_grade``: every
+#: contract below keeps ``pit_grade=None`` and the series remain C0
+#: candidates until #18 is accepted.
+RESEARCH_EVIDENCE_37 = (
+    "yjiao4903-lang/cross-asset#37:research-evidence:comment-5551061168"
+    ":accepted:comment-5551088799"
+)
+
 
 class RiskStressSeries(StrEnum):
     VIX_LEVEL = "RISK_VIX_LEVEL"
     VIX_TS = "RISK_VIX_TS"
     HY_OAS = "RISK_HY_OAS"
     BAA10Y = "RISK_BAA10Y"
+    #: Internal term-structure leg for ``RISK_VIX_TS = VIX / VIX3M``.
+    #: Deliberately NOT one of the four canonical outputs defined by #36 --
+    #: it never enters canonical storage/acceptance on its own.
+    VIX3M = "RISK_VIX3M"
+
+
+#: The four canonical outputs per #36.  ``RISK_VIX3M`` is a leg input only
+#: and must never be appended here.
+CANONICAL_SERIES: tuple[RiskStressSeries, ...] = (
+    RiskStressSeries.VIX_LEVEL,
+    RiskStressSeries.VIX_TS,
+    RiskStressSeries.HY_OAS,
+    RiskStressSeries.BAA10Y,
+)
 
 
 class SourceRole(StrEnum):
@@ -80,6 +115,12 @@ class SourceContract:
     #: to *warn* about truncated history (e.g. HY OAS free-history cutoffs),
     #: never to splice or impute.
     expected_history_start: date | None = None
+    #: Official coverage boundary: the publisher has no official data before
+    #: this date (e.g. VIX3M starts 2007-12-04).  Observations earlier than
+    #: this date must stay missing/uncovered -- parsing them is rejected and
+    #: they are never synthesized, interpolated or borrowed from another
+    #: series (e.g. VIX history must not backfill VIX3M).
+    official_history_start: date | None = None
     notes: str = field(default="")
 
     def is_approved(self, provider: str, source_series_id: str) -> bool:
@@ -95,9 +136,9 @@ _BAA10Y_NOTES = (
     "thresholds, not a HY OAS fallback equivalent."
 )
 
-#: Availability evidence strings are deliberately placeholders pending the
-#: RESEARCH-AUX evidence pass on #37.  pit_grade stays None: no acceptance
-#: claim is made by this module.
+#: Availability evidence strings link to the completed RESEARCH-AUX pass on
+#: #37 (see ``RESEARCH_EVIDENCE_37``).  ``pit_grade`` stays None on every
+#: contract: no acceptance claim is made by this module.
 _RISK_STRESS_CONTRACTS: dict[RiskStressSeries, SourceContract] = {
     RiskStressSeries.VIX_LEVEL: SourceContract(
         series=RiskStressSeries.VIX_LEVEL,
@@ -109,7 +150,7 @@ _RISK_STRESS_CONTRACTS: dict[RiskStressSeries, SourceContract] = {
         availability=AvailabilityContract(
             policy=AvailableAtPolicy.EXACT,
             timezone="America/New_York",
-            evidence="pending_research_aux_37",
+            evidence=RESEARCH_EVIDENCE_37,
         ),
     ),
     RiskStressSeries.VIX_TS: SourceContract(
@@ -123,9 +164,11 @@ _RISK_STRESS_CONTRACTS: dict[RiskStressSeries, SourceContract] = {
         availability=AvailabilityContract(
             policy=AvailableAtPolicy.EXACT,
             timezone="America/New_York",
-            evidence="pending_research_aux_37",
+            evidence=RESEARCH_EVIDENCE_37,
         ),
-        notes="available_at of the ratio is the max of both legs' available_at.",
+        notes="available_at of the ratio is the max of both legs' available_at. "
+        "Official VIX/VIX3M term structure starts 2007-12-04 (#37): earlier "
+        "readings stay missing/uncovered.",
     ),
     RiskStressSeries.HY_OAS: SourceContract(
         series=RiskStressSeries.HY_OAS,
@@ -137,10 +180,11 @@ _RISK_STRESS_CONTRACTS: dict[RiskStressSeries, SourceContract] = {
         availability=AvailabilityContract(
             policy=AvailableAtPolicy.RELEASE_DATE_EOD,
             timezone="America/New_York",
-            evidence="pending_research_aux_37",
+            evidence=RESEARCH_EVIDENCE_37,
         ),
         expected_history_start=date(1996, 8, 1),
-        notes="Free public history may be truncated; keep local raw archive.",
+        notes="Free public history may be truncated (FRED rolling window per "
+        "#37); keep local raw archive.",
     ),
     RiskStressSeries.BAA10Y: SourceContract(
         series=RiskStressSeries.BAA10Y,
@@ -153,7 +197,7 @@ _RISK_STRESS_CONTRACTS: dict[RiskStressSeries, SourceContract] = {
         availability=AvailabilityContract(
             policy=AvailableAtPolicy.RELEASE_DATE_EOD,
             timezone="America/New_York",
-            evidence="pending_research_aux_37",
+            evidence=RESEARCH_EVIDENCE_37,
         ),
         notes=_BAA10Y_NOTES,
     ),
@@ -161,36 +205,57 @@ _RISK_STRESS_CONTRACTS: dict[RiskStressSeries, SourceContract] = {
 
 
 def source_contract(series: RiskStressSeries | str) -> SourceContract:
+    """Return the canonical contract for one of the four canonical outputs.
+
+    ``RISK_VIX_TS`` is derived and ``RISK_VIX3M`` is an internal leg; neither
+    is a canonical output, so both are routed to their dedicated helpers.
+    """
     key = RiskStressSeries(series)
     if key is RiskStressSeries.VIX_TS:
         raise ValueError("RISK_VIX_TS is derived; use the VIX_LEVEL/VIX3M leg contracts")
+    if key is RiskStressSeries.VIX3M:
+        raise ValueError(
+            "RISK_VIX3M is an internal leg, not a canonical output; use vix3m_contract()"
+        )
     return _RISK_STRESS_CONTRACTS[key]
 
 
 VIX3M_LEG_KEY = "RISK_VIX3M"
 
+#: Official VIX3M (VXV) coverage start per #37: no official history exists
+#: before this date and none may be synthesized.
+VIX3M_OFFICIAL_HISTORY_START = date(2007, 12, 4)
+
 
 def vix3m_contract() -> SourceContract:
-    """VIX3M is a term-structure leg, not one of the four canonical outputs."""
+    """VIX3M is a term-structure leg, not one of the four canonical outputs.
+
+    The leg keeps its own identity (``RISK_VIX3M``) end-to-end: parser
+    records, source-health rows and raw-archive namespaces must all use
+    ``RISK_VIX3M`` and never collapse it into ``RISK_VIX_LEVEL``.
+    """
     return SourceContract(
-        series=RiskStressSeries.VIX_LEVEL,
+        series=RiskStressSeries.VIX3M,
         description="Cboe VIX3M close; term-structure denominator leg for RISK_VIX_TS.",
         unit="index_level",
         frequency="daily",
         role=SourceRole.PRIMARY,
-        approved_sources=(("cboe", "VIX3M"),),
+        approved_sources=(("cboe", "VIX3M"), ("fred", "VXVCLS")),
         availability=AvailabilityContract(
             policy=AvailableAtPolicy.EXACT,
             timezone="America/New_York",
-            evidence="pending_research_aux_37",
+            evidence=RESEARCH_EVIDENCE_37,
         ),
-        notes="Leg input for RISK_VIX_TS only; not a canonical stress output.",
+        official_history_start=VIX3M_OFFICIAL_HISTORY_START,
+        notes="Leg input for RISK_VIX_TS only; not a canonical stress output. "
+        "Official history starts 2007-12-04 (#37); earlier observations are "
+        "uncovered and must never be synthesized or backfilled from VIX.",
     )
 
 
 def _resolve_contract(series: RiskStressSeries | str) -> SourceContract:
     """Resolve one of the four canonical contracts or the VIX3M leg."""
-    if isinstance(series, str) and series == VIX3M_LEG_KEY:
+    if series in (VIX3M_LEG_KEY, RiskStressSeries.VIX3M):
         return vix3m_contract()
     return _RISK_STRESS_CONTRACTS[RiskStressSeries(series)]
 
@@ -200,7 +265,29 @@ class RiskStressError(ValueError):
 
 
 class UnapprovedSourceError(RiskStressError):
-    pass
+    """Raised when a (provider, source_series_id) pair is not approved.
+
+    The actually attempted identity is preserved on the exception so that
+    source-health records can audit it verbatim -- it must never be replaced
+    by the contract's first approved identity.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        attempted_provider: str,
+        attempted_source_series_id: str,
+    ) -> None:
+        super().__init__(message)
+        self.attempted_provider = attempted_provider
+        self.attempted_source_series_id = attempted_source_series_id
+
+
+class PreHistoryObservationError(RiskStressError):
+    """Raised when a snapshot claims observations before the official
+    coverage start (e.g. VIX3M before 2007-12-04).  Such data does not
+    officially exist and must remain missing/uncovered, never synthesized."""
 
 
 class SpliceViolationError(RiskStressError):
@@ -268,6 +355,15 @@ def parse_risk_stress_csv(
             observation_date = date.fromisoformat(raw_date)
         except ValueError as exc:
             raise RiskStressError(f"line_{line}_invalid_observation_date:{raw_date!r}") from exc
+        if (
+            contract.official_history_start is not None
+            and observation_date < contract.official_history_start
+        ):
+            raise PreHistoryObservationError(
+                f"line_{line}_pre_history_observation:{observation_date.isoformat()}"
+                f"_before_official_start_{contract.official_history_start.isoformat()}"
+                f"_for_{contract.series}"
+            )
         if not raw_value:
             raise RiskStressError(f"line_{line}_missing_value")
         try:
@@ -290,7 +386,9 @@ def parse_risk_stress_csv(
                 ) from exc
         if not contract.is_approved(provider, source_series_id):
             raise UnapprovedSourceError(
-                f"unapproved_source:{provider}:{source_series_id} for {contract.series}"
+                f"unapproved_source:{provider}:{source_series_id} for {contract.series}",
+                attempted_provider=str(provider),
+                attempted_source_series_id=str(source_series_id),
             )
         records.append(
             RiskStressRecord(
@@ -315,9 +413,10 @@ def check_series_identity(records, series: RiskStressSeries | str) -> None:
     """Reject any record whose source identity does not belong to ``series``.
 
     This is the guard that keeps BAA10Y rows from being spliced into the
-    HY OAS series (and any other cross-series mixing).
+    HY OAS series (and any other cross-series mixing), and keeps VIX rows
+    from standing in for the VIX3M leg.
     """
-    contract = _RISK_STRESS_CONTRACTS[RiskStressSeries(series)]
+    contract = _resolve_contract(series)
     for record in records:
         provider = getattr(record, "provider", None) or record.get("provider")  # type: ignore[union-attr]
         sid = getattr(record, "source_series_id", None) or record.get("source_series_id")  # type: ignore[union-attr]
@@ -378,6 +477,11 @@ def compute_vix_term_structure(
     a term-structure reading cannot be known before its slowest leg.  When
     the two legs disagree on ``available_at`` for the same date, a
     ``cutoff_mismatch`` warning is attached (and the later one wins).
+
+    Before the official VIX3M history start (2007-12-04, #37) the ratio
+    stays missing: a present VIX numerator never backfills a missing
+    pre-history VIX3M denominator, and such points carry a
+    ``pre_history_uncovered`` warning instead of being silently dropped.
     """
     by_date_vix = {r.observation_date: r for r in vix}
     by_date_vix3m = {r.observation_date: r for r in vix3m}
@@ -388,7 +492,13 @@ def compute_vix_term_structure(
         warnings: list[str] = []
         if num is None or den is None:
             state = "MISSING_NUMERATOR" if num is None else "MISSING_DENOMINATOR"
-            points.append(TermStructurePoint(observation_date, None, None, state))
+            if den is None and observation_date < VIX3M_OFFICIAL_HISTORY_START:
+                warnings.append(
+                    f"pre_history_uncovered:VIX3M_before_{VIX3M_OFFICIAL_HISTORY_START.isoformat()}"
+                )
+            points.append(
+                TermStructurePoint(observation_date, None, None, state, tuple(warnings))
+            )
             continue
         if num.available_at != den.available_at:
             warnings.append("cutoff_mismatch")
@@ -414,9 +524,16 @@ def evaluate_series_state(
     decision_time: datetime,
     max_staleness_days: int = DEFAULT_STALENESS_DAYS,
     expected_history_start: date | None = None,
+    official_history_start: date | None = None,
 ) -> dict[str, Any]:
     """C0 source-state evaluation: OK / STALE / PARTIAL / MISSING plus
-    truncated-history warnings.  Research-only representation."""
+    truncated-history warnings.  Research-only representation.
+
+    ``official_history_start`` is the hard coverage boundary (e.g. VIX3M
+    2007-12-04): it is echoed into the state so coverage can express that
+    earlier dates are uncovered, and any record predating it (which the
+    parser rejects) is flagged instead of silently accepted.
+    """
 
     cutoff = decision_time if decision_time.tzinfo else decision_time.replace(tzinfo=UTC)
     admissible = asof_records(records, cutoff)
@@ -426,6 +543,7 @@ def evaluate_series_state(
             "row_count": 0,
             "warnings": ["no_admissible_observations"],
             "failure_reason": None,
+            "official_history_start": official_history_start,
         }
     warnings: list[str] = []
     null_values = sum(1 for r in admissible if r.value is None)
@@ -443,6 +561,13 @@ def evaluate_series_state(
                 f"history_truncated:coverage_starts_{earliest.isoformat()}"
                 f"_expected_{contract_hint.isoformat()}"
             )
+    if official_history_start is not None:
+        pre_history = [r for r in admissible if r.observation_date < official_history_start]
+        if pre_history:
+            warnings.append(
+                f"pre_history_observation_present:before_{official_history_start.isoformat()}"
+                f":{len(pre_history)}_rows"
+            )
     status = SourceStatus.OK
     if any(w.startswith("stale") for w in warnings):
         status = SourceStatus.STALE
@@ -455,6 +580,7 @@ def evaluate_series_state(
         "latest_available_at": max(r.available_at for r in admissible),
         "coverage_start": min(r.observation_date for r in admissible),
         "coverage_end": latest.observation_date,
+        "official_history_start": official_history_start,
         "warnings": warnings,
         "failure_reason": None,
     }
@@ -462,11 +588,17 @@ def evaluate_series_state(
 
 @dataclass(frozen=True)
 class SourceHealth:
-    """C0 source-health record (raw snapshot provenance + parser state)."""
+    """C0 source-health record (raw snapshot provenance + parser state).
+
+    For ``UNAPPROVED`` snapshots ``provider``/``source_series_id`` carry the
+    *actually attempted* identity verbatim -- never the contract's first
+    approved identity.  For generic parse ``FAILED`` the attempted series id
+    is unknowable and stays ``None`` rather than being substituted.
+    """
 
     series: str
     provider: str
-    source_series_id: str
+    source_series_id: str | None
     raw_sha256: str
     raw_archive_path: str | None
     fetched_at: datetime
@@ -477,6 +609,7 @@ class SourceHealth:
     latest_observation_date: date | None
     latest_available_at: datetime | None
     status: SourceStatus
+    official_history_start: date | None = None
     warnings: tuple[str, ...] = ()
     failure_reason: str | None = None
 
@@ -497,6 +630,9 @@ class SourceHealth:
             else None,
             "latest_available_at": self.latest_available_at.isoformat() if self.latest_available_at else None,
             "status": str(self.status),
+            "official_history_start": self.official_history_start.isoformat()
+            if self.official_history_start
+            else None,
             "warnings": list(self.warnings),
             "failure_reason": self.failure_reason,
         }
@@ -516,9 +652,10 @@ def ingest_source_snapshot(
 ) -> SourceHealth:
     """Parse + evaluate one raw source snapshot and record its health.
 
-    Raises :class:`UnapprovedSourceError` for unapproved sources and
-    :class:`RiskStressError` for malformed input; callers convert those into
-    FAILED/stop reasons, never into silent success.
+    Unapproved ``(provider, source_series_id)`` attempts produce an explicit
+    ``UNAPPROVED`` health record preserving the attempted identity verbatim;
+    malformed input produces ``FAILED``.  Neither is ever converted into a
+    silent success or into a substituted approved identity.
     """
     contract = _resolve_contract(series)
     raw_payload = text.encode("utf-8")
@@ -526,40 +663,50 @@ def ingest_source_snapshot(
     archive_path = None
     if raw_archive is not None:
         archive_path = raw_archive.write(provider, str(contract.series), raw_payload, captured_at=fetched_at)
+
+    def _health(**overrides: Any) -> SourceHealth:
+        base: dict[str, Any] = {
+            "series": str(contract.series),
+            "provider": provider,
+            "source_series_id": None,
+            "raw_sha256": raw_sha256,
+            "raw_archive_path": archive_path,
+            "fetched_at": fetched_at,
+            "parser_version": PARSER_VERSION,
+            "row_count": 0,
+            "coverage_start": None,
+            "coverage_end": None,
+            "latest_observation_date": None,
+            "latest_available_at": None,
+            "status": SourceStatus.FAILED,
+            "official_history_start": contract.official_history_start,
+            "warnings": (),
+            "failure_reason": None,
+        }
+        base.update(overrides)
+        return SourceHealth(**base)
+
     try:
         records = parse_risk_stress_csv(text, series=series, provider=provider, origin=origin)
-    except RiskStressError as exc:
-        return SourceHealth(
-            series=str(contract.series),
-            provider=provider,
-            source_series_id=contract.approved_sources[0][1],
-            raw_sha256=raw_sha256,
-            raw_archive_path=archive_path,
-            fetched_at=fetched_at,
-            parser_version=PARSER_VERSION,
-            row_count=0,
-            coverage_start=None,
-            coverage_end=None,
-            latest_observation_date=None,
-            latest_available_at=None,
-            status=SourceStatus.FAILED,
-            warnings=(),
+    except UnapprovedSourceError as exc:
+        return _health(
+            provider=exc.attempted_provider,
+            source_series_id=exc.attempted_source_series_id,
+            status=SourceStatus.UNAPPROVED,
+            warnings=("unapproved_attempted_identity_preserved",),
             failure_reason=str(exc),
         )
+    except RiskStressError as exc:
+        return _health(failure_reason=str(exc))
     state = evaluate_series_state(
         records,
         decision_time=decision_time,
         max_staleness_days=max_staleness_days,
         expected_history_start=contract.expected_history_start,
+        official_history_start=contract.official_history_start,
     )
-    return SourceHealth(
-        series=str(contract.series),
-        provider=provider,
+    return _health(
         source_series_id=records[0].source_series_id,
-        raw_sha256=raw_sha256,
-        raw_archive_path=archive_path,
-        fetched_at=fetched_at,
-        parser_version=PARSER_VERSION,
         row_count=state["row_count"],
         coverage_start=state.get("coverage_start"),
         coverage_end=state.get("coverage_end"),

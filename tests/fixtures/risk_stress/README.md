@@ -10,8 +10,12 @@ timing, or history coverage.
 
 - `synthetic_vix_close.csv` — synthetic VIX-shaped daily closes (cboe/VIX shape)
 - `synthetic_vix3m_close.csv` — synthetic VIX3M-shaped leg for RISK_VIX_TS
-- `synthetic_vix3m_with_future_publication.csv` — synthetic leg whose
+- `synthetic_vix3m_delayed_publication.csv` — synthetic leg whose
   available_at is deliberately later than the test decision time
+- `synthetic_vix3m_pre_history.csv` — synthetic leg containing one row dated
+  before the official VIX3M history start (2007-12-04) plus the boundary
+  date itself, to exercise pre-history rejection.  The pre-history row is
+  itself synthetic, i.e. it models fabricated data that must be rejected.
 - `synthetic_hy_oas_truncated.csv` — synthetic HY OAS shape whose coverage
   starts after the contract's expected_history_start, to exercise the
   truncated-history warning
