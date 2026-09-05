@@ -1,5 +1,6 @@
 import numpy as np
 
+from .path_metrics import max_drawdown_from_returns
 from .walk_forward import build_turnover_cost_ledger, portfolio_turnover
 
 
@@ -19,7 +20,7 @@ def performance_metrics(
         if len(r) > 1 and r.std(ddof=1)
         else None
     )
-    dd = wealth / wealth.cummax() - 1
+    max_drawdown = max_drawdown_from_returns(r)
     month_periods = max(1, round(periods_per_year / 12))
     worst_1m = (
         float(
@@ -47,7 +48,7 @@ def performance_metrics(
         "CAGR": cagr,
         "annualized_vol": vol,
         "Sharpe": sharpe,
-        "max_drawdown": float(dd.min()) if len(dd) else None,
+        "max_drawdown": max_drawdown,
         "turnover": turnover,
         "turnover_convention": turnover_convention,
         "Worst1M": worst_1m,
