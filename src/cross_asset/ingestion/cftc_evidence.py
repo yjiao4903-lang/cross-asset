@@ -42,6 +42,7 @@ class CFTCRawSnapshotEvidence:
     raw_archive_path: str
     provider: str
     source_file: str
+    source_year: int
     fetched_at: datetime
     row_count: int
     latest_observation: date | None
@@ -59,6 +60,7 @@ class CFTCRawSnapshotEvidence:
             "raw_archive_path": self.raw_archive_path,
             "provider": self.provider,
             "source_file": self.source_file,
+            "source_year": self.source_year,
             "fetched_at": self.fetched_at.isoformat(),
             "row_count": self.row_count,
             "latest_observation": (
@@ -89,6 +91,7 @@ def build_cftc_raw_snapshot_evidence(
         raw_archive_path=health.raw_archive_path,
         provider=health.provider,
         source_file=health.source_file,
+        source_year=health.source_year,
         fetched_at=health.fetched_at,
         row_count=health.row_count,
         latest_observation=health.latest_observation,
