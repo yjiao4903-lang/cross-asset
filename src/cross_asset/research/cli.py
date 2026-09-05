@@ -29,6 +29,11 @@ from . import (
     stitch_oos_path,
     verdict_from_thresholds,
 )
+from .execution_timing import (
+    annotate_research_execution_timing,
+    research_execution_timing_summary,
+)
+from .model_config import load_research_asset_market_map
 from .storage import persist_fold_result, persist_research_plan
 
 app = typer.Typer(
@@ -201,6 +206,12 @@ def run_oos_command(
             protocol=protocol,
             model_config=model_config,
         )
+        asset_market_map = load_research_asset_market_map()
+        fold_rows = annotate_research_execution_timing(
+            fold_rows,
+            model_config.return_specs,
+            asset_market_map,
+        )
         stitched = stitch_oos_path(
             fold_rows,
             plan.to_dict(),
@@ -208,6 +219,13 @@ def run_oos_command(
             turnover_convention=protocol.turnover_convention,
             charge_initial_trade=protocol.charge_initial_trade,
         )
+        stitched = annotate_research_execution_timing(
+            stitched,
+            model_config.return_specs,
+            asset_market_map,
+            terminal_group_columns=("benchmark",),
+        )
+        execution_timing = research_execution_timing_summary(stitched)
         pivot = stitched.pivot(
             index="decision_date",
             columns="benchmark",
@@ -255,6 +273,7 @@ def run_oos_command(
                 "holdout_sealed": True,
                 "protocol_hash": protocol.protocol_hash,
                 "research_run_id": research_run_id,
+                "execution_timing": execution_timing,
                 "metrics_vs_static": metrics,
                 **verdict,
             },

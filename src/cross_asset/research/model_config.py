@@ -18,6 +18,22 @@ def _mapping(path):
     return value
 
 
+def load_research_asset_market_map(
+    universe_path="config/research_universe.yml",
+) -> dict[str, str]:
+    """Load only explicit asset -> market mappings; never infer from asset ids."""
+
+    universe = _mapping(universe_path)
+    assets_config = universe.get("assets", {})
+    if not isinstance(assets_config, dict):
+        raise TypeError("research_universe_assets_must_be_mapping")
+    return {
+        str(asset): str(entry["market"])
+        for asset, entry in assets_config.items()
+        if isinstance(entry, dict) and entry.get("market")
+    }
+
+
 def load_research_model_config(
     *,
     universe_path="config/research_universe.yml",
@@ -37,7 +53,13 @@ def load_research_model_config(
     if set(strategic) != set(assets_config):
         raise ValueError("research_universe_must_match_strategic_assets")
     specs = {
-        asset: AssetReturnSpec(**dict(assets_config[asset]))
+        asset: AssetReturnSpec(
+            **{
+                key: value
+                for key, value in dict(assets_config[asset]).items()
+                if key != "market"
+            }
+        )
         for asset in strategic
     }
     signal_map = {
@@ -60,4 +82,4 @@ def load_research_model_config(
     )
 
 
-__all__ = ["load_research_model_config"]
+__all__ = ["load_research_asset_market_map", "load_research_model_config"]
