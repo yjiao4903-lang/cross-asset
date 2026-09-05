@@ -14,6 +14,7 @@ import pandas as pd
 from cross_asset.backtest.replay import FullModelStrategy
 from cross_asset.backtest.returns import (
     AssetReturnSpec,
+    portfolio_asset_returns,
     portfolio_period_return,
     return_index_from_series,
 )
@@ -239,10 +240,6 @@ def execute_walk_forward(
         }
         | set(model_config.macro_config.get("series", {}))
     )
-    # Formal research consumes market data only through the same shared
-    # approved-provenance selection as the daily path (Issue #18); raw
-    # observations that are unapproved, ambiguous or quality-gated never
-    # enter a walk-forward fold. The research usage scope is protocol-bound.
     observations = latest_formal_observations_asof(
         connection,
         dates.max().to_pydatetime(),
@@ -258,6 +255,9 @@ def execute_walk_forward(
     )
 
     rows = []
+    clean_observations = observations.drop(
+        columns=["_available", "_observation_date"]
+    )
     for fold in plan["folds"]:
         fold_number = int(fold["fold"])
         test_indices = list(fold["test_indices"])
@@ -272,6 +272,9 @@ def execute_walk_forward(
                 fold_observations = observations[
                     observations["_observation_date"] >= train_start
                 ]
+            clean_fold_observations = fold_observations.drop(
+                columns=["_available", "_observation_date"]
+            )
             for index, decision in enumerate(test_dates):
                 info = fold_observations[
                     fold_observations["_available"] <= decision
@@ -282,13 +285,20 @@ def execute_walk_forward(
                     if index + 1 < len(test_dates)
                     else None
                 )
-                gross_return = strategy.realized_return(
-                    fold_observations.drop(
-                        columns=["_available", "_observation_date"]
-                    ),
+                asset_returns = portfolio_asset_returns(
+                    clean_fold_observations,
                     weights,
                     decision,
                     next_decision,
+                    specs=model_config.return_specs,
+                )
+                gross_return = (
+                    None
+                    if asset_returns is None
+                    else sum(
+                        float(weights[asset]) * value
+                        for asset, value in asset_returns.items()
+                    )
                 )
                 rows.append(
                     {
@@ -296,6 +306,7 @@ def execute_walk_forward(
                         "decision_date": decision,
                         "benchmark": benchmark,
                         "gross_return": gross_return,
+                        "asset_returns": asset_returns,
                         "allocation_status": _status(strategy),
                         "weights": weights,
                         "train_start": fold["train_start"],
