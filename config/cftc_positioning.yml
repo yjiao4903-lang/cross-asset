@@ -1,0 +1,29 @@
+version: 1
+status: CANDIDATE_ONLY
+provider: cftc
+historical_page: https://www.cftc.gov/MarketReports/CommitmentsofTraders/HistoricalCompressed/index.htm
+release_schedule: https://www.cftc.gov/MarketReports/CommitmentsofTraders/ReleaseSchedule/index.htm
+historical_url_templates:
+  DISAGGREGATED: https://www.cftc.gov/files/dea/history/com_disagg_txt_{year}.zip
+  TFF: https://www.cftc.gov/files/dea/history/com_fin_txt_{year}.zip
+markets:
+  - series_id: POS_CFTC_GOLD
+    market_key: GOLD
+    report_type: DISAGGREGATED
+    contract_market_codes: ["088691"]
+    source_series_id: CFTC_DISAGGREGATED_COMBINED_088691
+  - series_id: POS_CFTC_COPPER
+    market_key: COPPER
+    report_type: DISAGGREGATED
+    contract_market_codes: ["085692"]
+    source_series_id: CFTC_DISAGGREGATED_COMBINED_085692
+  - series_id: POS_CFTC_SP500
+    market_key: SP500
+    report_type: TFF
+    contract_market_codes: ["13874A", "13874+"]
+    source_series_id: CFTC_TFF_COMBINED_13874
+  - series_id: POS_CFTC_US10Y
+    market_key: US10Y
+    report_type: TFF
+    contract_market_codes: ["043602"]
+    source_series_id: CFTC_TFF_COMBINED_043602
