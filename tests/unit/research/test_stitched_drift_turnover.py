@@ -5,7 +5,6 @@ import pytest
 
 from cross_asset.research.evaluation import stitch_oos_path
 
-
 PLAN = {
     "holdout_sealed": True,
     "holdout_start": "2026-02-01T00:00:00+00:00",

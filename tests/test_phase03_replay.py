@@ -3,11 +3,16 @@ import pandas as pd
 from cross_asset.backtest.benchmarks import static_allocation, trend_only
 from cross_asset.backtest.metrics import performance_metrics
 from cross_asset.backtest.replay import HistoricalReplay
+from cross_asset.backtest.returns import AssetReturnSpec
 from cross_asset.reports.daily import generate_daily_report
 
 
 class Strategy:
     def __init__(self):
+        self.return_specs = {
+            "A": AssetReturnSpec("A"),
+            "B": AssetReturnSpec("B"),
+        }
         self.calls = []
 
     def __call__(self, info, decision):
@@ -21,12 +26,22 @@ class Strategy:
 
 
 def _observations():
-    return pd.DataFrame(
-        [
-            {"available_at": "2025-01-03", "observation_date": "2025-01-03", "future": 0},
-            {"available_at": "2025-01-10", "observation_date": "2025-01-10", "future": 1},
-        ]
-    )
+    rows = [
+        {"available_at": "2025-01-03", "observation_date": "2025-01-03", "future": 0},
+        {"available_at": "2025-01-10", "observation_date": "2025-01-10", "future": 1},
+    ]
+    prices = {"A": [100.0, 110.0, 110.0], "B": [100.0, 100.0, 100.0]}
+    for i, day in enumerate(("2025-01-03", "2025-01-10", "2025-01-17")):
+        for asset in ("A", "B"):
+            rows.append(
+                {
+                    "series_id": asset,
+                    "observation_date": day,
+                    "available_at": day,
+                    "value": prices[asset][i],
+                }
+            )
+    return pd.DataFrame(rows)
 
 
 def test_replay_is_pit_safe_w_fri_and_deterministic():

@@ -9,10 +9,14 @@ import pandas as pd
 
 from cross_asset.backtest.returns import (
     AssetReturnSpec,
+    portfolio_asset_returns,
     portfolio_period_return,
     return_index_from_series,
 )
-from cross_asset.backtest.walk_forward import portfolio_turnover
+from cross_asset.backtest.walk_forward import (
+    drifted_pretrade_weights,
+    portfolio_turnover,
+)
 from cross_asset.engines.allocation import allocate
 from cross_asset.engines.asset_score import COMPONENT_WEIGHTS, score_asset
 from cross_asset.engines.macro import build_macro_state
@@ -33,6 +37,7 @@ class ReplayResult:
             "next-period effective",
             "terminal decision has no realized return",
             "initial allocation trade cost disabled unless explicitly requested",
+            "turnover measured against drifted pre-trade holdings",
             "cost is research placeholder",
         ]
     )
@@ -42,12 +47,29 @@ class ReplayResult:
     scores: pd.DataFrame = field(default_factory=pd.DataFrame)
     decisions: list[dict] = field(default_factory=list)
     benchmark_metadata: dict = field(default_factory=dict)
+    turnover: pd.Series = field(default_factory=lambda: pd.Series(dtype=float))
+    cost: pd.Series = field(default_factory=lambda: pd.Series(dtype=float))
+    turnover_status: pd.Series = field(default_factory=lambda: pd.Series(dtype=object))
+    asset_returns: pd.DataFrame = field(default_factory=pd.DataFrame)
+    pre_trade_weights: pd.DataFrame = field(default_factory=pd.DataFrame)
 
     def write_artifacts(self, output_dir="artifacts/backtests"):
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
         _write_parquet(self.returns.to_frame(), out / "returns.parquet")
         _write_parquet(self.allocations, out / "allocations.parquet")
+        _write_parquet(self.asset_returns, out / "asset_returns.parquet")
+        _write_parquet(self.pre_trade_weights, out / "pre_trade_weights.parquet")
+        _write_parquet(
+            pd.DataFrame(
+                {
+                    "turnover": self.turnover,
+                    "cost": self.cost,
+                    "turnover_status": self.turnover_status,
+                }
+            ),
+            out / "turnover_cost.parquet",
+        )
         _write_parquet(
             self.scores
             if not self.scores.empty
@@ -114,8 +136,15 @@ class HistoricalReplay:
         score_rows = []
         decision_records = []
         returns = []
+        asset_return_rows = []
+        pretrade_rows = []
+        turnover_rows = []
+        cost_rows = []
+        status_rows = []
         previous = None
+        previous_asset_returns = None
         benchmark_metadata = {}
+        return_specs = getattr(self.strategy, "return_specs", None)
         for index, decision in enumerate(dates):
             info = obs[obs._available <= decision]
             raw_allocation = self.strategy(info, decision)
@@ -124,30 +153,14 @@ class HistoricalReplay:
             allocation = allocation / allocation.sum() if allocation.sum() else allocation
             next_decision = dates[index + 1] if index + 1 < len(dates) else None
 
+            # Advance the previous target through the previous holding period's
+            # asset returns before measuring this decision's rebalance turnover.
             if next_decision is None:
-                gross_return = float("nan")
-            elif hasattr(self.strategy, "realized_return"):
-                realized = self.strategy.realized_return(
-                    obs,
-                    allocation,
-                    decision,
-                    next_decision,
-                )
-                gross_return = float("nan") if realized is None else float(realized)
-            elif hasattr(self.strategy, "next_return"):
-                gross_return = float(
-                    self.strategy.next_return(
-                        obs[obs._available <= decision],
-                        allocation,
-                        decision,
-                    )
-                )
-            else:
-                gross_return = 0.0
-
-            if next_decision is None:
+                pretrade = None
                 turnover = 0.0
+                turnover_status = "terminal_no_trade"
             elif previous is None:
+                pretrade = {}
                 turnover = (
                     portfolio_turnover(
                         allocation,
@@ -157,14 +170,65 @@ class HistoricalReplay:
                     if self.charge_initial_trade
                     else 0.0
                 )
-            else:
-                turnover = portfolio_turnover(
-                    allocation,
-                    previous,
-                    convention=self.turnover_convention,
+                turnover_status = (
+                    "initial_target_vs_cash"
+                    if self.charge_initial_trade
+                    else "initial_trade_not_charged"
                 )
-            returns.append(gross_return - turnover * self.cost_bps / 10000)
+            else:
+                pretrade = drifted_pretrade_weights(
+                    previous,
+                    previous_asset_returns or {},
+                )
+                if pretrade is None:
+                    turnover = float("nan")
+                    turnover_status = "drift_unavailable"
+                else:
+                    turnover = portfolio_turnover(
+                        allocation,
+                        pretrade,
+                        convention=self.turnover_convention,
+                    )
+                    turnover_status = "drifted_pretrade_holdings"
+            cost = turnover * self.cost_bps / 10000.0
+
+            if next_decision is None:
+                asset_returns = None
+                gross_return = float("nan")
+            else:
+                asset_returns = portfolio_asset_returns(
+                    obs,
+                    allocation,
+                    decision,
+                    next_decision,
+                    specs=return_specs,
+                )
+                if hasattr(self.strategy, "realized_return"):
+                    realized = self.strategy.realized_return(
+                        obs,
+                        allocation,
+                        decision,
+                        next_decision,
+                    )
+                    gross_return = float("nan") if realized is None else float(realized)
+                elif hasattr(self.strategy, "next_return"):
+                    gross_return = float(
+                        self.strategy.next_return(
+                            obs[obs._available <= decision],
+                            allocation,
+                            decision,
+                        )
+                    )
+                else:
+                    gross_return = 0.0
+
+            returns.append(gross_return - cost)
             allocations.append(allocation)
+            asset_return_rows.append({} if asset_returns is None else dict(asset_returns))
+            pretrade_rows.append(pretrade or {})
+            turnover_rows.append(turnover)
+            cost_rows.append(cost)
+            status_rows.append(turnover_status)
             score_rows.append(
                 {
                     key: getattr(value, "score", value)
@@ -186,10 +250,15 @@ class HistoricalReplay:
                         "model_versions": state["model_versions"],
                         "data_cutoff": str(state["data_cutoff"]),
                         "missing_signal_assets": state.get("missing_signal_assets", []),
-                        "turnover": turnover,
+                        "turnover": (
+                            None if pd.isna(turnover) else float(turnover)
+                        ),
+                        "turnover_status": turnover_status,
+                        "pre_trade_weights": pretrade,
                     }
                 )
             previous = allocation
+            previous_asset_returns = asset_returns
 
         return ReplayResult(
             pd.Series(returns, index=dates, name="return"),
@@ -202,6 +271,11 @@ class HistoricalReplay:
             scores=pd.DataFrame(score_rows, index=dates),
             decisions=decision_records,
             benchmark_metadata=benchmark_metadata,
+            turnover=pd.Series(turnover_rows, index=dates, dtype=float),
+            cost=pd.Series(cost_rows, index=dates, dtype=float),
+            turnover_status=pd.Series(status_rows, index=dates, dtype=object),
+            asset_returns=pd.DataFrame(asset_return_rows, index=dates),
+            pre_trade_weights=pd.DataFrame(pretrade_rows, index=dates),
         )
 
 
