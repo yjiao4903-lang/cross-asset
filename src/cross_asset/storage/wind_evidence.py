@@ -14,6 +14,8 @@ from typing import Any
 
 import pandas as pd
 
+_DATE_TOKEN = re.compile(r"^\d{4}[-/]\d{2}[-/]\d{2}$")
+
 WIND_CANONICAL = {
     "M0000612": "CN_CPI",
     "M0017126": "CN_PMI",
@@ -22,11 +24,18 @@ WIND_CANONICAL = {
     "M0001385": "CN_M2",
     "M1006337": "CN_DR007",
     "M1001654": "CN_BOND_10Y",
+    # Defensive review guards: the raw fields are continuous-futures CLOSE
+    # series, while the canonical contracts require terminal-confirmed settle
+    # semantics; staged rows keep SEMANTIC_FIELD_REVIEW_REQUIRED and never
+    # become formal observations.
+    "S0069669": "GOLD",
+    "S0069672": "COPPER",
 }
 
 
 def _parse_date(value: str) -> date:
-    year, month, day = (int(part) for part in value.split("/"))
+    parts = value.replace("-", "/").split("/")
+    year, month, day = (int(part) for part in parts)
     return date(year, month, day)
 
 
@@ -51,6 +60,16 @@ def stage_wind_csv(store, path: str | Path) -> dict[str, Any]:
     if len(rows) < 8 or any(len(row) != len(rows[4]) for row in rows[:7]):
         raise ValueError("wind CSV metadata/header is incomplete")
     names, frequencies, units, source_ids, sources = rows[1], rows[2], rows[3], rows[4], rows[6]
+    data_start = next(
+        (
+            row_number
+            for row_number, row in enumerate(rows[7:], start=7)
+            if row and _DATE_TOKEN.fullmatch(row[0].strip())
+        ),
+        None,
+    )
+    if data_start is None:
+        raise ValueError("wind CSV data rows are missing")
     ingested_at = datetime.now(UTC).replace(tzinfo=None)
     candidates = []
     for index in range(1, len(source_ids)):
@@ -58,8 +77,10 @@ def stage_wind_csv(store, path: str | Path) -> dict[str, Any]:
         if not source_id:
             continue
         candidate = WIND_CANONICAL.get(source_id)
-        for row in rows[7:]:
-            if not row or not row[0].strip() or index >= len(row) or not row[index].strip():
+        for row in rows[data_start:]:
+            if not row or not row[0].strip() or not _DATE_TOKEN.fullmatch(row[0].strip()):
+                continue
+            if index >= len(row) or not row[index].strip():
                 continue
             try:
                 obs_date = _parse_date(row[0].strip())
@@ -67,10 +88,17 @@ def stage_wind_csv(store, path: str | Path) -> dict[str, Any]:
             except (ValueError, TypeError):
                 raise ValueError(f"invalid Wind CSV value for {source_id}") from None
             country = "China" if row[0] and (names[index].startswith("中国") or sources[index] in {"国家统计局", "中国人民银行", "中国货币网", "中证指数公司"}) else "United States"
-            quality_status = "SEMANTIC_UNIT_REVIEW_REQUIRED" if source_id == "M0017126" else "PIT_BLOCKED"
+            if source_id == "M0017126":
+                quality_status = "SEMANTIC_UNIT_REVIEW_REQUIRED"
+            elif source_id in {"S0069669", "S0069672"}:
+                quality_status = "SEMANTIC_FIELD_REVIEW_REQUIRED"
+            else:
+                quality_status = "PIT_BLOCKED"
             metadata = {"wind_indicator_id": source_id, "source_file": source_path.name, "source_label": sources[index], "pit_reason": "release timestamp and vintage lineage absent"}
             if source_id == "M0017126":
                 metadata["semantic_reason"] = "file unit % conflicts with canonical index contract"
+            if source_id in {"S0069669", "S0069672"}:
+                metadata["semantic_reason"] = "continuous futures close field; canonical contract requires terminal-confirmed settle and adjustment semantics"
             candidates.append((source_hash, source_id, candidate, names[index], country, frequencies[index], units[index], "wind_manual", obs_date, value, None, None, quality_status, "MANUAL", json.dumps(metadata, ensure_ascii=False, sort_keys=True), ingested_at))
     with store.atomic():
         before = store.conn.execute("SELECT count(*) FROM wind_evidence_staging WHERE source_file_sha256=?", [source_hash]).fetchone()[0]
@@ -157,6 +185,12 @@ def stage_wind_xlsx(store, path: str | Path) -> dict[str, Any]:
             canonical = {"H00300": "CN_EQ_LARGE", "H00852": "CN_EQ_SMALL", "HSI": "HK_EQ"}.get(source_id) if not comparable else None
             country = "Hong Kong" if source_id == "HSI" else "China"
             metadata = {"wind_source_id": source_id, "comparable": comparable, "source_file": source_path.name, "pit_reason": "workbook has observation date only; no available_at/vintage"}
+            # Descriptive metadata from the export label only; not a semantic
+            # approval of the canonical mapping.
+            if not comparable and source_id == "H00300":
+                metadata["return_type"] = "total_return"
+            elif not comparable and source_id == "HSI":
+                metadata["return_type"] = "price"
             candidates.append((source_hash, staging_id, canonical, label, country, "daily", "index_points", "wind_manual", obs_date, value, None, None, "PIT_BLOCKED", "MANUAL", json.dumps(metadata, ensure_ascii=False, sort_keys=True), ingested_at))
     columns_db = ["source_file_sha256", "source_series_id", "canonical_candidate", "indicator_name", "country", "frequency", "unit", "source", "observation_date", "value", "available_at", "vintage_date", "quality_status", "origin", "metadata_json", "ingested_at"]
     with store.atomic():
