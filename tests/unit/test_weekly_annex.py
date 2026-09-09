@@ -33,7 +33,7 @@ def test_missing_annex_inputs_are_skipped():
     assert annex["scenarios"]["status"] == "SKIPPED"
 
 
-def test_personal_weeks_compare_and_keep_us_eq_blocked(tmp_path):
+def test_personal_weeks_compare_with_fred_us_eq(tmp_path):
     prior = run_weekly_review(
         as_of="2026-08-29",
         observations_json="examples/personal_week_20260828.json",
@@ -55,9 +55,8 @@ def test_personal_weeks_compare_and_keep_us_eq_blocked(tmp_path):
     )
     assert prior["week_end"] == "2026-08-28"
     assert current["week_end"] == "2026-09-04"
-    assert prior["status"] == "DATA_BLOCKED"
-    assert current["status"] == "DATA_BLOCKED"
-    assert "US_EQ" in current["missing_levels"]
+    assert "US_EQ" not in current["missing_levels"]
+    assert current["status"] in {"READY", "PARTIAL"}
     assert current["stance"]["decision"] == "不行动"
     text = Path(current["brief_output"]).read_text(encoding="utf-8")
     assert "观点账本与情景附件" in text

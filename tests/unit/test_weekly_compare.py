@@ -30,9 +30,9 @@ def test_personal_weeks_wire_annex_and_compare(tmp_path):
         claims_json="examples/event_claims_fixture.json",
         scenarios_json="examples/scenario_fixture.json",
     )
-    assert prior["status"] == "DATA_BLOCKED"
-    assert current["status"] == "DATA_BLOCKED"
-    assert "US_EQ" in current["missing_levels"]
+    assert prior["status"] in {"READY", "PARTIAL"}
+    assert current["status"] in {"READY", "PARTIAL"}
+    assert "US_EQ" not in current["missing_levels"]
     assert current["stance"]["decision"] == "不行动"
     assert current["annex"]["claims_status"] != "SKIPPED"
     assert current["annex"]["scenarios_status"] != "SKIPPED"
