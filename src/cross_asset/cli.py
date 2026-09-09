@@ -230,6 +230,23 @@ def explain_run_command(run_id: str = typer.Argument(...)) -> None:
         db.close()
 
 
+@app.command("research-brief")
+def research_brief_command(
+    input_json: str = typer.Argument(..., help="Structured research facts JSON."),
+    output: str = typer.Option("artifacts/reports/research_brief.md", "--output"),
+) -> None:
+    """Render a traceable personal research brief for human review."""
+    from pathlib import Path
+
+    from .reports.research_brief import generate_research_brief
+
+    payload = json.loads(Path(input_json).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise typer.BadParameter("research brief input must be a JSON object")
+    path = generate_research_brief(output=output, **payload)
+    typer.echo(json.dumps({"status": "SUCCESS", "output": str(path)}, ensure_ascii=False))
+
+
 @app.command("current-state")
 def current_state_command(
     run_tests: bool = typer.Option(False, "--run-tests"),
