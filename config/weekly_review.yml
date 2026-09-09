@@ -44,3 +44,4 @@ notes:
   - This contract does not change strategic weights or authorize trades.
   - Overlay series feed relative prices, the four-box macro card, and win-rate/odds. Missing overlay is STALE, never DATA_BLOCKED.
   - Default decision is 不行动. Win-rate and odds must agree before a lean is recorded.
+  - Sell-side boxes are a journal. Conflict with the four-box is recorded, never traded.
