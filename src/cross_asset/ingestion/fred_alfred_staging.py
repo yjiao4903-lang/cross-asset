@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, timedelta
+from itertools import pairwise
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import pandas as pd
 
@@ -157,7 +159,7 @@ def audit_quality(
 
     non_monotonic = sum(
         1
-        for previous, current in zip(rows, rows[1:], strict=False)
+        for previous, current in pairwise(rows)
         if (current.observation_date, current.realtime_start)
         < (previous.observation_date, previous.realtime_start)
     )
@@ -176,7 +178,7 @@ def audit_quality(
     unique_dates = sorted({row.observation_date for row in rows})
     gap_limit = _gap_limit_days(spec.frequency)
     long_gaps: list[tuple[str, str, int]] = []
-    for left, right in zip(unique_dates, unique_dates[1:], strict=False):
+    for left, right in pairwise(unique_dates):
         delta = (right - left).days
         if delta > gap_limit and not _known_gap(spec, left, right):
             long_gaps.append((left.isoformat(), right.isoformat(), delta))
