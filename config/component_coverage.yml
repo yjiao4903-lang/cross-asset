@@ -1,0 +1,59 @@
+version: 0.1
+parameter_status: DEVELOPMENT_PRIOR
+# Diagnostic policy only. Does not change score_asset() or allocate().
+# Current production remains renormalize_available_components=true.
+
+declared_components:
+  - macro
+  - trend
+  - valuation
+  - carry
+  - risk
+  - structure
+
+declared_weights:
+  macro: 0.25
+  trend: 0.30
+  valuation: 0.15
+  carry: 0.10
+  risk: 0.10
+  structure: 0.10
+
+production_binding_policy: renormalize_available_components
+
+policies:
+  renormalize_available_components:
+    description: Current production. Missing weights are redistributed to available components.
+    changes_allocation: true
+  reserved_declared_weights:
+    description: >
+      Diagnostic alternative. Missing components keep their declared weight as a
+      missing budget instead of donating it to trend/macro.
+    changes_allocation: false
+
+thresholds:
+  min_research_coverage: 0.40
+  min_allocation_coverage: 0.70
+  max_missing_budget_for_allocation: 0.30
+  required_for_allocation:
+    - trend
+
+lanes:
+  PERSONAL_WEEKLY:
+    description: Personal replay / weekly brief. May use compact packs and public CSV.
+    may_enter_allocation: false
+    may_claim_research_admissible: false
+  RESEARCH_STATE:
+    description: Research artifact and state only. No tactical tilt change.
+    may_enter_allocation: false
+    may_claim_research_admissible: false
+  RESEARCH_ADMISSIBLE:
+    description: Reserved. Requires G5 factor admission plus data acceptance.
+    may_enter_allocation: true
+    may_claim_research_admissible: true
+
+grades:
+  INSUFFICIENT: coverage below min_research_coverage
+  RESEARCH_STATE: coverage meets research floor but allocation floor or gates fail
+  ALLOCATION_CANDIDATE: coverage and required components meet floors; still not G5
+  RESEARCH_ADMISSIBLE: reserved; never emitted by this work package
