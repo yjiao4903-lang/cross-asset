@@ -299,14 +299,26 @@ def scenario_command(
         raw = dict(raw)
         raw["evidence_refs"] = tuple(raw.get("evidence_refs", ()))
         raw["assumptions"] = tuple(raw.get("assumptions", ()))
-        results.append(asdict(evaluate_scenario(ScenarioSpec(**raw))))
+        result = asdict(evaluate_scenario(ScenarioSpec(**raw)))
+        result["input_contract"] = {
+            key: raw.get(key)
+            for key in (
+                "asset", "kind", "baseline", "shock", "unit", "duration",
+                "local_price_shock", "fx_shock", "currency", "base_currency",
+                "quote_currency", "quote_convention", "cost_bps", "as_of",
+                "evidence_refs",
+            )
+        }
+        result["reason"] = result["formula"] if result["status"] == "UNESTIMATED" else None
+        results.append(result)
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps({"status": payload.get("status", "DEVELOPMENT_PRIOR"), "results": results}, ensure_ascii=False, indent=2), encoding="utf-8")
     report_path = output_path.with_suffix(".md")
     lines = ["# Scenario review", "", "状态：DEVELOPMENT_PRIOR；结果是计算情景，不是预测、概率或期望收益。", ""]
     for result in results:
-        lines.extend([f"## {result['scenario_id']} ({result['status']})", "", f"- value: {result['value']}", f"- formula: `{result['formula']}`", f"- assumptions: {', '.join(result['assumptions']) or '未提供'}", f"- evidence_refs: {', '.join(result['evidence_refs']) or '未提供'}", ""])
+        contract = result["input_contract"]
+        lines.extend([f"## {result['scenario_id']} ({result['status']})", "", f"- value: {result['value']} (net return fraction)", f"- formula: `{result['formula'] or '未计算'}`", f"- inputs: baseline={contract['baseline']}, shock={contract['shock']}, unit={contract['unit']}, as_of={contract['as_of']}, cost_bps={contract['cost_bps']}", f"- FX convention: {contract['quote_convention'] or '不适用'} ({contract['base_currency'] or '-'} / {contract['quote_currency'] or '-'})", f"- assumptions: {', '.join(result['assumptions']) or '未提供'}", f"- evidence_refs: {', '.join(result['evidence_refs']) or '未提供'}", f"- reason: {result['reason'] or '已按公式计算'}", ""])
     report_path.write_text("\n".join(lines), encoding="utf-8")
     typer.echo(json.dumps({"status": payload.get("status", "DEVELOPMENT_PRIOR"), "output": str(output_path), "report_output": str(report_path), "results": results}, ensure_ascii=False))
 
