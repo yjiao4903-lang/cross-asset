@@ -4,4 +4,4 @@
 
 C 仅支持 `bond_duration` 与 `foreign_asset`。每个 spec 只表示一个明确冲击组合，结果使用单一 `value`，其单位固定为净收益率 fraction（`up/down` 保留为空，避免凭空生成对称情景）。债券公式为 `-duration × shock_bp / 10000 - cost`，外币资产公式为 `(1+local_price_shock) × (1+fx_shock) - 1 - cost`；结果不是预测、概率或期望收益。缺 baseline、shock、unit、duration、currency、成本或 evidence_refs 时返回 `UNESTIMATED`；外币还需 `base_currency`、`quote_currency`，以及严格的 `base_currency_per_quote_currency` 方向（实现示例为 `CNY_per_USD`，表示每 1 USD 对应多少 CNY）。价格指数不会被解释为含息工具。
 
-实现复用 Python 标准库 `dataclasses`（`frozen=True`）和 JSON/哈希，不新增依赖或服务。官方依据：Python dataclasses 文档说明 frozen 实例用于模拟只读对象；argparse 文档说明子命令应使用 subparsers。CLI 接线由 A 在主入口完成，本模块可先独立测试。
+实现复用 Python 标准库 `dataclasses`（`frozen=True`）和 JSON/哈希，不新增依赖或服务。官方依据：Python dataclasses 文档说明 frozen 实例用于模拟只读对象；argparse 文档说明子命令应使用 subparsers。当前入口已接入主 CLI：`python -m cross_asset.cli claim-ledger --input examples/event_claims_fixture.json --now 2026-10-02T00:00:00+00:00 --ledger-output artifacts/research/claim_ledger.jsonl`；`python -m cross_asset.cli scenario --input examples/scenario_fixture.json --output artifacts/reports/scenarios.json`。两者均为 `DEVELOPMENT_PRIOR`/fixture 流程，不解锁正式研究或自动交易；本分支依赖 PR #57，需单独审查和合并。
