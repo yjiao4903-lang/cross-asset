@@ -33,20 +33,20 @@ SLEEVES: tuple[dict[str, str], ...] = (
         "series_id": "CN_BOND_10Y",
         "name": "中国利率债",
         "job": "国内久期",
-        "env": "增长或通肨弱于预期",
+        "env": "增长或通胀弱于预期",
         "kind": "yield",
     },
     {
         "series_id": "GOLD",
         "name": "黄金",
         "job": "避险与财政残差",
-        "env": "增长弱，或通肨/财政超预期",
+        "env": "增长弱，或通胀/财政超预期",
     },
     {
         "series_id": "COPPER",
         "name": "铜",
         "job": "工业周期",
-        "env": "增长或通肨好于预期",
+        "env": "增长或通胀好于预期",
     },
 )
 
@@ -84,7 +84,8 @@ def _link(depth: dict[str, Any], label: str) -> str:
 def _fmt_move(value: float | None, kind: str) -> str:
     if value is None:
         return "缺失"
-    if kind == "yield":n        return f"{value:+.1f}bp"
+    if kind == "yield":
+        return f"{value:+.1f}bp"
     return f"{value * 100:+.2f}%"
 
 
