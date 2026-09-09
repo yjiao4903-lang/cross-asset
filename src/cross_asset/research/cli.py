@@ -16,7 +16,14 @@ import pandas as pd
 import typer
 
 from cross_asset.settings import get_settings
-from cross_asset.storage import code_version, config_hash, init_db
+from cross_asset.storage import (
+    ProvenanceStore,
+    approved_observations_asof,
+    code_version,
+    config_hash,
+    data_snapshot_id,
+    init_db,
+)
 
 from . import (
     build_research_plan,
@@ -199,6 +206,25 @@ def run_oos_command(
             )
             raise typer.Exit(2)
 
+        # A formal run is only reproducible when its admitted information set
+        # has an immutable identity.  Keep this explicit at the CLI boundary
+        # so a successful walk-forward can never persist ``NULL`` fold IDs.
+        snapshot_cutoff = pd.Timestamp(development_dates.max()).to_pydatetime()
+        snapshot_rows = approved_observations_asof(
+            store.conn,
+            snapshot_cutoff,
+            required_usage_status="RESEARCH_ADMISSIBLE",
+            allowed_quality={"ok", "closed"},
+        ).df()
+        if snapshot_rows.empty:
+            raise ValueError("research_data_snapshot_missing")
+        snapshot_id = data_snapshot_id(snapshot_rows.to_dict("records"))
+        ProvenanceStore(store.conn).create_snapshot(
+            snapshot_rows.to_dict("records"),
+            data_cutoff=snapshot_cutoff,
+            config_hash_value=config_hash(config_paths),
+        )
+
         fold_rows = execute_walk_forward(
             store.conn,
             decision_dates=dates,
@@ -240,6 +266,7 @@ def run_oos_command(
             plan=plan.to_dict(),
             config_hash=config_hash(config_paths),
             code_version=code_version("."),
+            data_snapshot_id=snapshot_id,
         )
         research_run_id = persisted["research_run_id"]
         for (fold, benchmark), group in fold_rows.groupby(["fold", "benchmark"]):
@@ -253,7 +280,7 @@ def run_oos_command(
                     "observations": len(valid),
                     "mean_gross_return": float(valid.mean()) if len(valid) else None,
                 },
-                data_snapshot_id=None,
+                data_snapshot_id=snapshot_id,
                 status="COMPLETE",
             )
 

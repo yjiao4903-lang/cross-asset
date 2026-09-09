@@ -230,6 +230,23 @@ def explain_run_command(run_id: str = typer.Argument(...)) -> None:
         db.close()
 
 
+@app.command("research-brief")
+def research_brief_command(
+    input_json: str = typer.Argument(..., help="Structured research facts JSON."),
+    output: str = typer.Option("artifacts/reports/research_brief.md", "--output"),
+) -> None:
+    """Render a traceable personal research brief for human review."""
+    from pathlib import Path
+
+    from .reports.research_brief import generate_research_brief
+
+    payload = json.loads(Path(input_json).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise typer.BadParameter("research brief input must be a JSON object")
+    path = generate_research_brief(output=output, **payload)
+    typer.echo(json.dumps({"status": "SUCCESS", "output": str(path)}, ensure_ascii=False))
+
+
 @app.command("current-state")
 def current_state_command(
     run_tests: bool = typer.Option(False, "--run-tests"),
@@ -546,6 +563,10 @@ def run_daily_command(
     series_calendar_config: str = typer.Option(
         "config/series_calendars.yml", "--series-calendar-config"
     ),
+    brief_output: str = typer.Option(
+        "artifacts/reports/daily_research_brief.md", "--brief-output",
+        help="Write the accompanying human-review brief.",
+    ),
 ) -> None:
     """Run the daily Cross model chain with an explicit macro source.
 
@@ -606,14 +627,50 @@ def run_daily_command(
     decision_date = requested_date or bundle.manifest.as_of
     decision_time = datetime.combine(decision_date, time.max)
 
+    def write_brief(status, cutoff, warnings, facts=None, computed=None):
+        from .reports.research_brief import generate_research_brief
+
+        generate_research_brief(
+            output=brief_output,
+            as_of=decision_date.isoformat(),
+            data_cutoff=cutoff,
+            sources=["run-daily:marco"],
+            completeness=status,
+            limitations=warnings or "未发现结构化限制",
+            market_facts=facts or [],
+            computed_signals=computed or [],
+        )
+
     settings = get_settings()
-    allocation_path = Path(settings.cross_asset_config_dir) / "allocation.yml"
+    config_dir = Path(settings.cross_asset_config_dir)
+    allocation_path = config_dir / "allocation.yml"
     allocation_cfg = yaml.safe_load(
         allocation_path.read_text(encoding="utf-8")
     )
     strategic_weights = dict(allocation_cfg["strategic_weights"])
     assets = list(strategic_weights)
     asset_signal_map = allocation_cfg.get("asset_signal_map", {})
+    # Daily and formal research paths must consume the same explicit return
+    # contract.  A missing contract is a hard configuration error; silently
+    # treating a yield or total-return proxy as a price is economically unsafe.
+    from .backtest.returns import AssetReturnSpec
+
+    universe_cfg = yaml.safe_load(
+        (config_dir / "research_universe.yml").read_text(encoding="utf-8")
+    )
+    universe_assets = universe_cfg.get("assets", {})
+    return_specs = {
+        asset: AssetReturnSpec(
+            **{
+                key: value
+                for key, value in dict(universe_assets.get(asset, {})).items()
+                if key != "market"
+            }
+        )
+        for asset in assets
+    }
+    if any(spec.series_id is None and spec.kind != "cash" for spec in return_specs.values()):
+        raise typer.BadParameter("research_universe return contract missing for non-cash asset")
     asset_series_map = {
         asset: asset_signal_map.get(asset, {}).get("trend")
         for asset in assets
@@ -711,6 +768,11 @@ def run_daily_command(
             *bundle.report.warnings,
             *(blocked[series_id] for series_id in required_series if series_id in blocked),
         ]
+        write_brief(
+            "DATA_BLOCKED",
+            {"marco": bundle.manifest.data_cutoff.isoformat(), "cross_market": cross_cutoff},
+            warnings,
+        )
         typer.echo(
             json.dumps(
                 {
@@ -728,6 +790,7 @@ def run_daily_command(
                     },
                     "warnings": warnings,
                     "legacy_fallback_used": False,
+                    "brief_output": brief_output,
                 },
                 ensure_ascii=False,
                 sort_keys=True,
@@ -740,6 +803,7 @@ def run_daily_command(
         assets,
         strategic_weights=strategic_weights,
         asset_series_map=asset_series_map,
+        return_specs=return_specs,
         asset_signal_map=asset_signal_map,
         component_weights=allocation_cfg.get("component_weights"),
         allocation_config=allocation_cfg,
@@ -814,7 +878,33 @@ def run_daily_command(
             *allocation.warnings,
         ],
         "legacy_fallback_used": False,
+        "brief_output": brief_output,
     }
+    write_brief(
+        payload["status"],
+        payload["data_cutoff"],
+        payload["warnings"],
+        [
+            {
+                "label": str(row.series_id),
+                "value": row.value,
+                "unit": "raw",
+                "period": str(row.observation_date),
+                "source": f"{row.source}/{row.source_series_id}; available_at={row.available_at}",
+            }
+            for row in observations.head(5).itertuples()
+        ],
+        [
+            {
+                "label": f"{asset} total score",
+                "value": score.score,
+                "unit": "score",
+                "period": decision_date.isoformat(),
+                "source": "run-daily:marco:computed",
+            }
+            for asset, score in state["asset_scores"].items()
+        ],
+    )
     typer.echo(
         json.dumps(
             payload,

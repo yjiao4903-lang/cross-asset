@@ -1,0 +1,21 @@
+{
+  "as_of": "2026-09-09",
+  "data_cutoff": "2026-09-08T16:00:00Z",
+  "sources": ["fixture:macro", "fixture:market"],
+  "completeness": "FIXTURE_ONLY",
+  "limitations": "合成 fixture，仅用于验证简报渲染；没有真实持仓、Live 或研究收益结论。",
+  "market_facts": [
+    {
+      "label": "US_CPI",
+      "value": 3.0,
+      "unit": "%",
+      "period": "2026-08",
+      "source": "fixture:macro; series_id=US_CPI"
+    }
+  ],
+  "research_question": "通胀变化是否需要继续核对利率暴露？",
+  "supporting_evidence": "fixture market observation",
+  "counterevidence": "尚无真实样本",
+  "next_check": "替换为经审批的 PIT 数据后复核",
+  "decision_record": "不行动：仅为 fixture 验收"
+}
