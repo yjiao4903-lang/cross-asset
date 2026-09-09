@@ -10,6 +10,8 @@ from cross_asset.research.weekly_review import (
     week_end,
 )
 
+FIXTURE = Path(__file__).resolve().parents[2] / "examples" / "weekly_review_fixture.json"
+
 
 def _obs(series_id, day, value, available=None):
     return Observation(
@@ -99,42 +101,18 @@ def test_compare_weeks_and_cli_fixture(tmp_path: Path):
     delta = compare_weeks(current, prior)
     assert delta[0]["value"] == 0.1
 
-    observations = tmp_path / "obs.json"
-    observations.write_text(
-        Path("/tmp/weekly_review_fixture.json").read_text(encoding="utf-8")
-        if False
-        else Path(__file__).resolve().parents[2].joinpath("examples/weekly_review_fixture.json").read_text(encoding="utf-8")
-        if Path(__file__).resolve().parents[2].joinpath("examples/weekly_review_fixture.json").exists()
-        else """{"observations": [
-          {"series_id": "CN_EQ_LARGE", "observation_date": "2026-08-14", "value": 3800, "available_at": "2026-08-14T16:00:00"},
-          {"series_id": "CN_EQ_LARGE", "observation_date": "2026-08-28", "value": 3900, "available_at": "2026-08-28T16:00:00"},
-          {"series_id": "CN_EQ_LARGE", "observation_date": "2026-09-04", "value": 4000, "available_at": "2026-09-04T16:00:00"},
-          {"series_id": "HK_EQ", "observation_date": "2026-08-14", "value": 17000, "available_at": "2026-08-14T16:00:00"},
-          {"series_id": "HK_EQ", "observation_date": "2026-08-28", "value": 17200, "available_at": "2026-08-28T16:00:00"},
-          {"series_id": "HK_EQ", "observation_date": "2026-09-04", "value": 17500, "available_at": "2026-09-04T16:00:00"},
-          {"series_id": "US_EQ", "observation_date": "2026-08-14", "value": 5400, "available_at": "2026-08-14T16:00:00"},
-          {"series_id": "US_EQ", "observation_date": "2026-08-28", "value": 5450, "available_at": "2026-08-28T16:00:00"},
-          {"series_id": "US_EQ", "observation_date": "2026-09-04", "value": 5500, "available_at": "2026-09-04T16:00:00"},
-          {"series_id": "CN_BOND_10Y", "observation_date": "2026-08-14", "value": 1.80, "available_at": "2026-08-14T16:00:00"},
-          {"series_id": "CN_BOND_10Y", "observation_date": "2026-08-28", "value": 1.84, "available_at": "2026-08-28T16:00:00"},
-          {"series_id": "CN_BOND_10Y", "observation_date": "2026-09-04", "value": 1.90, "available_at": "2026-09-04T16:00:00"},
-          {"series_id": "GOLD", "observation_date": "2026-08-14", "value": 3300, "available_at": "2026-08-14T16:00:00"},
-          {"series_id": "GOLD", "observation_date": "2026-08-28", "value": 3350, "available_at": "2026-08-28T16:00:00"},
-          {"series_id": "GOLD", "observation_date": "2026-09-04", "value": 3400, "available_at": "2026-09-04T16:00:00"},
-          {"series_id": "COPPER", "observation_date": "2026-08-14", "value": 4.4, "available_at": "2026-08-14T16:00:00"},
-          {"series_id": "COPPER", "observation_date": "2026-08-28", "value": 4.5, "available_at": "2026-08-28T16:00:00"},
-          {"series_id": "COPPER", "observation_date": "2026-09-04", "value": 4.6, "available_at": "2026-09-04T16:00:00"}
-        ]}""",
-        encoding="utf-8",
-    )
     result = run_weekly_review(
         as_of="2026-09-09",
-        observations_json=observations,
+        observations_json=FIXTURE,
         output=tmp_path / "weekly.md",
         snapshot_output=tmp_path / "weekly.snapshot.json",
         config_path="config/weekly_review.yml",
     )
-    assert result["status"] in {"READY", "PARTIAL"}
+    assert result["status"] == "READY"
+    assert result["week_end"] == "2026-09-04"
     text = Path(result["brief_output"]).read_text(encoding="utf-8")
     assert "相对上周" in text
     assert "不行动" in text
+    assert "未提供上周快照" in text
+    snapshot = Path(result["snapshot_output"]).read_text(encoding="utf-8")
+    assert "CN_EQ_LARGE" in snapshot
