@@ -1,1 +1,553 @@
-placeholder
+"""Weekly personal-review fact table.
+
+Assembles point-in-time market levels and lookback changes for a Friday
+week-end, compared on the Beijing clock. Missing values stay missing.
+This module does not allocate, impute, or produce trade instructions.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+from dataclasses import dataclass
+from datetime import date, datetime, time, timedelta
+from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
+
+import yaml
+
+from cross_asset.reports.research_brief import generate_research_brief
+
+BEIJING = ZoneInfo("Asia/Shanghai")
+WEEKDAYS = {
+    "Monday": 0,
+    "Tuesday": 1,
+    "Wednesday": 2,
+    "Thursday": 3,
+    "Friday": 4,
+    "Saturday": 5,
+    "Sunday": 6,
+}
+DEFAULT_CONFIG = Path("config/weekly_review.yml")
+DEFAULT_REVIEW_TIME = time(12, 0)
+
+
+def _as_date(value: Any) -> date:
+    if isinstance(value, datetime):
+        return to_beijing(value).date()
+    if isinstance(value, date):
+        return value
+    text = str(value)[:10]
+    return date.fromisoformat(text)
+
+
+def to_beijing(value: Any) -> datetime:
+    """Interpret naive timestamps as Beijing time; convert aware ones."""
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=BEIJING)
+        return value.astimezone(BEIJING)
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return datetime.combine(value, time(23, 59, 59), tzinfo=BEIJING)
+    text = str(value).strip()
+    if text.endswith("Z"):
+        parsed = datetime.fromisoformat(text[:-1]).replace(tzinfo=ZoneInfo("UTC"))
+        return parsed.astimezone(BEIJING)
+    if "T" in text:
+        parsed = datetime.fromisoformat(text)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=BEIJING)
+        return parsed.astimezone(BEIJING)
+    return datetime.combine(date.fromisoformat(text[:10]), time(23, 59, 59), tzinfo=BEIJING)
+
+
+def week_end(as_of: date, week_end_weekday: str | int = "Friday") -> date:
+    target = WEEKDAYS[week_end_weekday] if isinstance(week_end_weekday, str) else int(week_end_weekday)
+    delta = (as_of.weekday() - target) % 7
+    return as_of - timedelta(days=delta)
+
+
+def default_review_cutoff(week_end_date: date, review_local_time: time | None = None) -> datetime:
+    """Saturday 12:00 Beijing after the Friday week-end."""
+    review_date = week_end_date + timedelta(days=1)
+    stamp = review_local_time or DEFAULT_REVIEW_TIME
+    return datetime.combine(review_date, stamp, tzinfo=BEIJING)
+
+
+def load_weekly_config(path: str | Path | None = None) -> dict[str, Any]:
+    config_path = Path(path) if path else DEFAULT_CONFIG
+    if not config_path.exists():
+        raise FileNotFoundError(f"weekly review config not found: {config_path}")
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(config.get("required_series"), list) or not config["required_series"]:
+        raise ValueError("weekly review config must declare non-empty required_series")
+    return config
+
+
+def _review_time(config: dict[str, Any] | None) -> time:
+    raw = (config or {}).get("review_local_time", "12:00")
+    hour, minute = [int(part) for part in str(raw).split(":")[:2]]
+    return time(hour, minute)
+
+
+def _source_admitted(
+    source: str, expected: str | None, config: dict[str, Any]
+) -> bool:
+    if expected is None:
+        return True
+    src = str(source).lower()
+    exp = str(expected).lower()
+    if src == exp:
+        return True
+    aliases = (config.get("source_aliases") or {}).get(exp) or []
+    return src in {str(item).lower() for item in aliases}
+
+
+@dataclass(frozen=True)
+class Observation:
+    series_id: str
+    observation_date: date
+    value: float | None
+    available_at: datetime
+    source: str = "unspecified"
+
+
+def parse_observations(rows: list[dict[str, Any]]) -> list[Observation]:
+    out: list[Observation] = []
+    for row in rows:
+        out.append(
+            Observation(
+                series_id=str(row["series_id"]),
+                observation_date=_as_date(row["observation_date"]),
+                value=None if row.get("value") is None else float(row["value"]),
+                available_at=to_beijing(row["available_at"]),
+                source=str(row.get("source", "unspecified")),
+            )
+        )
+        if out[-1].value is not None and not math.isfinite(out[-1].value):
+            raise ValueError(f"non-finite observation value for {out[-1].series_id}")
+    return out
+
+
+def _visible(rows: list[Observation], cutoff: datetime) -> list[Observation]:
+    edge = to_beijing(cutoff)
+    return [row for row in rows if to_beijing(row.available_at) <= edge]
+
+
+def latest_on_or_before(
+    rows: list[Observation], series_id: str, as_of: date, cutoff: datetime
+) -> Observation | None:
+    eligible = [
+        row
+        for row in _visible(rows, cutoff)
+        if row.series_id == series_id and row.observation_date <= as_of
+    ]
+    if not eligible:
+        return None
+    return max(eligible, key=lambda row: (row.observation_date, to_beijing(row.available_at)))
+
+
+def _change(current: Observation | None, prior: Observation | None, kind: str) -> float | None:
+    if current is None or prior is None or current.value is None or prior.value is None:
+        return None
+    if kind == "yield":
+        return round((current.value - prior.value) * 100.0, 4)
+    if prior.value == 0:
+        return None
+    return round(current.value / prior.value - 1.0, 6)
+
+
+def build_fact_table(
+    rows: list[Observation],
+    *,
+    as_of: date,
+    cutoff: datetime,
+    config: dict[str, Any] | None = None,
+    week_end_date: date | None = None,
+) -> dict[str, Any]:
+    cfg = config or {}
+    end = week_end_date or week_end(as_of, cfg.get("week_end_weekday", "Friday"))
+    lookbacks = cfg.get("lookbacks") or {
+        "week": {"days": 7, "label": "1w"},
+        "month": {"days": 21, "label": "1m"},
+    }
+    beijing_cutoff = to_beijing(cutoff)
+    facts = []
+    missing_levels = []
+    missing_lookbacks = []
+    unverified_sources = []
+    for spec in cfg.get("required_series", []):
+        series_id = spec["series_id"]
+        kind = spec.get("kind", "price")
+        current = latest_on_or_before(rows, series_id, end, beijing_cutoff)
+        max_age = spec.get("max_age_days")
+        stale = (
+            current is not None
+            and max_age is not None
+            and (end - current.observation_date).days > int(max_age)
+        )
+        if stale:
+            current = None
+        expected_provider = spec.get("provider")
+        source_status = "UNVERIFIED"
+        if current is not None and current.value is not None:
+            source_status = (
+                "ADMITTED"
+                if _source_admitted(current.source, expected_provider, cfg)
+                else "UNVERIFIED"
+            )
+            if source_status == "UNVERIFIED" and cfg.get("require_source_admission", False):
+                unverified_sources.append(series_id)
+        fact = {
+            "label": spec.get("asset_id", series_id),
+            "series_id": series_id,
+            "kind": kind,
+            "unit": spec.get("unit", "raw"),
+            "period": end.isoformat(),
+            "value": None if current is None else current.value,
+            "observation_date": None if current is None else current.observation_date.isoformat(),
+            "available_at": None if current is None else to_beijing(current.available_at).isoformat(),
+            "source": "missing" if current is None or current.value is None else current.source,
+            "usage": spec.get("usage", "PERSONAL_WEEKLY"),
+            "source_status": source_status,
+            "changes": {},
+        }
+        if current is None or current.value is None:
+            missing_levels.append(series_id)
+        for name, window in lookbacks.items():
+            days = int(window["days"])
+            prior = latest_on_or_before(
+                rows, series_id, end - timedelta(days=days), beijing_cutoff
+            )
+            change = _change(current, prior, kind)
+            fact["changes"][window.get("label", name)] = {
+                "value": change,
+                "unit": "bp" if kind == "yield" else "fraction",
+                "prior_observation_date": None
+                if prior is None
+                else prior.observation_date.isoformat(),
+            }
+            if name == "month" and window.get("label") != "1m":
+                fact["changes"]["1m"] = fact["changes"][window.get("label", name)]
+            if current is not None and change is None:
+                missing_lookbacks.append(f"{series_id}:{window.get('label', name)}")
+        facts.append(fact)
+
+    if missing_levels or unverified_sources:
+        status = "DATA_BLOCKED"
+    elif missing_lookbacks:
+        status = "PARTIAL"
+    else:
+        status = "READY"
+    return {
+        "status": status,
+        "timezone": "Asia/Shanghai",
+        "as_of": as_of.isoformat(),
+        "week_end": end.isoformat(),
+        "data_cutoff": beijing_cutoff.isoformat(),
+        "review_cutoff": beijing_cutoff.isoformat(),
+        "missing_levels": missing_levels,
+        "missing_lookbacks": missing_lookbacks,
+        "unverified_sources": unverified_sources,
+        "facts": facts,
+    }
+
+
+def compare_weeks(current: dict[str, Any], prior: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not prior:
+        return [
+            {
+                "label": "prior_week",
+                "value": "未提供上周快照",
+                "unit": "status",
+                "period": current.get("week_end"),
+                "source": "weekly_review",
+            }
+        ]
+    prior_map = {item["series_id"]: item for item in prior.get("facts", [])}
+    out = []
+    for item in current.get("facts", []):
+        old = prior_map.get(item["series_id"])
+        if not old or item["value"] is None or old.get("value") is None:
+            out.append(
+                {
+                    "label": f"{item['label']} vs prior week",
+                    "value": "不可比",
+                    "unit": "status",
+                    "period": f"{old.get('period') if old else 'missing'} -> {item.get('period')}",
+                    "source": "weekly_review",
+                }
+            )
+            continue
+        if item.get("kind") == "yield":
+            delta = round((float(item["value"]) - float(old["value"])) * 100.0, 4)
+            unit = "bp"
+        else:
+            baseline = float(old["value"])
+            delta = None if baseline == 0 else round(float(item["value"]) / baseline - 1.0, 6)
+            unit = "fraction"
+        out.append(
+            {
+                "label": f"{item['label']} vs prior week",
+                "value": delta,
+                "unit": unit,
+                "period": f"{old.get('period')} -> {item.get('period')}",
+                "source": "weekly_review",
+            }
+        )
+    return out
+
+
+def _limitations(table: dict[str, Any]) -> str:
+    parts = []
+    if table["missing_levels"]:
+        parts.append("缺最新水平: " + ", ".join(table["missing_levels"]))
+    if table["missing_lookbacks"]:
+        parts.append("缺回溯窗口: " + ", ".join(table["missing_lookbacks"]))
+    parts.append("时钟为北京时间；周复盘不产生交易建议，也不改战略权重。")
+    return "；".join(parts)
+
+
+def _market_facts(table: dict[str, Any]) -> list[dict[str, Any]]:
+    facts = []
+    for item in table["facts"]:
+        change_1w = (item.get("changes") or {}).get("1w", {})
+        facts.append(
+            {
+                "label": item["label"],
+                "value": item["value"] if item["value"] is not None else "缺失",
+                "unit": item["unit"],
+                "period": item.get("observation_date") or item["period"],
+                "source": (
+                    f"{item['source']}; series_id={item['series_id']}; "
+                    f"1w={change_1w.get('value')}"
+                ),
+            }
+        )
+    return facts
+
+
+def resolve_cutoff(
+    *,
+    as_of: date,
+    payload_cutoff: Any | None,
+    config: dict[str, Any] | None = None,
+) -> datetime:
+    cfg = config or {}
+    end = week_end(as_of, cfg.get("week_end_weekday", "Friday"))
+    review_cutoff = default_review_cutoff(end, _review_time(cfg))
+    if payload_cutoff is None:
+        cap = datetime.combine(as_of, time(23, 59, 59), tzinfo=BEIJING)
+        return min(review_cutoff, cap)
+    parsed = to_beijing(payload_cutoff)
+    cap = datetime.combine(as_of, time(23, 59, 59), tzinfo=BEIJING)
+    return min(parsed, cap)
+
+
+def run_weekly_review(
+    *,
+    as_of: str,
+    observations_json: str | Path,
+    output: str | Path = "artifacts/reports/weekly_review.md",
+    prior_snapshot: str | Path | None = None,
+    snapshot_output: str | Path | None = None,
+    config_path: str | Path | None = None,
+    week_end_date: str | date | None = None,
+    review_cutoff: Any | None = None,
+    claims_json: str | Path | None = None,
+    scenarios_json: str | Path | None = None,
+) -> dict[str, Any]:
+    payload = json.loads(Path(observations_json).read_text(encoding="utf-8"))
+    config = load_weekly_config(config_path)
+    rows = parse_observations(list(payload.get("observations") or payload.get("rows") or []))
+    review_date = _as_date(as_of)
+    observation_week_end = _as_date(week_end_date) if week_end_date is not None else None
+    requested_cutoff = review_cutoff if review_cutoff is not None else payload.get("data_cutoff")
+    review_end = observation_week_end or week_end(
+        review_date, config.get("week_end_weekday", "Friday")
+    )
+    review_boundary = default_review_cutoff(review_end, _review_time(config))
+    if review_cutoff is not None:
+        requested = to_beijing(review_cutoff)
+        if requested > review_boundary:
+            raise ValueError(
+                f"review_cutoff exceeds configured boundary {review_boundary.isoformat()}"
+            )
+        if observation_week_end is None and requested.date() > review_date:
+            raise ValueError(
+                "a cutoff after as_of requires explicit --week-end to separate observation and review dates"
+            )
+        cutoff = requested
+    else:
+        cutoff = resolve_cutoff(
+            as_of=review_date,
+            payload_cutoff=payload.get("data_cutoff"),
+            config=config,
+        )
+    table = build_fact_table(
+        rows,
+        as_of=review_date,
+        cutoff=cutoff,
+        config=config,
+        week_end_date=observation_week_end,
+    )
+    table["requested_cutoff"] = (
+        None if requested_cutoff is None else to_beijing(requested_cutoff).isoformat()
+    )
+    table["cutoff_boundary"] = review_boundary.isoformat()
+    table["cutoff_adjusted"] = (
+        requested_cutoff is not None
+        and to_beijing(requested_cutoff) != cutoff
+    )
+    prior = None
+    if prior_snapshot and Path(prior_snapshot).exists():
+        prior = json.loads(Path(prior_snapshot).read_text(encoding="utf-8"))
+    changes = compare_weeks(table, prior)
+    from cross_asset.research.weekly_layers import build_weekly_layers
+
+    layers = build_weekly_layers(
+        rows,
+        table,
+        cutoff=cutoff,
+        sell_side=list(payload.get("sell_side") or []),
+    )
+    stance = layers["stance"]
+    computed = [
+        {
+            "label": item["label"],
+            "value": f"胜率{item['win']}/赔率{item['odds']}",
+            "unit": "score",
+            "period": table["week_end"],
+            "source": item.get("note", "weekly_layers"),
+        }
+        for item in layers["scorecard"]
+        if item["label"] != "macro_context"
+    ]
+    brief = generate_research_brief(
+        output=output,
+        as_of=table["as_of"],
+        data_cutoff=table["data_cutoff"],
+        sources=["weekly_review"],
+        completeness=table["status"],
+        limitations=_limitations(table),
+        market_facts=_market_facts(table) + [
+            {
+                "label": item["label"],
+                "value": item.get("value"),
+                "unit": item.get("unit", ""),
+                "period": table["week_end"],
+                "source": item.get("note") or item.get("source", "weekly_layers"),
+            }
+            for item in layers["relatives"] + layers["macro_boxes"]
+        ],
+        prior_week_changes=changes,
+        computed_signals=computed,
+        decision_record=f"{stance['decision']}。{stance['stance']}。{stance['rule']}",
+        next_check=(week_end(review_date) + timedelta(days=7)).isoformat(),
+        research_question="本周价格变动是否被增长/流动性/海外约束支持？",
+        supporting_evidence="见胜率/赔率与宏观四格；两边同向才记倾向。",
+        counterevidence="层间冲突或 overlay 缺失时保持不行动。",
+    )
+    from cross_asset.research.weekly_annex import build_weekly_annex
+    from cross_asset.research.weekly_compare import build_weekly_compare
+
+    annex = build_weekly_annex(
+        now=to_beijing(cutoff).isoformat(),
+        claims_json=claims_json,
+        scenarios_json=scenarios_json,
+    )
+    compare = build_weekly_compare(table, prior, layers)
+    brief_path = Path(brief)
+    brief_path.write_text(
+        brief_path.read_text(encoding="utf-8")
+        + layers["markdown"]
+        + compare["markdown"]
+        + annex["markdown"],
+        encoding="utf-8",
+    )
+    table["layers"] = {
+        "relatives": layers["relatives"],
+        "macro_boxes": layers["macro_boxes"],
+        "scorecard": layers["scorecard"],
+        "stance": stance,
+        "overlay_status": {
+            key: value.get("status") for key, value in layers["overlay"].items() if isinstance(value, dict)
+        },
+    }
+    snap_path = Path(snapshot_output or Path(output).with_suffix(".snapshot.json"))
+    snap_path.parent.mkdir(parents=True, exist_ok=True)
+    snap_path.write_text(json.dumps(table, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {
+        "status": table["status"],
+        "timezone": "Asia/Shanghai",
+        "week_end": table["week_end"],
+        "data_cutoff": table["data_cutoff"],
+        "review_cutoff": table["data_cutoff"],
+        "requested_cutoff": table["requested_cutoff"],
+        "cutoff_boundary": table["cutoff_boundary"],
+        "cutoff_adjusted": table["cutoff_adjusted"],
+        "brief_output": str(brief_path),
+        "snapshot_output": str(snap_path),
+        "missing_levels": table["missing_levels"],
+        "missing_lookbacks": table["missing_lookbacks"],
+        "unverified_sources": table["unverified_sources"],
+        "facts": table["facts"],
+        "prior_week_changes": changes,
+        "stance": stance,
+        "macro_boxes": layers["macro_boxes"],
+        "scorecard": layers["scorecard"],
+        "annex": {
+            "claims_status": annex["claims"]["status"],
+            "scenarios_status": annex["scenarios"]["status"],
+        },
+        "compare": {
+            "status": compare["status"],
+            "rows": compare["rows"],
+        },
+    }
+
+
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Weekly personal review fact table")
+    parser.add_argument("--as-of", required=True)
+    parser.add_argument("--observations-json", required=True)
+    parser.add_argument("--output", default="artifacts/reports/weekly_review.md")
+    parser.add_argument("--prior-snapshot")
+    parser.add_argument("--snapshot-output")
+    parser.add_argument("--config")
+    parser.add_argument("--claims-json")
+    parser.add_argument("--scenarios-json")
+    args = parser.parse_args()
+    result = run_weekly_review(
+        as_of=args.as_of,
+        observations_json=args.observations_json,
+        output=args.output,
+        prior_snapshot=args.prior_snapshot,
+        snapshot_output=args.snapshot_output,
+        config_path=args.config,
+        claims_json=args.claims_json,
+        scenarios_json=args.scenarios_json,
+    )
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
+
+
+__all__ = [
+    "BEIJING",
+    "Observation",
+    "build_fact_table",
+    "compare_weeks",
+    "default_review_cutoff",
+    "latest_on_or_before",
+    "parse_observations",
+    "resolve_cutoff",
+    "run_weekly_review",
+    "to_beijing",
+    "week_end",
+]
