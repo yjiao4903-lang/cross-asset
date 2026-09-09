@@ -335,6 +335,26 @@ def run_weekly_review(
     if prior_snapshot and Path(prior_snapshot).exists():
         prior = json.loads(Path(prior_snapshot).read_text(encoding="utf-8"))
     changes = compare_weeks(table, prior)
+    from cross_asset.research.weekly_layers import build_weekly_layers
+
+    layers = build_weekly_layers(
+        rows,
+        table,
+        cutoff=cutoff,
+        sell_side=list(payload.get("sell_side") or []),
+    )
+    stance = layers["stance"]
+    computed = [
+        {
+            "label": item["label"],
+            "value": f"胜率{item['win']}/赔率{item['odds']}",
+            "unit": "score",
+            "period": table["week_end"],
+            "source": item.get("note", "weekly_layers"),
+        }
+        for item in layers["scorecard"]
+        if item["label"] != "macro_context"
+    ]
     brief = generate_research_brief(
         output=output,
         as_of=table["as_of"],
@@ -342,11 +362,38 @@ def run_weekly_review(
         sources=["weekly_review"],
         completeness=table["status"],
         limitations=_limitations(table),
-        market_facts=_market_facts(table),
+        market_facts=_market_facts(table) + [
+            {
+                "label": item["label"],
+                "value": item.get("value"),
+                "unit": item.get("unit", ""),
+                "period": table["week_end"],
+                "source": item.get("note") or item.get("source", "weekly_layers"),
+            }
+            for item in layers["relatives"] + layers["macro_boxes"]
+        ],
         prior_week_changes=changes,
-        decision_record="不行动：周复盘默认观察，人工填写后才形成候选调整。",
+        computed_signals=computed,
+        decision_record=f"{stance['decision']}。{stance['stance']}。{stance['rule']}",
         next_check=(week_end(review_date) + timedelta(days=7)).isoformat(),
+        research_question="本周价格变动是否被增长/流动性/海外约束支持？",
+        supporting_evidence="见胜率/赔率与宏观四格；两边同向才记倾向。",
+        counterevidence="层间冲突或 overlay 缺失时保持不行动。",
     )
+    brief_path = Path(brief)
+    brief_path.write_text(
+        brief_path.read_text(encoding="utf-8") + layers["markdown"],
+        encoding="utf-8",
+    )
+    table["layers"] = {
+        "relatives": layers["relatives"],
+        "macro_boxes": layers["macro_boxes"],
+        "scorecard": layers["scorecard"],
+        "stance": stance,
+        "overlay_status": {
+            key: value.get("status") for key, value in layers["overlay"].items() if isinstance(value, dict)
+        },
+    }
     snap_path = Path(snapshot_output or Path(output).with_suffix(".snapshot.json"))
     snap_path.parent.mkdir(parents=True, exist_ok=True)
     snap_path.write_text(json.dumps(table, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -355,12 +402,15 @@ def run_weekly_review(
         "timezone": "Asia/Shanghai",
         "week_end": table["week_end"],
         "data_cutoff": table["data_cutoff"],
-        "brief_output": str(brief),
+        "brief_output": str(brief_path),
         "snapshot_output": str(snap_path),
         "missing_levels": table["missing_levels"],
         "missing_lookbacks": table["missing_lookbacks"],
         "facts": table["facts"],
         "prior_week_changes": changes,
+        "stance": stance,
+        "macro_boxes": layers["macro_boxes"],
+        "scorecard": layers["scorecard"],
     }
 
 
