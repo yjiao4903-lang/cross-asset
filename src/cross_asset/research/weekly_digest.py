@@ -13,6 +13,8 @@ from typing import Any
 
 import yaml
 
+from cross_asset.research.weekly_story import build_weekly_story
+
 DEFAULT_CALENDAR = Path("config/weekly_calendar.yml")
 
 
@@ -173,6 +175,7 @@ def build_weekly_digest(
     reviews: list[dict[str, Any]] | None = None,
     depth: dict[str, Any] | None = None,
     calendar_path: str | Path | None = None,
+    story: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     week_end = date.fromisoformat(str(table.get("week_end")))
     depth = depth or {}
@@ -181,11 +184,21 @@ def build_weekly_digest(
     constraint = _binding_constraint(table, boxes, scorecard, depth)
     split = _disagreement(reviews or [])
     decision = stance.get("decision") or "不行动"
+    if story is None:
+        story = build_weekly_story(
+            table=table,
+            boxes=boxes,
+            scorecard=scorecard,
+            stance=stance,
+            depth=depth,
+        )
+    headline = story.get("headline") or happened
     lines = [
         "",
         "## 本周读法",
         "",
-        f"- 观察周 {week_end.isoformat()}。{happened}",
+        f"- 观察周 {week_end.isoformat()}。{headline}",
+        f"- 六条腿备查：{happened}",
         f"- 主导矛盾：{constraint}",
         f"- {split}",
         f"- 结论仍是{decision}。下面的四格和评分是证据，不是另一套口号。",
@@ -202,7 +215,9 @@ def build_weekly_digest(
         "status": "READY",
         "happened": happened,
         "constraint": constraint,
+        "headline": headline,
         "events": events,
+        "story": story,
         "markdown": "\n".join(lines) + "\n",
     }
 
