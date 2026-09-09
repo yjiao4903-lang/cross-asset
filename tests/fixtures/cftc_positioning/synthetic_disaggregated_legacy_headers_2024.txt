@@ -1,0 +1,2 @@
+MarketName,Report_Date_YYYYMMDD,CFTC_Contract_Code,Open_Interest_Total,ProdMerc_Long,ProdMerc_Short,Swap_Long,Swap_Short,Swap_Spread,Managed_Long,Managed_Short,Managed_Spread,OtherReportable_Long,OtherReportable_Short,OtherReportable_Spread,Nonreportable_Long,Nonreportable_Short,Nonreportable_Spread
+Gold - COMEX,20250107,088691,1000,100,50,200,100,20,300,150,30,100,50,10,300,200,5
