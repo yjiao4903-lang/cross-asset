@@ -18,6 +18,15 @@ required_series:
   - {series_id: CN_BOND_10Y, asset_id: CN_BOND, kind: yield, unit: percent}
   - {series_id: GOLD, asset_id: GOLD, kind: price, unit: price}
   - {series_id: COPPER, asset_id: COMMODITY, kind: price, unit: price}
+overlay_series:
+  - {series_id: CN_BOND_2Y, kind: yield, unit: percent}
+  - {series_id: US_GOV_10Y, kind: yield, unit: percent}
+  - {series_id: US_GOV_2Y, kind: yield, unit: percent}
+  - {series_id: CN_DR007, kind: yield, unit: percent}
+  - {series_id: CN_PMI, kind: level, unit: index}
+  - {series_id: CN_CPI, kind: level, unit: percent}
+  - {series_id: CN_PPI, kind: level, unit: percent}
+  - {series_id: CN_M1, kind: level, unit: percent}
 session_close_beijing:
   CN_EQ_LARGE: "15:00"
   HK_EQ: "16:00"
@@ -33,3 +42,5 @@ notes:
   - Missing lookback windows are PARTIAL, never zero-filled.
   - Yield series report level change in basis points, not percent return.
   - This contract does not change strategic weights or authorize trades.
+  - Overlay series feed relative prices, the four-box macro card, and win-rate/odds. Missing overlay is STALE, never DATA_BLOCKED.
+  - Default decision is 不行动. Win-rate and odds must agree before a lean is recorded.
