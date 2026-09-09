@@ -1,6 +1,6 @@
 # 工作包 B/C 最小契约
 
-状态为 `DEVELOPMENT_PRIOR`，examples 仅为 `FIXTURE_ONLY`。B 的 `ResearchClaim` 是 append-only：同 `claim_id + revision` 内容冲突拒绝，修订必须产生递增 revision，历史记录不覆盖；评估结果另存为带 `evaluated_at`/证据引用的 JSONL 记录。统一按带时区 ISO-8601 处理，只有日期/年月输入时按 UTC 日历期间解释。`published_at` 不得晚于 `as_of`，`as_of` 不得晚于评价窗口起点；观测 `as_of` 必须在窗口内且 `available_at <= evaluated_at`。未知发布日期、未到期、无实际值、未来 available_at 或单位不符分别保持 `INSUFFICIENT`/`NOT_DUE`，不自动判胜负。人工定性观点可保留，但应不填写自动 outcome。
+状态为 `DEVELOPMENT_PRIOR`，examples 仅为 `FIXTURE_ONLY`。B 的 `ResearchClaim` 是 append-only：同 `claim_id + revision` 内容冲突拒绝，修订必须产生递增 revision，历史记录不覆盖；评估结果另存为带 `evaluated_at`/证据引用的 JSONL 记录。统一按带时区 ISO-8601 处理，只有日期/年月输入时按 UTC 日历期间解释。`published_at` 必须不晚于冻结的 `as_of`，而预测可以在观测期间开始后发布；只有结果发布前冻结才可评价，观测期与信息可用时间分离；观测 `as_of` 必须在窗口内且 `available_at <= evaluated_at`。未知发布日期、未到期、无实际值、未来 available_at 或单位不符分别保持 `INSUFFICIENT`/`NOT_DUE`，不自动判胜负。人工定性观点可保留，但应不填写自动 outcome。
 
 C 仅支持 `bond_duration` 与 `foreign_asset`。每个 spec 只表示一个明确冲击组合，结果使用单一 `value`，其单位固定为净收益率 fraction（`up/down` 保留为空，避免凭空生成对称情景）。债券公式为 `-duration × shock_bp / 10000 - cost`，外币资产公式为 `(1+local_price_shock) × (1+fx_shock) - 1 - cost`；结果不是预测、概率或期望收益。缺 baseline、shock、unit、duration、currency、成本或 evidence_refs 时返回 `UNESTIMATED`；外币还需 `base_currency`、`quote_currency`，以及严格的 `base_currency_per_quote_currency` 方向（实现示例为 `CNY_per_USD`，表示每 1 USD 对应多少 CNY）。价格指数不会被解释为含息工具。
 
