@@ -790,6 +790,7 @@ def run_daily_command(
                     },
                     "warnings": warnings,
                     "legacy_fallback_used": False,
+                    "brief_output": brief_output,
                 },
                 ensure_ascii=False,
                 sort_keys=True,
