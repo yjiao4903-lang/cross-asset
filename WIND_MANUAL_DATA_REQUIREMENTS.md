@@ -1,84 +1,381 @@
-# Wind 人工取数需求（MVP）
+# Professional Data Manual Backfill Requirements
 
-本文档是本地跨资产引擎的人工导入操作单。Wind 仅用于补足中国市场、宏观与风格数据；它不是模型逻辑，也不要求用户提供账号密码、Token 或截图。当前 Yahoo/FRED 已覆盖的序列不需要重复导出：`US_EQ`、`HK_EQ`、`GOLD`、`COPPER`、`OIL`、`DXY`、`USDCNH` 可优先使用已验证的 Yahoo 数据；`US_GOV_10Y`、`US_REAL_10Y` 的核心宏观来源优先 FRED。`US_GOV_10Y` 的 Yahoo `^TNX` 只能作 auxiliary，默认 `semantic_equivalence=false`，不能替代 FRED。
+> Historical filename retained for compatibility. This document supersedes the old “Wind 人工取数需求（MVP）” workflow.
 
-## 1. 取数优先级
+**Repository**：`yjiao4903-lang/cross-asset`  
+**Purpose**：只定义 Professional Data Bridge 无法自动取得关键专业数据时的**最后人工 fallback**。  
+**Default policy**：用户不应为公共可自动取得的数据逐条导 Wind/iFind Excel。  
+**Must read first**：`docs/DATA_AVAILABILITY_AND_SOURCE_STRATEGY_v1_20260909.md`、`docs/tasks/REQ-PROFESSIONAL-DATA-BRIDGE-W1-20260909.md`、`docs/DATA_ACCEPTANCE_GATE.md`。
 
-- **P0 Live Gate/中国桥**：`CN_EQ_LARGE`、`CN_EQ_SMALL`、`HK_EQ`、`CN_BOND_10Y`。
-- **P1 中国宏观 PIT**：`CN_PMI`、`CN_CPI`、`CN_PPI`、`CN_M1`、`CN_M2`、`CN_SOCIAL_FINANCING`、`CN_DR007`。
-- **P2 风格增强**：可合法定义 SIZE/GROWTH/CYCLICAL/TECH 的指数对；优先日频、价格口径一致、长期稳定的指数。
+---
 
-## 2. 单序列需求
+## 1. Major policy change
 
-Wind 代码只有在终端核对过后才能填写。下表中的“候选代码”均为搜索提示，不是未经核验的事实代码。
+旧版文档曾要求用户人工提供：
 
-| canonical id | 中文名 | Wind 代码/候选 | 类型/频率 | 首次区间 | 单位/币种 | 口径、时区 | PIT/版本 | critical/用途 |
-|---|---|---|---|---|---|---|---|---|
-| CN_EQ_LARGE | 中国大盘权益 | 需在Wind终端确认；关键词：沪深300、中证大盘、large cap index | 指数日频 | 2010-01-01至今 | index points / CNY | 价格指数或全收益必须明确；Asia/Shanghai；不默认复权 | observation_date=交易日；available_at=收盘后可用时间；如无精确时间，采用保守次日 00:00；vintage按导出版本 | P0；中国权益桥 |
-| CN_EQ_SMALL | 中国小盘权益 | 需在Wind终端确认；关键词：中证1000、中证小盘、small cap index | 指数日频 | 2010-01-01至今 | index points / CNY | 必须与 CN_EQ_LARGE 明确同口径 | 同上；保留 vintage_date/is_final | P0；SIZE |
-| HK_EQ | 港股权益 | 已有 Yahoo 主源；Wind 仅 backup，代码需终端确认；关键词：恒生指数/港股宽基 | 指数日频 | 2010-01-01至今 | index points / HKD | 仅在与主源语义等价时才可人工替换 | 交易日、收盘发布时间 | P0 backup；默认 semantic_equivalence=false |
-| CN_BOND_10Y | 中国10年国债 | 需在Wind终端确认；关键词：中债国债10年到期收益率、10Y CGB yield | 收益率日频 | 2010-01-01至今 | percent / CNY | 到期收益率/估值收益率须写清；Asia/Shanghai | available_at 为发布/收盘可用时点；保留修订版本 | P0；中国债券桥 |
-| CN_PMI | 中国制造业PMI | 需在Wind终端确认；关键词：中国制造业采购经理指数 PMI | 宏观月频 | 2005-01-01至今 | index / CNY | 公告值，不是收盘值 | observation_date=统计月份末；available_at=国家统计局公告时间，未知则次月1日后保守 lag；vintage/revision 必须保留 | P1；Macro |
-| CN_CPI | 中国CPI | 需在Wind终端确认；关键词：居民消费价格指数 CPI 当月同比 | 宏观月频 | 2005-01-01至今 | percent / CNY | 同比/环比需分开 | 以正式公告时间为 available_at，不得填月份末 | P1；Macro |
-| CN_PPI | 中国PPI | 需在Wind终端确认；关键词：工业生产者出厂价格指数 PPI 当月同比 | 宏观月频 | 2005-01-01至今 | percent / CNY | 同比/环比需分开 | 同 CN_CPI | P1；Macro |
-| CN_M1 | 中国M1 | 需在Wind终端确认；关键词：M1同比/余额 | 宏观月频 | 2005-01-01至今 | percent 或 CNY bn / CNY | 增速或余额必须明确 | 以央行/统计公告发布时间为 available_at；保留 revision | P1；流动性 |
-| CN_M2 | 中国M2 | 需在Wind终端确认；关键词：M2同比/余额 | 宏观月频 | 2005-01-01至今 | percent 或 CNY bn / CNY | 与 M1 采用同类口径 | 同上 | P1；流动性 |
-| CN_SOCIAL_FINANCING | 社会融资规模 | 需在Wind终端确认；关键词：社会融资规模存量/增量 | 宏观月频 | 2010-01-01至今 | CNY bn / CNY | 存量与增量不可混用 | 公告时间；保留 revision | P1；信用 |
-| CN_DR007 | 银行间质押式回购7天利率 | 需在Wind终端确认；关键词：DR007、存款类机构质押式回购 | 利率日频 | 2015-01-01至今 | percent / CNY | 加权利率口径确认 | observation_date=交易日；available_at=收盘/发布后；必要时保守次日 | P1；流动性 |
-| CN_GROWTH_LHS/RHS | 成长/价值指数对 | 需在Wind终端确认；关键词：中证成长、中证价值、成长价值风格指数 | 指数日频 | 2010-01-01至今 | index points / CNY | 需同一编制机构、价格或全收益一致 | 交易日收盘后 | P2；GROWTH；代码未确认前 UNAVAILABLE |
-| CN_CYCLICAL_LHS/RHS | 周期/防御指数对 | 需在Wind终端确认；关键词：周期、防御、行业风格指数 | 指数日频 | 2010-01-01至今 | index points / CNY | 明确成分与指数口径 | 同上 | P2；CYCLICAL；未确认前 UNAVAILABLE |
-| CN_TECH_LHS/RHS | 科技/红利指数对 | 需在Wind终端确认；关键词：科技、红利、科技红利指数 | 指数日频 | 2010-01-01至今 | index points / CNY | 明确成分、价格/全收益 | 同上 | P2；TECH；未确认前 UNAVAILABLE |
+- CN_EQ_LARGE / CN_EQ_SMALL
+- CN_PMI / CN_CPI / CN_PPI
+- CN_M1 / CN_M2 / CN_SOCIAL_FINANCING
+- CN_DR007
+- China style indices
+- CN_BOND_10Y 等
 
-## 3. Excel 导出模板
+该默认工作流现已废止。
 
-文件可为 `.xlsx` 或 `.csv`，每行一条观察。统一必填列：
+后续必须先执行：
 
 ```text
-series_id,source_series_id,observation_date,available_at,value,unit,currency,timezone,vintage_date,is_final,source
+1. Official public source discovery / ingestion
+2. Public adapter if needed
+3. cross-asset probe-professional-data
+4. Professional API/SDK automatic ingestion
+5. ONLY THEN manual one-time backfill
 ```
 
-Market daily 模板：上述必填列；`observation_date` 为交易日，`available_at` 为收盘后实际可用时刻；可选 `adjustment、price_type、notes`。
+任何开发 LLM 在步骤 1–4 未完成前，不得要求用户手工提供数据。
 
-Macro monthly/release 模板：上述必填列；另外建议 `release_time、release_agency、revision_no、release_lag_days`。`observation_date` 是统计期，不是公告日；`available_at` 必须是公告发布时间，未知时使用保守 lag 并标注 `quality=pIT_conservative_lag`。
+---
 
-Style daily 模板：上述必填列；另外建议 `axis、side`，其中 `side=lhs/rhs`；两边必须有同一交易日、同一价格/全收益口径。
+## 2. Data that should NOT normally be requested from the user
 
-`available_at` 绝不能用 `observation_date` 代替。宏观数据若只有月份而没有公告时间，必须明确标记保守滞后，不能假装精确 PIT。`vintage_date` 不可随意留空；若 Wind 导出的是当前修订值，应标 `is_final` 并在 notes 说明无法重建历史 vintage。
+以下默认由开发端自动解决，不再列入人工 Wind 清单：
 
-## 4. Wind 操作步骤
+### China macro
 
-1. 在 Wind 终端搜索关键词，先核对名称、编制机构、价格/全收益、币种、频率和修订规则。
-2. 打开历史数据/时间序列导出，设置完整起止日期与日历，不要只导出屏幕可见区间。
-3. 核对首行、末行、缺失值、单位和小数位；收益率与指数点不要混在同一文件。
-4. 导出后补齐统一必填列；从公告或资料记录 `available_at`，不要复制 `observation_date`。
-5. 将文件放入 `data/manual_inbox/`，不要改写历史归档文件。
-6. 交付前计算 SHA-256，并保留 Wind 代码、口径、导出时间和权限说明在伴随 notes 中。
+- `CN_PMI` — NBS official release
+- `CN_CPI` — NBS official release
+- `CN_PPI` — NBS official release
+- `CN_M1` — PBOC official release
+- `CN_M2` — PBOC official release
+- `CN_SOCIAL_FINANCING` — PBOC official release
 
-## 5. 文件命名、版本和幂等
+### China leverage
 
-建议命名：`{template_id}_v{version}_{YYYYMMDD}.xlsx`，例如 `market_daily_v1_20260831.xlsx`、`macro_release_v1_20260831.xlsx`、`style_daily_v1_20260831.xlsx`。模板必须有 `template_id`、`version`、required columns 和 mapping。导入器应按 `file_sha256` 幂等：相同文件重复导入不得产生重复 observations；成功后移至 `data/manual_archive/`，原始文件不可覆盖。
+- SSE / SZSE margin financing public disclosures where available
 
-## 6. 首次批次与验收
+### US / Global public layer
 
-建议顺序：先交 P0 四条（各至少 10 年），再交 P1 宏观（至少 15 年，能提供公告时间最好），最后交 P2 风格（至少 10 年）。导出前检查代码/口径/日期/单位/时区；导出后检查必填列、重复日期、NaN、未来 available_at、时间单调性、SHA-256、source_series_id 和语义等价声明。
+- FRED / ALFRED macro and Treasury series
+- NY Fed public rates / term premium / dealer data
+- OFR / NFCI / BIS public datasets
+- CFTC positioning
+- EIA public energy data
+- public market proxies already accepted in existing source mappings
 
-常见错误：把公告月末当可用时间；把全收益当价格指数；把收益率当价格；用不同机构的成长/价值指数直接相除；把 Wind 当前修订值当历史 vintage；把 `^TNX` 当 FRED `DGS10` 的等价替代；同一文件改名后重复导入。
+### Breadth research
 
-示例（仅展示格式，数值为占位符，不是真实数据）：
+A-share EOD breadth should first use an audited public research adapter and/or official/index constituent information; it should not automatically require a professional export.
 
-```csv
-series_id,source_series_id,observation_date,available_at,value,unit,currency,timezone,vintage_date,is_final,source
-CN_EQ_LARGE,WIND_CODE_TO_CONFIRM,2025-01-02,2025-01-02T15:30:00+08:00,<VALUE>,index_points,CNY,Asia/Shanghai,2025-01-02,false,wind_manual
-CN_EQ_SMALL,WIND_CODE_TO_CONFIRM,2025-01-02,2025-01-02T15:30:00+08:00,<VALUE>,index_points,CNY,Asia/Shanghai,2025-01-02,false,wind_manual
-CN_BOND_10Y,WIND_CODE_TO_CONFIRM,2025-01-02,2025-01-03T00:00:00+08:00,<VALUE>,yield_percent,CNY,Asia/Shanghai,2025-01-02,true,wind_manual
-CN_PMI,WIND_CODE_TO_CONFIRM,2024-12-31,2025-01-01T09:30:00+08:00,<VALUE>,index,CNY,Asia/Shanghai,2025-01-01,true,wind_manual
-CN_GROWTH_LHS,WIND_CODE_TO_CONFIRM,2025-01-02,2025-01-02T15:30:00+08:00,<VALUE>,index_points,CNY,Asia/Shanghai,2025-01-02,false,wind_manual
+---
+
+## 3. Data that MAY require Professional Bridge
+
+Only the following high-value areas are expected to require Wind/iFind or another legitimately entitled professional source.
+
+### P0 — CN Rates & Credit
+
+Candidate minimum set:
+
+| canonical target | Description | Priority |
+|---|---|---:|
+| CN_CGB_1Y | CGB 1Y yield | P0 |
+| CN_CGB_2Y | CGB 2Y yield | P0 |
+| CN_CGB_5Y | CGB 5Y yield | P0 |
+| CN_CGB_10Y | CGB 10Y yield | P0 critical |
+| CN_CGB_30Y | CGB 30Y yield | P0 |
+| CN_CDB_5Y | CDB 5Y yield | P0 |
+| CN_CDB_10Y | CDB 10Y yield | P0 |
+| CN_DR007 | official DR007 daily rate | P0 critical |
+| CN_NCD_1Y | representative 1Y NCD rate | P0 |
+| CN_CREDIT_AAA_3Y | stable AAA credit yield/spread component | P0 |
+| CN_CREDIT_AAA_5Y | stable AAA credit yield/spread component | P0 |
+| CN_CREDIT_AAP_3Y | stable AA+ credit component | P0 |
+| CN_CREDIT_AAP_5Y | stable AA+ credit component | P0 |
+
+Exact Wind/iFind code must be discovered by the local bridge or verified in the entitled terminal. No code should be guessed in committed config.
+
+### P0 — Valuation
+
+Candidate minimum set:
+
+- CN large-cap PE/PB/dividend yield
+- CN small-cap PE/PB/dividend yield
+- HK broad index PE/PB/dividend yield
+- selected style/sector valuation spreads
+- forward PE / consensus EPS only if entitlement and historical semantics are adequate
+
+### P1 — Commodity Futures Structure
+
+Candidate set:
+
+- Gold front / 2nd / 3rd
+- Copper front / 2nd / 3rd
+- WTI front / 2nd / 3rd
+- settlement / expiry / open interest / contract identity
+
+This is for carry / term structure. Yahoo continuous futures remain trend proxies only.
+
+### P2 — Optional professional extras
+
+- MOVE
+- selected implied-vol/skew indices
+- true ETF flow
+- consensus revisions
+- richer institutional-flow data
+
+P2 must not block P0/P1.
+
+---
+
+## 4. Preferred user experience
+
+### Normal path — no manual export
+
+User runs once:
+
+```text
+cross-asset probe-professional-data
 ```
 
-## 7. 最小交付清单
+The system identifies available Wind/iFind capabilities and automatically ingests entitled datasets through vendor-supported local SDK/API.
 
-- `market_daily_v1_YYYYMMDD.xlsx`：CN_EQ_LARGE、CN_EQ_SMALL、HK_EQ、CN_BOND_10Y（P0）。
-- `macro_release_v1_YYYYMMDD.xlsx`：CN_PMI、CN_CPI、CN_PPI、CN_M1、CN_M2、CN_SOCIAL_FINANCING、CN_DR007（P1）。
-- `style_daily_v1_YYYYMMDD.xlsx`：经终端确认的三组风格指数对（P2，可后交）。
-- 每个文件的 `template_id/version`、Wind 代码与口径 notes、导出时间、SHA-256。
-- 不需要提供 Wind 凭据；Yahoo/FRED 已覆盖序列无需重复提供。
+User should not need to copy account credentials into ChatGPT/Codex or GitHub.
+
+### Fallback path — only when API entitlement is unavailable
+
+The program generates:
+
+```text
+artifacts/professional_data/manual_backfill_requirements.json
+```
+
+Only unresolved, high-priority professional gaps may appear there.
+
+---
+
+## 5. Maximum manual delivery scope
+
+If manual backfill is genuinely required, compress it into at most two packs.
+
+### Pack A — CN Rates / Credit / Valuation
+
+Suggested filename:
+
+```text
+cn_rates_credit_valuation_v1_YYYYMMDD.xlsx
+```
+
+Possible sheets:
+
+```text
+rates
+credit
+valuation
+metadata
+```
+
+### Pack B — Derivatives Structure
+
+Suggested filename:
+
+```text
+derivatives_structure_v1_YYYYMMDD.xlsx
+```
+
+Possible sheets:
+
+```text
+gold_curve
+copper_curve
+oil_curve
+metadata
+```
+
+Do not create separate user tasks for dozens of individual series unless the vendor export tooling makes one combined pack impossible.
+
+---
+
+## 6. Canonical manual schema
+
+Every imported row must still preserve the project’s canonical audit fields.
+
+Minimum:
+
+```text
+series_id
+source_series_id
+observation_date
+available_at
+value
+unit
+currency
+timezone
+vintage_date
+is_final
+source
+```
+
+Recommended professional metadata:
+
+```text
+provider
+vendor_field
+vendor_code
+exported_at
+price_type
+yield_type
+index_provider
+contract_code
+expiry
+revision_notes
+license_scope_notes
+```
+
+Manual import is not allowed to weaken PIT requirements.
+
+---
+
+## 7. PIT rules for manual professional data
+
+### Market daily / rate daily
+
+- `observation_date` = trading/valuation date
+- `available_at` = earliest point the value could legitimately be used
+- if exact publication time cannot be established, use a documented conservative lag
+
+### Macro
+
+Macro should normally come from public official releases, not manual professional export.
+
+If a professional historical backfill is exceptionally used:
+
+- current revised history must not be represented as historical vintage
+- release date/time evidence must be stored separately
+- inability to reconstruct vintage => research limitation / lower PIT grade
+
+### Valuation / consensus
+
+Must distinguish:
+
+- trailing vs forward
+- observation date vs vendor snapshot date
+- forecast vintage
+- index constituent/version effects
+
+Consensus data without historical snapshot semantics cannot automatically qualify for PIT backtest.
+
+### Futures curve
+
+Must store contract identity and expiry. Continuous synthetic price alone cannot support carry/roll research.
+
+---
+
+## 8. Credential handling
+
+Never ask the user to paste professional credentials into:
+
+- ChatGPT / Codex prompt
+- GitHub issue / PR
+- committed config
+- CLI command history
+
+Allowed local mechanisms:
+
+- `.env` ignored by git
+- OS credential store
+- vendor-native local authenticated session
+
+`.env.example` may contain variable names only.
+
+---
+
+## 9. What the user may need to do — maximum expected interaction
+
+Expected normal interaction should be limited to one of the following:
+
+### Case A — SDK/API already available
+
+```text
+Run capability probe once.
+```
+
+No further action.
+
+### Case B — local vendor SDK exists but requires one-time local login/config
+
+User performs vendor-supported local authentication once; credentials remain local.
+
+### Case C — terminal subscription exists but Data API is not entitled
+
+Only then request Pack A and/or Pack B historical export once.
+
+### Case D — professional dataset is not entitled at all
+
+Do not repeatedly ask the user. Mark:
+
+```text
+PROFESSIONAL_DATA_UNAVAILABLE
+```
+
+Then use public fallback if semantically valid, otherwise `DATA_BLOCKED` / `DEFER`.
+
+---
+
+## 10. Forbidden shortcuts
+
+- Do not ask user to manually export PMI/CPI/PPI/M1/M2/TSF before official-source automation is attempted.
+- Do not use FDR007 as semantic replacement for DR007.
+- Do not use current revised macro history as PIT vintage history.
+- Do not use Yahoo `^TNX` as semantic equivalent of FRED DGS10.
+- Do not use continuous futures price as a valid term-structure/carry dataset.
+- Do not merge economically different credit proxies to fabricate long history.
+- Do not allow a manual file or fixture to bypass acceptance registry.
+- Do not treat professional provider status as research/OOS validation.
+
+---
+
+## 11. Manual file validation
+
+If a file is supplied, importer must validate at least:
+
+- file SHA-256 / idempotency
+- provider identity
+- vendor code / field identity
+- duplicate dates
+- unit consistency
+- timezone
+- future `available_at`
+- observation coverage
+- missingness
+- monotonic timestamps
+- contract expiry for futures
+- valuation semantic metadata
+- credential leakage scan
+
+Successful import still requires normal acceptance before formal consumption.
+
+---
+
+## 12. Developer decision rule
+
+Before generating any manual data request for the user, the implementing LLM must record:
+
+```text
+Official public source checked: YES/NO
+Public adapter checked: YES/NO
+Professional capability probe checked: YES/NO
+Professional API entitlement: AVAILABLE/UNAVAILABLE/UNKNOWN
+Reason manual backfill is unavoidable:
+Exact minimum missing series:
+Expected one-time user action:
+```
+
+If those fields are not available, do not ask the user for data.
+
+---
+
+## 13. Final operating principle
+
+> **The user is not the data pipeline.**
+>
+> Public official data should be automated; professional local entitlements should be bridged automatically; manual export is a one-time emergency/backfill path only.
