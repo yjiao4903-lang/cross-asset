@@ -1,11 +1,16 @@
-from datetime import date, datetime, timedelta
-from typing import Any
+from datetime import date, datetime
 
 import pytest
 
 from cross_asset.research.weekly_depth import build_location
 from cross_asset.research.weekly_layers import build_scorecard, decide_stance, overlay_levels
-from cross_asset.research.weekly_review import BEIJING, Observation, build_fact_table, run_weekly_review, to_beijing
+from cross_asset.research.weekly_review import (
+    BEIJING,
+    Observation,
+    build_fact_table,
+    run_weekly_review,
+    to_beijing,
+)
 
 FIXTURE = "examples/weekly_review_fixture.json"
 
