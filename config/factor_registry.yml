@@ -1,0 +1,158 @@
+version: 0.1
+parameter_status: DEVELOPMENT_PRIOR
+admission_gate_vocab: [G0, G1, G2, G3, G4_FACTOR, G5]
+# G4_FACTOR = roadmap OOS qualification. Distinct from CI PR #54 G4 dual-platform gate.
+default_lane: RESEARCH_STATE
+notes:
+  - Registry entries are G0 specifications, not admitted factors.
+  - production_allocation remains false until G5.
+  - PERSONAL_WEEKLY replay does not promote a factor to RESEARCH_ADMISSIBLE.
+
+factors:
+  MACRO_GROWTH:
+    economic_hypothesis: >
+      Growth-state evidence informs cyclical risk assets. Macro is an evidence
+      source, not the commander of every asset score.
+    canonical_id: MACRO_GROWTH
+    role: [macro]
+    lane: RESEARCH_STATE
+    admission_gate: G0
+    production_allocation: false
+    source_candidate: [CN_PMI, US_PMI, INDUSTRIAL_PRODUCTION]
+    transforms: [level, momentum, acceleration, historical_percentile]
+    target_horizon: [1m, 3m]
+    direction:
+      CN_EQ: positive
+      HK_EQ: positive
+      US_EQ: positive
+      COMMODITY: positive
+      CN_BOND: weak_negative
+    falsification: [incremental_vs_trend_only, regime_stability]
+    status: SPECIFIED
+
+  TREND_PRICE:
+    economic_hypothesis: >
+      Risk-adjusted multi-horizon price persistence is the currently wired
+      trend component. Breadth is not a substitute for this series.
+    canonical_id: TREND_PRICE
+    role: [trend]
+    lane: RESEARCH_STATE
+    admission_gate: G0
+    production_allocation: false
+    source_candidate: [CN_EQ_LARGE, HK_EQ, US_EQ, CN_BOND_10Y, GOLD, COPPER]
+    transforms: [risk_adjusted_log_move]
+    target_horizon: [1m, 3m, 6m, 12m]
+    direction:
+      mapped_asset: positive
+    falsification: [incremental_vs_static, drawdown_prediction]
+    status: SPECIFIED
+
+  RISK_VOL20D:
+    economic_hypothesis: >
+      Short realized volatility is a risk-off damper, not a complete stress
+      system. Credit, funding, and implied-vol term structure remain missing.
+    canonical_id: RISK_VOL20D
+    role: [risk]
+    lane: RESEARCH_STATE
+    admission_gate: G0
+    production_allocation: false
+    source_candidate: [asset_return_series]
+    transforms: [vol_20d, causal_zscore]
+    target_horizon: [1m]
+    direction:
+      mapped_asset: negative
+    falsification: [incremental_vs_trend, stress_period_stability]
+    status: SPECIFIED
+
+  US_2S10S:
+    economic_hypothesis: >
+      The 10Y-2Y slope mixes growth, policy-path, and term-premium information.
+      A flattening or inversion is not a single-factor recession or hawkish flag.
+    canonical_id: US_2S10S
+    role: [rates, structure]
+    lane: RESEARCH_STATE
+    admission_gate: G0
+    production_allocation: false
+    source_candidate: [US_TSY_10Y, US_TSY_2Y]
+    transforms: [level, change_20d, historical_percentile]
+    target_horizon: [1m, 3m]
+    direction:
+      CN_BOND: unspecified
+      US_EQ: unspecified
+    falsification: [decomposition_vs_level_only, regime_stability]
+    status: SPECIFIED
+
+  US_HY_OAS:
+    economic_hypothesis: >
+      Rising high-yield option-adjusted spread represents higher compensation
+      demanded for private credit risk and weaker risk appetite.
+    canonical_id: US_HY_OAS
+    role: [risk, credit_confirmation]
+    lane: RESEARCH_STATE
+    admission_gate: G0
+    production_allocation: false
+    source_candidate: [FRED_BAMLH0A0HYM2]
+    transforms: [level_percentile, change_20d, change_60d]
+    target_horizon: [1w, 1m, 3m]
+    direction:
+      US_EQ: negative
+      HK_EQ: negative
+      CN_EQ: weak_negative
+      CASH: positive
+    falsification: [incremental_vs_macro_trend, drawdown_prediction, regime_stability]
+    status: SPECIFIED
+
+  VAL_US_EQ_EY:
+    economic_hypothesis: >
+      Trailing earnings yield is a valuation and carry-like input. It must be
+      compared to a real or nominal risk-free benchmark, not read as cheap/rich
+      in isolation.
+    canonical_id: VAL_US_EQ_EY
+    role: [valuation]
+    lane: RESEARCH_STATE
+    admission_gate: G0
+    production_allocation: false
+    source_candidate: [pending_licensed_or_vendor]
+    transforms: [level, percentile_5y, vs_real10y]
+    target_horizon: [3m, 12m]
+    direction:
+      US_EQ: positive
+    falsification: [incremental_vs_trend, vs_bond_spread_only]
+    status: SPECIFIED
+
+  CARRY_US_TSY_10Y:
+    economic_hypothesis: >
+      Bond carry is income plus roll-down at a frozen duration and horizon.
+      Yield level is not carry.
+    canonical_id: CARRY_US_TSY_10Y
+    role: [carry]
+    lane: RESEARCH_STATE
+    admission_gate: G0
+    production_allocation: false
+    source_candidate: [US_TSY_curve]
+    transforms: [income_yield, roll_down]
+    target_horizon: [3m]
+    direction:
+      CN_BOND: unspecified
+    falsification: [vs_yield_only, curve_shock_stability]
+    status: SPECIFIED
+
+  EQ_BREADTH_PCT_ABOVE_MA60:
+    economic_hypothesis: >
+      Index trend with collapsing breadth is a poorer quality trend than the
+      same move with rising participation. Breadth confirms structure; it is
+      not a standalone directional alpha.
+    canonical_id: EQ_BREADTH_PCT_ABOVE_MA60
+    role: [structure, trend_quality]
+    lane: RESEARCH_STATE
+    admission_gate: G0
+    production_allocation: false
+    source_candidate: [pending_vendor_constituents]
+    transforms: [level, change_20d]
+    target_horizon: [1m]
+    direction:
+      CN_EQ: confirmation_only
+      HK_EQ: confirmation_only
+      US_EQ: confirmation_only
+    falsification: [incremental_vs_cap_weighted_trend]
+    status: SPECIFIED
