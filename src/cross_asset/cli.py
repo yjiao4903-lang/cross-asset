@@ -309,7 +309,16 @@ def scenario_command(
                 "evidence_refs",
             )
         }
-        result["reason"] = result["formula"] if result["status"] == "UNESTIMATED" else None
+        required = ["baseline", "unit", "as_of", "cost_bps", "evidence_refs"]
+        if raw.get("kind") == "bond_duration":
+            required.extend(["shock", "duration"])
+        elif raw.get("kind") == "foreign_asset":
+            required.extend(["local_price_shock", "fx_shock", "base_currency", "quote_currency", "quote_convention"])
+        missing = [key for key in required if raw.get(key) in (None, "", [])]
+        result["missing_fields"] = missing
+        result["reason"] = (
+            f"missing:{','.join(missing)}" if missing else ("invalid_input_contract" if result["status"] == "UNESTIMATED" else None)
+        )
         results.append(result)
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
