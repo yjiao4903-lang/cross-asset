@@ -1,0 +1,91 @@
+version: "2026-09-09-v1"
+status: ACTIVE
+canonical_control_issue: 35
+identity_model: logical_role_identity
+note: >-
+  These roles are logical execution identities. They are enforced by GitHub records,
+  branch prefixes, Issue/PR contracts and WEB-CONTROL decisions. They are not
+  cryptographically distinct unless separate GitHub accounts/tokens are used.
+
+roles:
+  WEB-CONTROL:
+    window: online
+    description: ChatGPT main control window
+    branch_prefixes: ["control/", "governance/"]
+    may_merge: true
+    may_change_scope: true
+    may_change_architecture: true
+    may_authorize_release: true
+  GPT-DEV:
+    window: online
+    description: GPT online development window
+    branch_prefixes: ["gpt/"]
+    default_routing: ONLINE_DEFAULT
+    may_merge: false
+    may_change_scope: false
+    may_change_architecture: false
+    may_authorize_release: false
+  GROK-DEV:
+    window: online
+    description: Grok online development window
+    branch_prefixes: ["grok/"]
+    default_routing: ONLINE_PARALLEL
+    may_merge: false
+    may_change_scope: false
+    may_change_architecture: false
+    may_authorize_release: false
+  LOCAL-DEV:
+    window: local
+    description: Local PC development window
+    branch_prefixes: ["local/"]
+    default_routing: LOCAL_REQUIRED
+    may_merge: false
+    may_change_scope: false
+    may_change_architecture: false
+    may_authorize_release: false
+
+routing_modes:
+  - ONLINE_DEFAULT
+  - ONLINE_PARALLEL
+  - LOCAL_REQUIRED
+  - PRIMARY_EXECUTOR
+  - RESEARCH_ONLY
+  - REVIEW_ONLY
+  - LOCAL_EVIDENCE
+
+workflow_states:
+  - PROPOSED
+  - READY
+  - IN_PROGRESS
+  - PR_OPEN
+  - REVIEW
+  - MERGE_APPROVED
+  - MERGED
+  - VERIFIED
+  - BLOCKED
+  - DATA_BLOCKED
+  - COORDINATION_BLOCKED
+  - GOVERNANCE_DRIFT
+  - DEFERRED
+  - REJECTED
+
+gate_statuses:
+  - PASS
+  - FAIL
+  - NOT_RUN
+  - CI_INFRA_BLOCKED
+  - DATA_GAP
+  - BLOCKED
+
+rules:
+  no_dispatch_no_work: true
+  branch_per_task: true
+  pr_per_task: true
+  exact_head_evidence_required: true
+  ci_pass_is_not_merge_approval: true
+  merge_requires_web_control: true
+  production_default_deny: true
+  schema_default_deny: true
+  release_default_deny: true
+  research_to_production_requires_explicit_req: true
+  concurrent_same_surface_default_deny: true
