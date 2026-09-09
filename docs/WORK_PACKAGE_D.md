@@ -6,7 +6,7 @@
 
 - `weekly_annex.py` 把可选 `claim-ledger` / `scenario` 结果附到周报末尾。缺文件时标记 `SKIPPED`，不阻断事实表。
 - `weekly-review` 增加 `--claims-json` 与 `--scenarios-json`。附件不改 `stance`。
-- `examples/personal_week_20260828.json` 与更新后的 `examples/personal_week_20260904.json` 是用户 Wind/iFinD 工作簿的压缩个人包。来源一律记 `manual`，对应 `PERSONAL_WEEKLY` provider 门禁。`US_EQ` 故意缺席，因此两周都保持 `DATA_BLOCKED`。
+- `examples/personal_week_20260828.json` 与 `examples/personal_week_20260904.json` 是用户 Wind/iFinD 工作簿的压缩个人包。vendor 名可通过 `source_aliases` 映射到 `manual`，但 `US_EQ` 仍缺席，因此两周都保持 `DATA_BLOCKED`。
 
 ## 验收
 

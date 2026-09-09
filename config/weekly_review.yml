@@ -1,6 +1,16 @@
 version: "0.2"
 status: DEVELOPMENT_PRIOR
 require_source_admission: true
+source_aliases:
+  manual:
+    - manual
+    - wind_manual
+    - sse_ifind
+    - ifind_hsi
+    - wind_comex
+    - wind_ust
+  fred:
+    - fred
 purpose: Personal weekly review cutoff and fact-table contract. Not a trading schedule.
 clock:
   timezone: Asia/Shanghai

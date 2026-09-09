@@ -1,0 +1,42 @@
+{
+  "data_cutoff": "2026-08-29T12:00:00+08:00",
+  "timezone": "Asia/Shanghai",
+  "note": "Compact personal pack for Friday 2026-08-28. Same Wind/iFinD workbook as 2026-09-04, truncated to the prior Saturday noon. US_EQ absent. Not RESEARCH_ADMISSIBLE.",
+  "observations": [
+    {"series_id": "CN_EQ_LARGE", "observation_date": "2026-08-14", "value": 4665.88, "available_at": "2026-08-14T15:00:00+08:00", "source": "sse_ifind"},
+    {"series_id": "CN_EQ_LARGE", "observation_date": "2026-08-28", "value": 4609.18, "available_at": "2026-08-28T15:00:00+08:00", "source": "sse_ifind"},
+    {"series_id": "HK_EQ", "observation_date": "2026-08-14", "value": 25116.85, "available_at": "2026-08-14T16:00:00+08:00", "source": "ifind_hsi"},
+    {"series_id": "HK_EQ", "observation_date": "2026-08-28", "value": 25584.79, "available_at": "2026-08-28T16:00:00+08:00", "source": "ifind_hsi"},
+    {"series_id": "CN_BOND_10Y", "observation_date": "2026-08-14", "value": 1.6952, "available_at": "2026-08-14T15:30:00+08:00", "source": "wind_manual"},
+    {"series_id": "CN_BOND_10Y", "observation_date": "2026-08-28", "value": 1.697, "available_at": "2026-08-28T15:30:00+08:00", "source": "wind_manual"},
+    {"series_id": "GOLD", "observation_date": "2026-08-14", "value": 4373.9, "available_at": "2026-08-15T12:00:00+08:00", "source": "wind_comex"},
+    {"series_id": "GOLD", "observation_date": "2026-08-28", "value": 4453.8, "available_at": "2026-08-29T12:00:00+08:00", "source": "wind_comex"},
+    {"series_id": "COPPER", "observation_date": "2026-08-14", "value": 6.589, "available_at": "2026-08-15T12:00:00+08:00", "source": "wind_comex"},
+    {"series_id": "COPPER", "observation_date": "2026-08-28", "value": 6.5465, "available_at": "2026-08-29T12:00:00+08:00", "source": "wind_comex"},
+    {"series_id": "CN_BOND_2Y", "observation_date": "2026-08-14", "value": 1.2337, "available_at": "2026-08-14T15:30:00+08:00", "source": "wind_manual"},
+    {"series_id": "CN_BOND_2Y", "observation_date": "2026-08-28", "value": 1.2539, "available_at": "2026-08-28T15:30:00+08:00", "source": "wind_manual"},
+    {"series_id": "US_GOV_10Y", "observation_date": "2026-08-14", "value": 4.68, "available_at": "2026-08-15T12:00:00+08:00", "source": "wind_ust"},
+    {"series_id": "US_GOV_10Y", "observation_date": "2026-08-28", "value": 4.73, "available_at": "2026-08-29T12:00:00+08:00", "source": "wind_ust"},
+    {"series_id": "US_GOV_2Y", "observation_date": "2026-08-14", "value": 4.17, "available_at": "2026-08-15T12:00:00+08:00", "source": "wind_ust"},
+    {"series_id": "US_GOV_2Y", "observation_date": "2026-08-28", "value": 4.34, "available_at": "2026-08-29T12:00:00+08:00", "source": "wind_ust"},
+    {"series_id": "CN_DR007", "observation_date": "2026-08-14", "value": 1.3858, "available_at": "2026-08-14T16:00:00+08:00", "source": "wind_manual"},
+    {"series_id": "CN_DR007", "observation_date": "2026-08-28", "value": 1.3859, "available_at": "2026-08-28T16:00:00+08:00", "source": "wind_manual"},
+    {"series_id": "CN_CPI", "observation_date": "2026-07-31", "value": 0.5, "available_at": "2026-08-09T09:00:00+08:00", "source": "wind_manual"},
+    {"series_id": "CN_PPI", "observation_date": "2026-07-31", "value": 3.5, "available_at": "2026-08-09T09:00:00+08:00", "source": "wind_manual"},
+    {"series_id": "CN_M1", "observation_date": "2026-07-31", "value": 4.0, "available_at": "2026-08-14T09:00:00+08:00", "source": "wind_manual"}
+  ],
+  "sell_side": [
+    {
+      "house": "personal_journal",
+      "date": "2026-08-29",
+      "stance": "个人纪要：增长仍偏分化，政策加码但不是一揽子刺激；外部利率仍高。默认不行动。",
+      "theme": "K型增长、通胀上游与下游分裂、外部约束未松",
+      "boxes": {
+        "增长": "走弱",
+        "通胀": "分化",
+        "流动性": "中性",
+        "海外约束": "外部紧"
+      }
+    }
+  ]
+}
