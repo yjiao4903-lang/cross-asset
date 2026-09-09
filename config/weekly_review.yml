@@ -1,0 +1,20 @@
+version: "0.1"
+status: DEVELOPMENT_PRIOR
+purpose: Personal weekly review cutoff and fact-table contract. Not a trading schedule.
+week_end_weekday: Friday
+review_timezone: Asia/Shanghai
+lookbacks:
+  week: {days: 7, label: 1w}
+  month: {days: 21, label: 1m}
+required_series:
+  - {series_id: CN_EQ_LARGE, asset_id: CN_EQ, kind: price, unit: index_points}
+  - {series_id: HK_EQ, asset_id: HK_EQ, kind: price, unit: index_points}
+  - {series_id: US_EQ, asset_id: US_EQ, kind: price, unit: index_points}
+  - {series_id: CN_BOND_10Y, asset_id: CN_BOND, kind: yield, unit: percent}
+  - {series_id: GOLD, asset_id: GOLD, kind: price, unit: price}
+  - {series_id: COPPER, asset_id: COMMODITY, kind: price, unit: price}
+notes:
+  - Missing required latest level fails closed as DATA_BLOCKED.
+  - Missing lookback windows are PARTIAL, never zero-filled.
+  - Yield series report level change in basis points, not percent return.
+  - This contract does not change strategic weights or authorize trades.
