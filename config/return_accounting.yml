@@ -1,0 +1,50 @@
+version: "0.1"
+reporting_currency: CNY
+supported_currencies: [CNY, HKD, USD]
+pricing_basis: decision_to_next_decision_research_proxy
+performance_semantics: research_proxy_not_investor_realizable
+notes:
+  - "CNY is the portfolio reporting currency for the current research configuration."
+  - "Foreign-asset FX mappings remain UNRESOLVED until an approved causal FX series contract is supplied; USDCNH presence alone is not treated as CNY conversion evidence."
+  - "Current observation-to-observation returns are research proxies, not execution-price or investor-realizable returns."
+assets:
+  CN_EQ:
+    local_currency: CNY
+    return_type: PRICE_RETURN
+    hedge_status: UNHEDGED
+    fx_mapping_status: NOT_REQUIRED
+  HK_EQ:
+    local_currency: HKD
+    return_type: PRICE_RETURN
+    hedge_status: UNHEDGED
+    fx_mapping_status: UNRESOLVED
+    fx: null
+  US_EQ:
+    local_currency: USD
+    return_type: PRICE_RETURN
+    hedge_status: UNHEDGED
+    fx_mapping_status: UNRESOLVED
+    fx: null
+  CN_BOND:
+    local_currency: CNY
+    return_type: BOND_YIELD_DURATION_PROXY
+    hedge_status: UNHEDGED
+    fx_mapping_status: NOT_REQUIRED
+  GOLD:
+    local_currency: USD
+    return_type: UNRESOLVED
+    hedge_status: UNHEDGED
+    fx_mapping_status: UNRESOLVED
+    fx: null
+  COMMODITY:
+    local_currency: USD
+    return_type: FUTURES_CONTINUOUS_ROLL_PROXY
+    hedge_status: UNHEDGED
+    fx_mapping_status: UNRESOLVED
+    fx: null
+    futures_roll_semantics: UNVERIFIED
+  CASH:
+    local_currency: CNY
+    return_type: CASH_RATE
+    hedge_status: UNHEDGED
+    fx_mapping_status: NOT_REQUIRED

@@ -11,6 +11,10 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from cross_asset.backtest.accounting import (
+    embedded_accounting_disclosure,
+    embedded_accounting_required_series_ids,
+)
 from cross_asset.backtest.replay import FullModelStrategy
 from cross_asset.backtest.returns import (
     AssetReturnSpec,
@@ -232,12 +236,14 @@ def execute_walk_forward(
     if len(dates) <= development_count:
         raise ValueError("sealed_holdout_dates_missing_from_input")
 
+    accounting_series = embedded_accounting_required_series_ids(model_config.return_specs)
     series_ids = sorted(
         {
             spec.series_id
             for spec in model_config.return_specs.values()
             if spec.series_id is not None
         }
+        | accounting_series
         | set(model_config.macro_config.get("series", {}))
     )
     observations = latest_formal_observations_asof(
@@ -253,6 +259,7 @@ def execute_walk_forward(
         observations["observation_date"],
         utc=True,
     )
+    accounting_disclosure = embedded_accounting_disclosure(model_config.return_specs)
 
     rows = []
     for fold in plan["folds"]:
@@ -304,6 +311,7 @@ def execute_walk_forward(
                         "benchmark": benchmark,
                         "gross_return": gross_return,
                         "asset_returns": asset_returns,
+                        "return_accounting": accounting_disclosure,
                         "allocation_status": _status(strategy),
                         "weights": weights,
                         "train_start": fold["train_start"],
