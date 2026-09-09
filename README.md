@@ -49,7 +49,7 @@ cross-asset validate-data-file <file> [--manifest <yaml-or-json>] [--output <jso
 | US_INDUSTRIAL_PRODUCTION | index | `pct_change_12m` | percent | 指数水平先转同比百分比 |
 | CN_CPI/CN_PPI/CN_M1/CN_M2 | 未冻结 | `ambiguous_raw_semantics`（fail closed） | 不输出 | Wind 原始字段语义待证据快照核对，暂不进入宏观分数 |
 
-WP3 验收覆盖指数同比、同比增速变化 pp、缺月/缺季和 revision cutoff；正式研究仍需冻结来源快照与 PIT 证据。WP6 的 `generate_research_brief` 只渲染已有结构化市场事实和可选持仓字段；没有持仓时明确“未提供”，并保留数据时间、来源、缺失限制、人工研究问题、支持/反证、下次检查及不行动记录。`cross-asset weekly-review` 在此基础上生成周五截止的事实表、1w/1m 变化和“相对上周”对比，缺水平为 `DATA_BLOCKED`、缺回溯为 `PARTIAL`，默认记录不行动。当前交付是辅助研究，不代表交易建议或模型收益验证完成。后续路线是先由 CLI 统一装配这些结构化字段，再以真实周度周期测量追溯率和人工复盘使用情况；旧审计状态证据保留，不将其改写为完成。
+WP3 验收覆盖指数同比、同比增速变化 pp、缺月/缺季和 revision cutoff；正式研究仍需冻结来源快照与 PIT 证据。WP6 的 `generate_research_brief` 只渲染已有结构化市场事实和可选持仓字段；没有持仓时明确“未提供”，并保留数据时间、来源、缺失限制、人工研究问题、支持/反证、下次检查及不行动记录。`cross-asset weekly-review` 在此基础上生成周五观察周的事实表、1w/21d_calendar 变化和“相对上周”对比，缺水平为 `DATA_BLOCKED`、缺回溯为 `PARTIAL`，默认记录不行动。当前交付是辅助研究，不代表交易建议或模型收益验证完成。后续路线是先由 CLI 统一装配这些结构化字段，再以真实周度周期测量追溯率和人工复盘使用情况；旧审计状态证据保留，不将其改写为完成。
 
 ```text
 cross-asset weekly-review --as-of 2026-09-09 \

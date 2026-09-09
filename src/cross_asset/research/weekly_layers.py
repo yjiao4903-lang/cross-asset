@@ -18,14 +18,14 @@ from cross_asset.research.weekly_views import (
 )
 
 OVERLAY_DEFAULTS = [
-    {"series_id": "CN_BOND_2Y", "kind": "yield"},
-    {"series_id": "US_GOV_10Y", "kind": "yield"},
-    {"series_id": "US_GOV_2Y", "kind": "yield"},
-    {"series_id": "CN_DR007", "kind": "yield"},
-    {"series_id": "CN_PMI", "kind": "level"},
-    {"series_id": "CN_CPI", "kind": "level"},
-    {"series_id": "CN_PPI", "kind": "level"},
-    {"series_id": "CN_M1", "kind": "level"},
+    {"series_id": "CN_BOND_2Y", "kind": "yield", "max_age_days": 7},
+    {"series_id": "US_GOV_10Y", "kind": "yield", "max_age_days": 7},
+    {"series_id": "US_GOV_2Y", "kind": "yield", "max_age_days": 7},
+    {"series_id": "CN_DR007", "kind": "yield", "max_age_days": 7},
+    {"series_id": "CN_PMI", "kind": "level", "max_age_days": 45},
+    {"series_id": "CN_CPI", "kind": "level", "max_age_days": 60},
+    {"series_id": "CN_PPI", "kind": "level", "max_age_days": 60},
+    {"series_id": "CN_M1", "kind": "level", "max_age_days": 60},
 ]
 
 
@@ -63,6 +63,7 @@ def overlay_levels(
     week_end_date: date,
     cutoff: datetime,
     specs: list[dict[str, Any]] | None = None,
+    max_age_days: int = 7,
 ) -> dict[str, dict[str, Any]]:
     from cross_asset.research.weekly_review import latest_on_or_before
 
@@ -70,6 +71,11 @@ def overlay_levels(
     for spec in specs or OVERLAY_DEFAULTS:
         series_id = spec["series_id"]
         current = latest_on_or_before(rows, series_id, week_end_date, cutoff)
+        stale = current is not None and (
+            week_end_date - current.observation_date
+        ).days > int(spec.get("max_age_days", max_age_days))
+        if stale:
+            current = None
         out[series_id] = {
             "series_id": series_id,
             "kind": spec.get("kind", "level"),
@@ -447,6 +453,13 @@ def build_weekly_layers(
     boxes = build_macro_boxes(overlay)
     scorecard = build_scorecard(table, overlay, boxes)
     stance = decide_stance(scorecard)
+    if table.get("status") == "DATA_BLOCKED":
+        stance = {
+            "decision": "不行动",
+            "stance": "核心事实缺失，禁止形成资产倾向",
+            "leans": [],
+            "rule": "DATA_BLOCKED：核心事实不足时不计算方向倾向，不改战略权重。",
+        }
     reviews = compare_sell_side(boxes, sell_side)
     narratives = build_narratives(boxes, relatives, scorecard)
     depth = build_weekly_depth(

@@ -181,10 +181,11 @@ def build_fact_table(
         if current is not None and current.value is not None:
             source_status = (
                 "ADMITTED"
-                if expected_provider is None or current.source.lower() == str(expected_provider).lower()
+                if expected_provider is not None
+                and current.source.lower() == str(expected_provider).lower()
                 else "UNVERIFIED"
             )
-            if source_status == "UNVERIFIED":
+            if source_status == "UNVERIFIED" and cfg.get("require_source_admission", False):
                 unverified_sources.append(series_id)
         fact = {
             "label": spec.get("asset_id", series_id),
@@ -350,17 +351,25 @@ def run_weekly_review(
     rows = parse_observations(list(payload.get("observations") or payload.get("rows") or []))
     review_date = _as_date(as_of)
     observation_week_end = _as_date(week_end_date) if week_end_date is not None else None
+    requested_cutoff = review_cutoff if review_cutoff is not None else payload.get("data_cutoff")
+    review_end = observation_week_end or week_end(
+        review_date, config.get("week_end_weekday", "Friday")
+    )
+    review_boundary = default_review_cutoff(review_end, _review_time(config))
     if review_cutoff is not None:
         # Explicitly separate the Friday observation week from the Saturday
         # information cutoff while never permitting data after the configured
         # review boundary.
-        review_end = observation_week_end or week_end(
-            review_date, config.get("week_end_weekday", "Friday")
-        )
-        cutoff = min(
-            to_beijing(review_cutoff),
-            default_review_cutoff(review_end, _review_time(config)),
-        )
+        requested = to_beijing(review_cutoff)
+        if requested > review_boundary:
+            raise ValueError(
+                f"review_cutoff exceeds configured boundary {review_boundary.isoformat()}"
+            )
+        if observation_week_end is None and requested.date() > review_date:
+            raise ValueError(
+                "a cutoff after as_of requires explicit --week-end to separate observation and review dates"
+            )
+        cutoff = requested
     else:
         cutoff = resolve_cutoff(
             as_of=review_date,
@@ -373,6 +382,14 @@ def run_weekly_review(
         cutoff=cutoff,
         config=config,
         week_end_date=observation_week_end,
+    )
+    table["requested_cutoff"] = (
+        None if requested_cutoff is None else to_beijing(requested_cutoff).isoformat()
+    )
+    table["cutoff_boundary"] = review_boundary.isoformat()
+    table["cutoff_adjusted"] = (
+        requested_cutoff is not None
+        and to_beijing(requested_cutoff) != cutoff
     )
     prior = None
     if prior_snapshot and Path(prior_snapshot).exists():
@@ -446,6 +463,9 @@ def run_weekly_review(
         "week_end": table["week_end"],
         "data_cutoff": table["data_cutoff"],
         "review_cutoff": table["data_cutoff"],
+        "requested_cutoff": table["requested_cutoff"],
+        "cutoff_boundary": table["cutoff_boundary"],
+        "cutoff_adjusted": table["cutoff_adjusted"],
         "brief_output": str(brief_path),
         "snapshot_output": str(snap_path),
         "missing_levels": table["missing_levels"],

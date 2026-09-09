@@ -9,6 +9,7 @@ exist. Nothing here changes strategic weights or emits trades.
 
 from __future__ import annotations
 
+import math
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -560,7 +561,7 @@ def build_location(
                 }
             )
             continue
-        history = []
+        history_by_day = {}
         for row in rows:
             if getattr(row, "series_id", None) != series_id:
                 continue
@@ -572,19 +573,13 @@ def build_location(
                 continue
             if to_beijing(available) > edge:
                 continue
-            history.append(float(row.value))
-        history_days = []
-        for row in rows:
-            day = getattr(row, "observation_date", None)
-            available = getattr(row, "available_at", None)
-            if (
-                getattr(row, "series_id", None) == series_id
-                and day is not None
-                and start <= day <= week_end
-                and available is not None
-                and to_beijing(available) <= edge
-            ):
-                history_days.append(day)
+            if row.value is None or not math.isfinite(float(row.value)):
+                continue
+            prior = history_by_day.get(day)
+            if prior is None or to_beijing(available) > to_beijing(prior[1]):
+                history_by_day[day] = (float(row.value), available)
+        history = [item[0] for item in history_by_day.values()]
+        history_days = list(history_by_day)
         if len(history) < MIN_PERCENTILE_SAMPLES:
             out.append(
                 {
@@ -593,7 +588,7 @@ def build_location(
                     "samples": len(history),
                     "history_start": min(history_days).isoformat() if history_days else None,
                     "history_end": max(history_days).isoformat() if history_days else None,
-                    "n_unique_periods": len(set(history_days)),
+                    "n_unique_periods": len(history_by_day),
                     "note": "一年样本不足 20，分位留空，避免用三个点假装历史",
                 }
             )
@@ -605,7 +600,7 @@ def build_location(
                 "samples": len(history),
                 "history_start": min(history_days).isoformat() if history_days else None,
                 "history_end": max(history_days).isoformat() if history_days else None,
-                "n_unique_periods": len(set(history_days)),
+                "n_unique_periods": len(history_by_day),
                 "note": "可见样本内的经验分位，不是正式风险模型",
             }
         )
