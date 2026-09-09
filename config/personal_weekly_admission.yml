@@ -1,0 +1,58 @@
+version: "0.1"
+status: DEVELOPMENT_PRIOR
+usage: PERSONAL_WEEKLY
+timezone: Asia/Shanghai
+description: Mixed-provider admission for personal weekly replay. Does not satisfy the Wind-only six-series production gate and does not grant RESEARCH_ADMISSIBLE.
+series:
+  CN_EQ_LARGE:
+    provider: manual
+    source_series_id: CN_EQ_LARGE
+    kind: price
+    available_at_rule: CN_SESSION_CLOSE_BEIJING
+    usage: PERSONAL_WEEKLY
+  HK_EQ:
+    provider: manual
+    source_series_id: HK_EQ
+    kind: price
+    available_at_rule: HK_SESSION_CLOSE_BEIJING
+    usage: PERSONAL_WEEKLY
+  US_EQ:
+    provider: fred
+    source_series_id: SP500
+    instrument_semantics: SP500_PRICE_INDEX
+    kind: price
+    available_at_rule: FRED_SP500_BEIJING_CONSERVATIVE
+    available_at_basis: POLICY_DERIVED
+    usage: PERSONAL_WEEKLY
+    notes:
+      - FRED SP500 is a price index and excludes dividends.
+      - Public FRED window is about ten years of daily history.
+      - Conservative available_at is Saturday 12:00 Beijing after a Friday US session.
+    backup:
+      provider: yahoo
+      source_series_id: "^GSPC"
+      usage: PERSONAL_WEEKLY_BACKUP
+  CN_BOND_10Y:
+    provider: manual
+    source_series_id: CN_BOND_10Y
+    kind: yield
+    available_at_rule: CN_SESSION_CLOSE_BEIJING
+    usage: PERSONAL_WEEKLY
+  GOLD:
+    provider: manual
+    source_series_id: GOLD
+    kind: price
+    available_at_rule: COMEX_CLOSE_BEIJING_CONSERVATIVE
+    usage: PERSONAL_WEEKLY
+  COPPER:
+    provider: manual
+    source_series_id: COPPER
+    kind: price
+    available_at_rule: COMEX_CLOSE_BEIJING_CONSERVATIVE
+    usage: PERSONAL_WEEKLY
+rules:
+  require_available_at_le_decision_time: true
+  decision_time: "Saturday 12:00 Asia/Shanghai"
+  zero_imputation: false
+  mixed_providers_allowed: true
+  production_wind_gate: not_claimed

@@ -1,5 +1,7 @@
-version: 0.1
+version: 0.2
 timezone: Asia/Shanghai
+label: 北京时间
 jobs:
   - {name: shadow_daily, frequency: daily, command: shadow-run, enabled: true, local_time: "16:00"}
-  - {name: shadow_weekly, frequency: weekly, day: Friday, command: weekly-shadow-report, enabled: true, local_time: "16:00"}
+  - {name: shadow_weekly, frequency: weekly, day: Saturday, command: weekly-shadow-report, enabled: true, local_time: "12:00"}
+  - {name: weekly_review, frequency: weekly, day: Saturday, command: weekly-review, enabled: true, local_time: "12:00"}

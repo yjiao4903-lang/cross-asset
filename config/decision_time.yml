@@ -1,13 +1,18 @@
-version: "0.1"
+version: "0.2"
 timezone: Asia/Shanghai
+label: 北京时间
 frequency: weekly
+naive_timestamps: interpret_as_asia_shanghai
 decision_time:
   weekday: Saturday
   local_time: "12:00"
   effective_from: next_available_session
   conservative: true
 markets:
-  US: {timezone: America/New_York, cutoff: session_close}
-  CN: {timezone: Asia/Shanghai, cutoff: session_close}
-  HK: {timezone: Asia/Hong_Kong, cutoff: session_close}
-  FX: {timezone: UTC, cutoff: calendar_day_end}
+  US: {timezone: America/New_York, cutoff: session_close, beijing_after_close: "04:00-05:00 next calendar day"}
+  CN: {timezone: Asia/Shanghai, cutoff: session_close, beijing_after_close: "15:00 same calendar day"}
+  HK: {timezone: Asia/Hong_Kong, cutoff: session_close, beijing_after_close: "16:00 same calendar day"}
+  FX: {timezone: Asia/Shanghai, cutoff: calendar_day_end, beijing_after_close: "24:00 same calendar day"}
+notes:
+  - Comparison clock is always Asia/Shanghai.
+  - Market session timezones are only used to derive Beijing available_at.

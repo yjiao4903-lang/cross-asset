@@ -1,8 +1,13 @@
-version: "0.1"
+version: "0.2"
 status: DEVELOPMENT_PRIOR
 purpose: Personal weekly review cutoff and fact-table contract. Not a trading schedule.
+clock:
+  timezone: Asia/Shanghai
+  label: 北京时间
+  naive_timestamps: interpret_as_asia_shanghai
 week_end_weekday: Friday
-review_timezone: Asia/Shanghai
+review_weekday: Saturday
+review_local_time: "12:00"
 lookbacks:
   week: {days: 7, label: 1w}
   month: {days: 21, label: 1m}
@@ -13,7 +18,17 @@ required_series:
   - {series_id: CN_BOND_10Y, asset_id: CN_BOND, kind: yield, unit: percent}
   - {series_id: GOLD, asset_id: GOLD, kind: price, unit: price}
   - {series_id: COPPER, asset_id: COMMODITY, kind: price, unit: price}
+session_close_beijing:
+  CN_EQ_LARGE: "15:00"
+  HK_EQ: "16:00"
+  CN_BOND_10Y: "15:30"
+  US_EQ: "次日 04:00–05:00（视夏令时）；FRED 保守记次日 12:00 前"
+  GOLD: "次日 05:00–06:00；保守记次日 12:00 前"
+  COPPER: "次日 05:00–06:00；保守记次日 12:00 前"
 notes:
+  - 所有比较时钟为北京时间 Asia/Shanghai。无时区时间戳按北京时间解释。
+  - 观察日仍按各市场交易日（周五周终），复盘截止默认为次日周六 12:00 北京时间。
+  - 周五北京晚间看不到当周美股/COMEX 收盘；周六 12:00 可以看到。
   - Missing required latest level fails closed as DATA_BLOCKED.
   - Missing lookback windows are PARTIAL, never zero-filled.
   - Yield series report level change in basis points, not percent return.
