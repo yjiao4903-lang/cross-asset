@@ -43,6 +43,7 @@ def generate_research_brief(
     next_check: Any = None,
     decision_record: Any = None,
     computed_signals: Any = None,
+    prior_week_changes: Any = None,
 ) -> Path:
     """Write a descriptive, human-reviewable brief from existing fields."""
     source_text = sources if sources is not None else "来源未提供"
@@ -51,19 +52,30 @@ def generate_research_brief(
     support = supporting_evidence if supporting_evidence is not None else "待人工填写"
     counter = counterevidence if counterevidence is not None else "待人工填写"
     check = next_check if next_check is not None else "待人工填写"
-    decision = decision_record if decision_record is not None else "不行动记录：待人工填写（本简报不产生交易建议）"
+    decision = (
+        decision_record
+        if decision_record is not None
+        else "不行动记录：待人工填写（本简报不产生交易建议）"
+    )
 
     text = "# 个人研究简报\n\n"
     text += f"- 数据截至（as_of）：{as_of if as_of is not None else '未提供'}\n"
     text += f"- 数据截点（data_cutoff）：{data_cutoff if data_cutoff is not None else '未提供'}\n"
     text += f"- 来源：{source_text}\n"
-    text += "- 用途：辅助人工研究；不构成交易建议，也不宣称投资验证完成。\n\n"
+    text += "- 用途：辅助人工周度复盘；不构成交易建议，也不宣称投资验证完成。\n\n"
     text += "## 数据完整性与限制\n\n"
     text += f"- 完整性：{completeness if completeness is not None else '未提供'}\n"
     text += f"- 缺失与限制：{limitations if limitations is not None else '未提供'}\n\n"
     text += "## 市场事实\n\n"
     facts = _items(market_facts)
     text += "\n".join(_fact_line(item) for item in facts) if facts else "- 未提供结构化市场事实"
+    text += "\n\n## 相对上周\n\n"
+    changes = _items(prior_week_changes)
+    text += (
+        "\n".join(_fact_line(item) for item in changes)
+        if changes
+        else "- 未提供上周快照；无法计算周度变化"
+    )
     text += "\n\n## 持仓上下文\n\n"
     if holding_lines:
         text += "\n".join(_fact_line(item) for item in holding_lines)
@@ -72,11 +84,11 @@ def generate_research_brief(
     text += "\n\n## 计算信号（模型输出）\n\n"
     signals = _items(computed_signals)
     text += "\n".join(_fact_line(item) for item in signals) if signals else "- 未提供计算信号"
-    text += "\n\n## 模型计算信号（非市场事实）\n\n"
-    signals = _items(computed_signals)
-    text += "\n".join(_fact_line(item) for item in signals) if signals else "- 未提供计算信号"
     text += "\n\n## 人工研究记录\n\n"
-    text += f"- 研究问题：{question}\n- 支持证据：{support}\n- 反证/反例：{counter}\n- 下次检查：{check}\n- 人工决定与理由：{decision}\n"
+    text += (
+        f"- 研究问题：{question}\n- 支持证据：{support}\n- 反证/反例：{counter}\n"
+        f"- 下次检查：{check}\n- 人工决定与理由：{decision}\n"
+    )
 
     path = Path(output)
     path.parent.mkdir(parents=True, exist_ok=True)
