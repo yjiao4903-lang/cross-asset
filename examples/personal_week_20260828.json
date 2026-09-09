@@ -1,12 +1,15 @@
 {
   "data_cutoff": "2026-08-29T12:00:00+08:00",
   "timezone": "Asia/Shanghai",
-  "note": "Compact personal pack for Friday 2026-08-28. Same Wind/iFinD workbook as 2026-09-04, truncated to the prior Saturday noon. US_EQ absent. Not RESEARCH_ADMISSIBLE.",
+  "note": "Compact personal pack for Friday 2026-08-28. Wind/iFinD workbook plus FRED public SP500 CSV. Not RESEARCH_ADMISSIBLE.",
   "observations": [
     {"series_id": "CN_EQ_LARGE", "observation_date": "2026-08-14", "value": 4665.88, "available_at": "2026-08-14T15:00:00+08:00", "source": "sse_ifind"},
     {"series_id": "CN_EQ_LARGE", "observation_date": "2026-08-28", "value": 4609.18, "available_at": "2026-08-28T15:00:00+08:00", "source": "sse_ifind"},
     {"series_id": "HK_EQ", "observation_date": "2026-08-14", "value": 25116.85, "available_at": "2026-08-14T16:00:00+08:00", "source": "ifind_hsi"},
     {"series_id": "HK_EQ", "observation_date": "2026-08-28", "value": 25584.79, "available_at": "2026-08-28T16:00:00+08:00", "source": "ifind_hsi"},
+    {"series_id": "US_EQ", "observation_date": "2026-08-07", "value": 7757.64, "available_at": "2026-08-08T12:00:00+08:00", "source": "fred"},
+    {"series_id": "US_EQ", "observation_date": "2026-08-14", "value": 7785.76, "available_at": "2026-08-15T12:00:00+08:00", "source": "fred"},
+    {"series_id": "US_EQ", "observation_date": "2026-08-28", "value": 7711.76, "available_at": "2026-08-29T12:00:00+08:00", "source": "fred"},
     {"series_id": "CN_BOND_10Y", "observation_date": "2026-08-14", "value": 1.6952, "available_at": "2026-08-14T15:30:00+08:00", "source": "wind_manual"},
     {"series_id": "CN_BOND_10Y", "observation_date": "2026-08-28", "value": 1.697, "available_at": "2026-08-28T15:30:00+08:00", "source": "wind_manual"},
     {"series_id": "GOLD", "observation_date": "2026-08-14", "value": 4373.9, "available_at": "2026-08-15T12:00:00+08:00", "source": "wind_comex"},

@@ -1,7 +1,7 @@
 {
   "data_cutoff": "2026-09-05T12:00:00+08:00",
   "timezone": "Asia/Shanghai",
-  "note": "Compact personal pack from user Wind/iFinD workbooks. US_EQ is absent on purpose. Not RESEARCH_ADMISSIBLE.",
+  "note": "Compact personal pack from user Wind/iFinD workbooks plus FRED public SP500 CSV. Not RESEARCH_ADMISSIBLE.",
   "observations": [
     {"series_id": "CN_EQ_LARGE", "observation_date": "2026-08-14", "value": 4665.88, "available_at": "2026-08-14T15:00:00+08:00", "source": "sse_ifind"},
     {"series_id": "CN_EQ_LARGE", "observation_date": "2026-08-28", "value": 4609.18, "available_at": "2026-08-28T15:00:00+08:00", "source": "sse_ifind"},
@@ -9,6 +9,9 @@
     {"series_id": "HK_EQ", "observation_date": "2026-08-14", "value": 25116.85, "available_at": "2026-08-14T16:00:00+08:00", "source": "ifind_hsi"},
     {"series_id": "HK_EQ", "observation_date": "2026-08-28", "value": 25584.79, "available_at": "2026-08-28T16:00:00+08:00", "source": "ifind_hsi"},
     {"series_id": "HK_EQ", "observation_date": "2026-09-04", "value": 25650.87, "available_at": "2026-09-04T16:00:00+08:00", "source": "ifind_hsi"},
+    {"series_id": "US_EQ", "observation_date": "2026-08-14", "value": 7785.76, "available_at": "2026-08-15T12:00:00+08:00", "source": "fred"},
+    {"series_id": "US_EQ", "observation_date": "2026-08-28", "value": 7711.76, "available_at": "2026-08-29T12:00:00+08:00", "source": "fred"},
+    {"series_id": "US_EQ", "observation_date": "2026-09-04", "value": 7718.60, "available_at": "2026-09-05T12:00:00+08:00", "source": "fred"},
     {"series_id": "CN_BOND_10Y", "observation_date": "2026-08-14", "value": 1.6952, "available_at": "2026-08-14T15:30:00+08:00", "source": "wind_manual"},
     {"series_id": "CN_BOND_10Y", "observation_date": "2026-08-28", "value": 1.697, "available_at": "2026-08-28T15:30:00+08:00", "source": "wind_manual"},
     {"series_id": "CN_BOND_10Y", "observation_date": "2026-09-04", "value": 1.68, "available_at": "2026-09-04T15:30:00+08:00", "source": "wind_manual"},
@@ -37,10 +40,10 @@
   ],
   "sell_side": [
     {
-      "house": "personal_placeholder",
+      "house": "personal_journal",
       "date": "2026-09-05",
-      "stance": "占位，待本周卖方纪要替换",
-      "theme": "增长偏弱、流动性不紧、外部利率仍高",
+      "stance": "个人纪要：A股继续走弱、港股相对强、黄金续涨、国债利率略下。美股用 FRED SP500 公共 CSV，默认不行动。",
+      "theme": "弱增长、资金略松、外部利率仍高、A/H分化",
       "boxes": {
         "增长": "走弱",
         "通胀": "分化",
