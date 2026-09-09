@@ -126,7 +126,13 @@ def evaluate_claim(claim: ResearchClaim, *, now: Any, observation: EventObservat
         return replace(claim, status="INSUFFICIENT")
     # A date-only ``as_of`` is a whole calendar-day cutoff.  Compare calendar
     # dates so a 09:00 publication on the stated day is not rejected.
-    if published is None or published > frozen or published >= release:
+    if (
+        published is None
+        or published > frozen
+        or published >= release
+        or frozen >= release
+        or frozen > current
+    ):
         return replace(claim, status="INSUFFICIENT")
     # A date-only freeze has no intraday ordering.  Do not claim that a
     # same-day publication was known before that freeze.

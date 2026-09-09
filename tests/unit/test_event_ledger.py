@@ -59,6 +59,15 @@ def test_prediction_after_period_start_is_valid_but_same_day_date_freeze_is_not(
     assert evaluate_claim(ambiguous, now="2026-10-02T00:00:00+00:00", observation=obs()).status == "INSUFFICIENT"
 
 
+def test_freeze_after_release_is_not_a_valid_historical_evaluation():
+    late_freeze = claim(
+        claim_id="c4",
+        as_of="2026-10-01T10:00:00+08:00",
+        published_at="2026-09-20T09:00:00+08:00",
+    )
+    assert evaluate_claim(late_freeze, now="2026-10-02T00:00:00+00:00", observation=obs()).status == "INSUFFICIENT"
+
+
 def test_evaluation_is_separate_persisted_append_only_record():
     ledger, record = ClaimLedger().add(claim()).evaluate("c1", now="2026-10-02T00:00:00+00:00", observation=obs())
     assert record.status == "SUPPORTED" and record.evidence_refs == ("fixture:actual",)
