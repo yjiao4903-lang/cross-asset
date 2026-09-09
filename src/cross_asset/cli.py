@@ -247,6 +247,70 @@ def research_brief_command(
     typer.echo(json.dumps({"status": "SUCCESS", "output": str(path)}, ensure_ascii=False))
 
 
+@app.command("claim-ledger")
+def claim_ledger_command(
+    input_json: str = typer.Option(..., "--input", help="Claim/observation JSON fixture."),
+    ledger_output: str = typer.Option("artifacts/research/claim_ledger.jsonl", "--ledger-output"),
+    now: str = typer.Option(..., "--now", help="Evaluation cutoff timestamp (ISO-8601)."),
+) -> None:
+    """Append claims, evaluate due observations, and persist the JSONL ledger."""
+    from dataclasses import asdict
+    from pathlib import Path
+
+    from .research.event_ledger import ClaimLedger, EventObservation, ResearchClaim
+
+    payload = json.loads(Path(input_json).read_text(encoding="utf-8"))
+    ledger_path = Path(ledger_output)
+    ledger = ClaimLedger.from_jsonl(ledger_path.read_text(encoding="utf-8")) if ledger_path.exists() else ClaimLedger()
+    for raw in payload.get("claims", []):
+        raw = dict(raw)
+        raw["evidence_refs"] = tuple(raw.get("evidence_refs", ()))
+        raw["alternative_explanations"] = tuple(raw.get("alternative_explanations", ()))
+        ledger = ledger.add(ResearchClaim(**raw))
+    observations = {
+        key: EventObservation(**dict(value))
+        for key, value in payload.get("observations", {}).items()
+    }
+    evaluations = []
+    for claim_id in {item["claim_id"] for item in ledger.records()}:
+        if claim_id not in observations:
+            continue
+        ledger, record = ledger.evaluate(claim_id, now=now, observation=observations[claim_id])
+        evaluations.append(asdict(record))
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    ledger_path.write_text(ledger.to_jsonl(), encoding="utf-8")
+    typer.echo(json.dumps({"status": payload.get("status", "DEVELOPMENT_PRIOR"), "ledger_output": str(ledger_path), "claims": ledger.records(), "evaluations": evaluations}, ensure_ascii=False))
+
+
+@app.command("scenario")
+def scenario_command(
+    input_json: str = typer.Option(..., "--input", help="Scenario JSON fixture."),
+    output: str = typer.Option("artifacts/reports/scenarios.json", "--output"),
+) -> None:
+    """Evaluate transparent assumptions and write JSON plus a readable report."""
+    from dataclasses import asdict
+    from pathlib import Path
+
+    from .research.scenarios import ScenarioSpec, evaluate_scenario
+
+    payload = json.loads(Path(input_json).read_text(encoding="utf-8"))
+    results = []
+    for raw in payload.get("scenarios", []):
+        raw = dict(raw)
+        raw["evidence_refs"] = tuple(raw.get("evidence_refs", ()))
+        raw["assumptions"] = tuple(raw.get("assumptions", ()))
+        results.append(asdict(evaluate_scenario(ScenarioSpec(**raw))))
+    output_path = Path(output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps({"status": payload.get("status", "DEVELOPMENT_PRIOR"), "results": results}, ensure_ascii=False, indent=2), encoding="utf-8")
+    report_path = output_path.with_suffix(".md")
+    lines = ["# Scenario review", "", "状态：DEVELOPMENT_PRIOR；结果是计算情景，不是预测、概率或期望收益。", ""]
+    for result in results:
+        lines.extend([f"## {result['scenario_id']} ({result['status']})", "", f"- value: {result['value']}", f"- formula: `{result['formula']}`", f"- assumptions: {', '.join(result['assumptions']) or '未提供'}", f"- evidence_refs: {', '.join(result['evidence_refs']) or '未提供'}", ""])
+    report_path.write_text("\n".join(lines), encoding="utf-8")
+    typer.echo(json.dumps({"status": payload.get("status", "DEVELOPMENT_PRIOR"), "output": str(output_path), "report_output": str(report_path), "results": results}, ensure_ascii=False))
+
+
 @app.command("weekly-review")
 def weekly_review_command(
     as_of: str = typer.Option(..., "--as-of", help="Information cutoff date (ISO date)."),
