@@ -607,13 +607,35 @@ def run_daily_command(
     decision_time = datetime.combine(decision_date, time.max)
 
     settings = get_settings()
-    allocation_path = Path(settings.cross_asset_config_dir) / "allocation.yml"
+    config_dir = Path(settings.cross_asset_config_dir)
+    allocation_path = config_dir / "allocation.yml"
     allocation_cfg = yaml.safe_load(
         allocation_path.read_text(encoding="utf-8")
     )
     strategic_weights = dict(allocation_cfg["strategic_weights"])
     assets = list(strategic_weights)
     asset_signal_map = allocation_cfg.get("asset_signal_map", {})
+    # Daily and formal research paths must consume the same explicit return
+    # contract.  A missing contract is a hard configuration error; silently
+    # treating a yield or total-return proxy as a price is economically unsafe.
+    from .backtest.returns import AssetReturnSpec
+
+    universe_cfg = yaml.safe_load(
+        (config_dir / "research_universe.yml").read_text(encoding="utf-8")
+    )
+    universe_assets = universe_cfg.get("assets", {})
+    return_specs = {
+        asset: AssetReturnSpec(
+            **{
+                key: value
+                for key, value in dict(universe_assets.get(asset, {})).items()
+                if key != "market"
+            }
+        )
+        for asset in assets
+    }
+    if any(spec.series_id is None and spec.kind != "cash" for spec in return_specs.values()):
+        raise typer.BadParameter("research_universe return contract missing for non-cash asset")
     asset_series_map = {
         asset: asset_signal_map.get(asset, {}).get("trend")
         for asset in assets
@@ -740,6 +762,7 @@ def run_daily_command(
         assets,
         strategic_weights=strategic_weights,
         asset_series_map=asset_series_map,
+        return_specs=return_specs,
         asset_signal_map=asset_signal_map,
         component_weights=allocation_cfg.get("component_weights"),
         allocation_config=allocation_cfg,
