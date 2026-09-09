@@ -19,6 +19,30 @@
     {"series_id": "GOLD", "observation_date": "2026-09-04", "value": 3400, "available_at": "2026-09-05T12:00:00+08:00", "source": "manual"},
     {"series_id": "COPPER", "observation_date": "2026-08-14", "value": 4.4, "available_at": "2026-08-15T12:00:00+08:00", "source": "manual"},
     {"series_id": "COPPER", "observation_date": "2026-08-28", "value": 4.5, "available_at": "2026-08-29T12:00:00+08:00", "source": "manual"},
-    {"series_id": "COPPER", "observation_date": "2026-09-04", "value": 4.6, "available_at": "2026-09-05T12:00:00+08:00", "source": "manual"}
+    {"series_id": "COPPER", "observation_date": "2026-09-04", "value": 4.6, "available_at": "2026-09-05T12:00:00+08:00", "source": "manual"},
+    {"series_id": "CN_BOND_2Y", "observation_date": "2026-08-14", "value": 1.40, "available_at": "2026-08-14T15:30:00+08:00", "source": "manual"},
+    {"series_id": "CN_BOND_2Y", "observation_date": "2026-08-28", "value": 1.42, "available_at": "2026-08-28T15:30:00+08:00", "source": "manual"},
+    {"series_id": "CN_BOND_2Y", "observation_date": "2026-09-04", "value": 1.45, "available_at": "2026-09-04T15:30:00+08:00", "source": "manual"},
+    {"series_id": "US_GOV_10Y", "observation_date": "2026-08-14", "value": 4.60, "available_at": "2026-08-15T12:00:00+08:00", "source": "manual"},
+    {"series_id": "US_GOV_10Y", "observation_date": "2026-08-28", "value": 4.65, "available_at": "2026-08-29T12:00:00+08:00", "source": "manual"},
+    {"series_id": "US_GOV_10Y", "observation_date": "2026-09-04", "value": 4.70, "available_at": "2026-09-05T12:00:00+08:00", "source": "manual"},
+    {"series_id": "US_GOV_2Y", "observation_date": "2026-08-14", "value": 4.20, "available_at": "2026-08-15T12:00:00+08:00", "source": "manual"},
+    {"series_id": "US_GOV_2Y", "observation_date": "2026-08-28", "value": 4.22, "available_at": "2026-08-29T12:00:00+08:00", "source": "manual"},
+    {"series_id": "US_GOV_2Y", "observation_date": "2026-09-04", "value": 4.25, "available_at": "2026-09-05T12:00:00+08:00", "source": "manual"},
+    {"series_id": "CN_DR007", "observation_date": "2026-08-14", "value": 1.50, "available_at": "2026-08-14T16:00:00+08:00", "source": "manual"},
+    {"series_id": "CN_DR007", "observation_date": "2026-08-28", "value": 1.48, "available_at": "2026-08-28T16:00:00+08:00", "source": "manual"},
+    {"series_id": "CN_DR007", "observation_date": "2026-09-04", "value": 1.46, "available_at": "2026-09-04T16:00:00+08:00", "source": "manual"},
+    {"series_id": "CN_PMI", "observation_date": "2026-08-31", "value": 50.2, "available_at": "2026-08-31T09:00:00+08:00", "source": "manual"},
+    {"series_id": "CN_CPI", "observation_date": "2026-07-31", "value": 0.5, "available_at": "2026-08-09T09:00:00+08:00", "source": "manual"},
+    {"series_id": "CN_PPI", "observation_date": "2026-07-31", "value": 3.5, "available_at": "2026-08-09T09:00:00+08:00", "source": "manual"},
+    {"series_id": "CN_M1", "observation_date": "2026-07-31", "value": 4.0, "available_at": "2026-08-14T09:00:00+08:00", "source": "manual"}
+  ],
+  "sell_side": [
+    {
+      "house": "fixture",
+      "date": "2026-09-05",
+      "stance": "对照样例，非实盘观点",
+      "theme": "用于验证卖方对照段落被写入 brief"
+    }
   ]
 }

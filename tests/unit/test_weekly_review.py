@@ -154,6 +154,14 @@ def test_compare_weeks_and_cli_fixture(tmp_path: Path):
     assert "不行动" in text
     assert "未提供上周快照" in text
     assert "北京时间" in text
+    assert "宏观四格" in text
+    assert "胜率 / 赔率" in text
+    assert result["stance"]["decision"] == "不行动"
+    boxes = {item["label"]: item["value"] for item in result["macro_boxes"]}
+    assert boxes["增长"] == "扩张"
+    assert boxes["通胀"] == "分化"
+    assert boxes["流动性"] == "松"
     snapshot = Path(result["snapshot_output"]).read_text(encoding="utf-8")
     assert "CN_EQ_LARGE" in snapshot
     assert "Asia/Shanghai" in snapshot
+    assert "scorecard" in snapshot
