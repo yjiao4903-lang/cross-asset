@@ -10,6 +10,12 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from cross_asset.research.weekly_views import (
+    build_narratives,
+    compare_sell_side,
+    render_view_markdown,
+)
+
 OVERLAY_DEFAULTS = [
     {"series_id": "CN_BOND_2Y", "kind": "yield"},
     {"series_id": "US_GOV_10Y", "kind": "yield"},
@@ -417,7 +423,7 @@ def render_layer_markdown(
             theme = item.get("theme", "未填写")
             lines.append(f"- **{house}** {day}：{view}；主线：{theme}")
     else:
-        lines.append("- 未提供本周卖方对照。字段：house / date / stance / theme。")
+        lines.append("- 未提供本周卖方对照。字段：house / date / stance / theme / boxes。")
     return "\n".join(lines) + "\n"
 
 
@@ -440,6 +446,15 @@ def build_weekly_layers(
     boxes = build_macro_boxes(overlay)
     scorecard = build_scorecard(table, overlay, boxes)
     stance = decide_stance(scorecard)
+    reviews = compare_sell_side(boxes, sell_side)
+    narratives = build_narratives(boxes, relatives, scorecard)
+    base_md = render_layer_markdown(
+        relatives=relatives,
+        boxes=boxes,
+        scorecard=scorecard,
+        stance=stance,
+        sell_side=sell_side,
+    )
     return {
         "overlay": overlay,
         "relatives": relatives,
@@ -447,13 +462,9 @@ def build_weekly_layers(
         "scorecard": scorecard,
         "stance": stance,
         "sell_side": sell_side or [],
-        "markdown": render_layer_markdown(
-            relatives=relatives,
-            boxes=boxes,
-            scorecard=scorecard,
-            stance=stance,
-            sell_side=sell_side,
-        ),
+        "sell_side_review": reviews,
+        "narratives": narratives,
+        "markdown": base_md + render_view_markdown(reviews, narratives),
     }
 
 
