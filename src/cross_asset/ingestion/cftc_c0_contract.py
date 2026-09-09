@@ -10,8 +10,8 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 
 from .cftc_positioning import (
-    CFTCPositionRecord,
     CFTCPositioningError,
+    CFTCPositionRecord,
     asof_cftc_records,
     cftc_publication_at,
 )
