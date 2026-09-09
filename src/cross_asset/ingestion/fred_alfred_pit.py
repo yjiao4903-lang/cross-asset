@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, time, timedelta
-from typing import Any, Iterable
+from typing import Any
 
 import pandas as pd
 
@@ -169,11 +170,11 @@ def records_to_frame(records: Iterable[VintageObservation]) -> pd.DataFrame:
 
 
 __all__ = [
-    "FredPITError",
     "MODE_ALL_REALTIME_PERIODS",
     "MODE_HISTORICAL_ASOF",
     "MODE_INITIAL_RELEASE",
     "MODE_REVISED_LATEST",
+    "FredPITError",
     "VintageObservation",
     "conservative_available_at",
     "parse_observations",
