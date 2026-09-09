@@ -6,9 +6,13 @@ from pathlib import Path
 
 import yaml
 
+from cross_asset.backtest.accounting import load_return_accounting_policy
 from cross_asset.backtest.returns import AssetReturnSpec
 
 from .executor import ResearchModelConfig
+
+_DEFAULT_UNIVERSE_PATH = Path("config/research_universe.yml")
+_DEFAULT_ACCOUNTING_PATH = "config/return_accounting.yml"
 
 
 def _mapping(path):
@@ -39,6 +43,7 @@ def load_research_model_config(
     universe_path="config/research_universe.yml",
     allocation_path="config/allocation.yml",
     macro_path="config/macro.yml",
+    accounting_path=None,
 ) -> ResearchModelConfig:
     universe = _mapping(universe_path)
     allocation = _mapping(allocation_path)
@@ -52,16 +57,42 @@ def load_research_model_config(
         raise ValueError("strategic_weights_must_sum_to_one")
     if set(strategic) != set(assets_config):
         raise ValueError("research_universe_must_match_strategic_assets")
-    specs = {
-        asset: AssetReturnSpec(
+
+    effective_accounting_path = accounting_path
+    if effective_accounting_path is None and Path(universe_path) == _DEFAULT_UNIVERSE_PATH:
+        effective_accounting_path = _DEFAULT_ACCOUNTING_PATH
+
+    accounting_policy = None
+    accounting_raw = None
+    if effective_accounting_path is not None:
+        accounting_policy = load_return_accounting_policy(effective_accounting_path)
+        accounting_raw = accounting_policy.to_dict()
+        if set(strategic) != set(accounting_policy.assets):
+            raise ValueError("return_accounting_must_cover_research_universe")
+
+    specs = {}
+    for asset in strategic:
+        asset_accounting = None
+        if accounting_policy is not None and accounting_raw is not None:
+            asset_accounting = dict(accounting_raw["assets"][asset])
+            asset_accounting.update(
+                {
+                    "policy_version": accounting_policy.version,
+                    "reporting_currency": accounting_policy.reporting_currency,
+                    "supported_currencies": list(accounting_policy.supported_currencies),
+                    "pricing_basis": accounting_policy.pricing_basis,
+                    "performance_semantics": accounting_policy.performance_semantics,
+                }
+            )
+        specs[asset] = AssetReturnSpec(
             **{
                 key: value
                 for key, value in dict(assets_config[asset]).items()
                 if key != "market"
-            }
+            },
+            accounting=asset_accounting,
         )
-        for asset in strategic
-    }
+
     signal_map = {
         asset: dict(value or {})
         for asset, value in allocation.get("asset_signal_map", {}).items()
