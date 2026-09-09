@@ -15,8 +15,7 @@ mappings:
   - {series_id: CN_EQ_LARGE, provider: manual, source_series_id: CN_EQ_LARGE, priority: 1, enabled: true, semantic_equivalence: true}
   - {series_id: CN_EQ_SMALL, provider: manual, source_series_id: CN_EQ_SMALL, priority: 1, enabled: true, semantic_equivalence: true}
   - {series_id: HK_EQ, provider: yahoo, source_series_id: ^HSI, priority: 1, enabled: true, semantic_equivalence: true}
-  - {series_id: US_EQ, provider: fred, source_series_id: SP500, priority: 1, enabled: true, semantic_equivalence: true, notes: "S&P 500 price index via FRED; PERSONAL_WEEKLY; ~10y public window; available_at Saturday 12:00 Beijing conservative"}
-  - {series_id: US_EQ, provider: yahoo, source_series_id: ^GSPC, priority: 2, enabled: true, semantic_equivalence: true, notes: "backup quote only; not RESEARCH_ADMISSIBLE"}
+  - {series_id: US_EQ, provider: yahoo, source_series_id: ^GSPC, priority: 1, enabled: true, semantic_equivalence: true}
   - {series_id: CN_BOND_10Y, provider: manual, source_series_id: CN_BOND_10Y, priority: 1, enabled: true, semantic_equivalence: true, notes: "Proxy/manual until entitled source is confirmed"}
   - {series_id: US_GOV_10Y, provider: fred, source_series_id: DGS10, priority: 1, enabled: true, semantic_equivalence: true}
   - {series_id: US_GOV_10Y, provider: yahoo, source_series_id: ^TNX, priority: 99, enabled: true, semantic_equivalence: false, notes: "auxiliary live diagnostic only"}
