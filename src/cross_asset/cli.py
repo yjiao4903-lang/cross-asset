@@ -563,6 +563,10 @@ def run_daily_command(
     series_calendar_config: str = typer.Option(
         "config/series_calendars.yml", "--series-calendar-config"
     ),
+    brief_output: str = typer.Option(
+        "artifacts/reports/daily_research_brief.md", "--brief-output",
+        help="Write the accompanying human-review brief.",
+    ),
 ) -> None:
     """Run the daily Cross model chain with an explicit macro source.
 
@@ -622,6 +626,20 @@ def run_daily_command(
 
     decision_date = requested_date or bundle.manifest.as_of
     decision_time = datetime.combine(decision_date, time.max)
+
+    def write_brief(status, cutoff, warnings, facts=None, computed=None):
+        from .reports.research_brief import generate_research_brief
+
+        generate_research_brief(
+            output=brief_output,
+            as_of=decision_date.isoformat(),
+            data_cutoff=cutoff,
+            sources=["run-daily:marco"],
+            completeness=status,
+            limitations=warnings or "未发现结构化限制",
+            market_facts=facts or [],
+            computed_signals=computed or [],
+        )
 
     settings = get_settings()
     config_dir = Path(settings.cross_asset_config_dir)
@@ -750,6 +768,11 @@ def run_daily_command(
             *bundle.report.warnings,
             *(blocked[series_id] for series_id in required_series if series_id in blocked),
         ]
+        write_brief(
+            "DATA_BLOCKED",
+            {"marco": bundle.manifest.data_cutoff.isoformat(), "cross_market": cross_cutoff},
+            warnings,
+        )
         typer.echo(
             json.dumps(
                 {
@@ -854,7 +877,33 @@ def run_daily_command(
             *allocation.warnings,
         ],
         "legacy_fallback_used": False,
+        "brief_output": brief_output,
     }
+    write_brief(
+        payload["status"],
+        payload["data_cutoff"],
+        payload["warnings"],
+        [
+            {
+                "label": str(row.series_id),
+                "value": row.value,
+                "unit": "raw",
+                "period": str(row.observation_date),
+                "source": f"{row.source}/{row.source_series_id}; available_at={row.available_at}",
+            }
+            for row in observations.head(5).itertuples()
+        ],
+        [
+            {
+                "label": f"{asset} total score",
+                "value": score.score,
+                "unit": "score",
+                "period": decision_date.isoformat(),
+                "source": "run-daily:marco:computed",
+            }
+            for asset, score in state["asset_scores"].items()
+        ],
+    )
     typer.echo(
         json.dumps(
             payload,

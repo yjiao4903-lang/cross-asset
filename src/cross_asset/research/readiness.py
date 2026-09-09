@@ -64,7 +64,9 @@ def _formal_series_frame(
 
 
 def _pit_coverage(
-    formal_rows: pd.DataFrame,
+    connection,
+    series_id: str,
+    usage_status: str,
     stale_after_hours: float | None,
     decision_times: pd.DatetimeIndex,
 ) -> dict:
@@ -84,18 +86,21 @@ def _pit_coverage(
             "stale_after_hours": stale_after_hours,
         }
 
-    if formal_rows.empty:
-        available = pd.DatetimeIndex([])
-    else:
-        available = pd.DatetimeIndex(
-            pd.to_datetime(formal_rows["available_at"], utc=True)
-        ).sort_values()
     covered = 0
     for decision in decision_times:
-        position = int(available.searchsorted(decision, side="right")) - 1
-        if position < 0:
+        # Select the latest approved vintage *at this decision time*. A table
+        # selected at ``now`` can discard older vintages and falsely certify
+        # historical coverage.
+        rows = latest_formal_observations_asof(
+            connection,
+            decision.to_pydatetime(),
+            required_usage_status=usage_status,
+            series_ids=[series_id],
+        )
+        if rows.empty:
             continue
-        latest = available[position]
+        latest = pd.Timestamp(rows["available_at"].max())
+        latest = latest.tz_localize("UTC") if latest.tzinfo is None else latest.tz_convert("UTC")
         if stale_after_hours is not None:
             age_hours = (decision - latest).total_seconds() / 3600.0
             if age_hours > stale_after_hours:
@@ -172,7 +177,9 @@ def evaluate_research_readiness(
             else 0.0
         )
         coverage = _pit_coverage(
-            formal_rows,
+            connection,
+            series_id,
+            usage_status,
             _series_freshness_hours(connection, series_id),
             research_decisions,
         )

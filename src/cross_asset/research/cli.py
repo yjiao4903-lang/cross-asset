@@ -18,11 +18,11 @@ import typer
 from cross_asset.settings import get_settings
 from cross_asset.storage import (
     ProvenanceStore,
+    approved_observations_asof,
     code_version,
     config_hash,
     data_snapshot_id,
     init_db,
-    latest_formal_observations_asof,
 )
 
 from . import (
@@ -210,12 +210,12 @@ def run_oos_command(
         # has an immutable identity.  Keep this explicit at the CLI boundary
         # so a successful walk-forward can never persist ``NULL`` fold IDs.
         snapshot_cutoff = pd.Timestamp(development_dates.max()).to_pydatetime()
-        snapshot_rows = latest_formal_observations_asof(
+        snapshot_rows = approved_observations_asof(
             store.conn,
             snapshot_cutoff,
             required_usage_status="RESEARCH_ADMISSIBLE",
-            series_ids=return_series,
-        )
+            allowed_quality={"ok", "closed"},
+        ).df()
         if snapshot_rows.empty:
             raise ValueError("research_data_snapshot_missing")
         snapshot_id = data_snapshot_id(snapshot_rows.to_dict("records"))
@@ -266,6 +266,7 @@ def run_oos_command(
             plan=plan.to_dict(),
             config_hash=config_hash(config_paths),
             code_version=code_version("."),
+            data_snapshot_id=snapshot_id,
         )
         research_run_id = persisted["research_run_id"]
         for (fold, benchmark), group in fold_rows.groupby(["fold", "benchmark"]):

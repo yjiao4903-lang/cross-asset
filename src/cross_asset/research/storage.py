@@ -20,12 +20,14 @@ def persist_research_plan(
     plan: dict,
     config_hash: str,
     code_version: str,
+    data_snapshot_id: str | None = None,
 ) -> dict:
     signature = {
         "protocol_hash": plan["protocol_hash"],
         "plan": plan,
         "config_hash": config_hash,
         "code_version": code_version,
+        "data_snapshot_id": data_snapshot_id,
     }
     run_id = f"research-{_digest(signature)[:24]}"
     existing = store.conn.execute(
@@ -81,6 +83,18 @@ def persist_fold_result(
     if manifest is None:
         raise ValueError("fold_not_in_frozen_plan")
     now = datetime.now(UTC).replace(tzinfo=None)
+    metrics_json = json.dumps(metrics, sort_keys=True, default=str)
+    existing_result = store.conn.execute(
+        """SELECT observation_count,metrics_json,data_snapshot_id,status
+           FROM research_fold_results
+           WHERE research_run_id=? AND fold=? AND phase=? AND benchmark=?""",
+        [research_run_id, int(fold), "WALK_FORWARD", benchmark],
+    ).fetchone()
+    if existing_result is not None:
+        expected = (int(metrics.get("observations", 0)), metrics_json, data_snapshot_id, status)
+        if tuple(existing_result) == expected:
+            return
+        raise ValueError("research_fold_result_conflict")
     store.conn.execute(
         """INSERT INTO research_fold_results
            (research_run_id,fold,phase,benchmark,train_start,train_end,test_start,test_end,
@@ -102,7 +116,7 @@ def persist_fold_result(
             utc_naive(manifest["test_start"]),
             utc_naive(manifest["test_end"]),
             int(metrics.get("observations", 0)),
-            json.dumps(metrics, sort_keys=True, default=str),
+            metrics_json,
             data_snapshot_id,
             status,
             now,

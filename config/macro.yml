@@ -6,18 +6,20 @@ series:
   US_CPI:
     display_name: US CPI
     frequency: monthly
+    raw_unit: index
     unit: percent
     critical: false
     stale_after_hours: 1080
-    transform: {type: yoy, direction: negative}
+    transform: {type: pct_change_12m, direction: negative, period: month}
     normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
   US_CORE_PCE:
     display_name: US Core PCE
     frequency: monthly
+    raw_unit: index
     unit: percent
     critical: false
     stale_after_hours: 1080
-    transform: {type: yoy, direction: negative}
+    transform: {type: pct_change_12m, direction: negative, period: month}
     normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
   US_UNEMPLOYMENT:
     display_name: US unemployment
@@ -38,10 +40,11 @@ series:
   US_INDUSTRIAL_PRODUCTION:
     display_name: US industrial production
     frequency: monthly
-    unit: index
+    raw_unit: index
+    unit: percent
     critical: false
     stale_after_hours: 1080
-    transform: {type: yoy, direction: positive}
+    transform: {type: pct_change_12m, direction: positive, period: month}
     normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
   US_REAL_10Y:
     display_name: US 10Y real yield
@@ -73,7 +76,8 @@ series:
     unit: percent
     critical: false
     stale_after_hours: 1080
-    transform: {type: yoy, direction: negative}
+    # Wind code semantics are not frozen in the current evidence snapshot.
+    transform: {type: ambiguous_raw_semantics, direction: negative}
     normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
   CN_PPI:
     display_name: China PPI
@@ -81,7 +85,7 @@ series:
     unit: percent
     critical: false
     stale_after_hours: 1080
-    transform: {type: yoy, direction: negative}
+    transform: {type: ambiguous_raw_semantics, direction: negative}
     normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
   CN_M1:
     display_name: China M1
@@ -89,7 +93,7 @@ series:
     unit: percent
     critical: false
     stale_after_hours: 1080
-    transform: {type: yoy, direction: positive}
+    transform: {type: ambiguous_raw_semantics, direction: positive}
     normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
   CN_M2:
     display_name: China M2
@@ -97,7 +101,7 @@ series:
     unit: percent
     critical: false
     stale_after_hours: 1080
-    transform: {type: yoy, direction: positive}
+    transform: {type: ambiguous_raw_semantics, direction: positive}
     normalization: {method: causal_zscore, min_history: 24, clip: 2.0}
   CN_DR007:
     display_name: China DR007

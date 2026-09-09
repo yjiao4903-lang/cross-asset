@@ -40,12 +40,60 @@ def _values(series):
     return [_get(x, "value") for x in _ordered_rows(series)]
 
 
+def _date_key(value):
+    """Return a comparable calendar date while preserving missingness."""
+    if value is None or pd.isna(value):
+        return None
+    return pd.Timestamp(value).normalize()
+
+
+def _dated_value_map(rows, period="date"):
+    def key(value):
+        stamp = _date_key(value)
+        if stamp is None:
+            return None
+        if period == "month":
+            return stamp.year * 12 + stamp.month
+        if period == "quarter":
+            return stamp.year * 4 + (stamp.quarter - 1)
+        return stamp
+    return {
+        key(_get(row, "observation_date")): _get(row, "value")
+        for row in rows
+        if key(_get(row, "observation_date")) is not None
+    }
+
+
+def _period_lag(rows, months, period="date"):
+    """Find an exact date/month/quarter lag; never substitute by row position."""
+    ordered = _ordered_rows(rows)
+    # The last observation period is the decision point. Do not walk backward
+    # over a missing current value, otherwise a stale period is silently used.
+    current = ordered[-1] if ordered else None
+    if current is None:
+        return None, None
+    current_date = _date_key(_get(current, "observation_date"))
+    if current_date is None:
+        return current, None
+    if period == "month":
+        target = current_date.year * 12 + current_date.month - months
+    elif period == "quarter":
+        target = current_date.year * 4 + (current_date.quarter - 1) - months // 3
+    else:
+        target = current_date - pd.DateOffset(months=months)
+    previous = _dated_value_map(ordered, period).get(target)
+    return current, previous
+
+
 def transform_series(series, transform=None):
     """Transform an ordered level series without imputing missing values."""
 
     cfg = transform or {}
     typ = cfg.get("type", "level")
-    vals = _values(series)
+    if typ == "ambiguous_raw_semantics":
+        return TransformResult(None, False, "ambiguous_raw_semantics")
+    rows = _ordered_rows(series)
+    vals = [_get(row, "value") for row in rows]
     vals = [None if v is None else float(v) for v in vals]
     valid = [v for v in vals if v is not None]
     if not valid:
@@ -53,11 +101,21 @@ def transform_series(series, transform=None):
     if typ == "level":
         out = valid[-1] - float(cfg.get("baseline", 0))
     elif typ in ("diff", "mom"):
-        out = valid[-1] - (
-            valid[-2] if len(valid) >= 2 and valid[-2] is not None else float("nan")
-        )
-    elif typ == "yoy":
-        out = valid[-1] - (valid[-13] if len(valid) >= 13 else float("nan"))
+        # Adjacent observations are intentional for daily/weekly series. A
+        # missing adjacent value remains unavailable; it is never filtered out.
+        current = vals[-1]
+        previous = vals[-2] if len(vals) >= 2 else None
+        out = current - previous if current is not None and previous is not None else float("nan")
+    elif typ in ("yoy", "difference_12m", "pct_change_12m", "change_in_yoy_pp"):
+        months = int(cfg.get("lag_months", 12))
+        current_row, previous = _period_lag(rows, months, cfg.get("period", "date"))
+        current = _get(current_row, "value") if current_row is not None else None
+        if current is None or previous is None:
+            return TransformResult(None, False, "missing_lag_period")
+        if typ == "pct_change_12m" or typ == "yoy":
+            out = (float(current) / float(previous) - 1.0) * 100.0 if previous else float("nan")
+        else:
+            out = float(current) - float(previous)
     elif typ == "zscore":
         if len(valid) < 2:
             return TransformResult(None, False, "insufficient_history")

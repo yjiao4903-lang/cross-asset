@@ -22,6 +22,8 @@ cross-asset validate-data-file <file> [--manifest <yaml-or-json>] [--output <jso
 - `trend_signal_v0.2`：1M/3M/6M/12M 多周期趋势，使用 log move / 同周期已实现波动率构造无量纲信号；缺失周期降低 confidence，不做零填充。
 - `risk_signal_v0.2`：20 日波动率相对其严格历史基线的 causal z-score，风险越高分数越低。
 - `macro_v0.2`：先按 observation_date 去除同一期的旧 revision，再做 transform；可选 causal z-score 只使用当前观测之前的历史，freshness 按单序列计算。
+- 宏观转换语义：`pct_change_12m` 对精确匹配的 12 个月前 observation_date 输出同比百分比；`difference_12m` 输出原始单位差值；`change_in_yoy_pp` 适用于原始值已是同比增速的序列，输出同比增速变化的百分点（pp）。缺少对应期间时保持不可用，不按有效值位置补齐。
+- 月末/闰日政策：月度序列按 `YearMonth` 经济期间匹配，季度序列按 `YearQuarter` 匹配，不 rollforward/rollback 到邻近期间；因此 `2025-02-28` 与 `2024-02-29` 属于同一月度期间。日频序列仍按精确日期匹配。当前期值为缺失时保持不可用，不回退到上一期。
 - `asset_score_v0.2`：按预声明 component weight 聚合，并把 component confidence 与 weighted coverage 纳入最终 confidence。
 - Price 与 yield proxy 统一转成 price-like return index；债券收益率使用显式 duration proxy，不再把 yield level 当价格。
 - `valuation`、`carry`、`structure` 在没有可信输入时保持 `None`；系统不会为补齐模型而伪造信号。
@@ -37,6 +39,17 @@ cross-asset validate-data-file <file> [--manifest <yaml-or-json>] [--output <jso
 - 默认不对首个战略建仓收取交易成本；如需要可通过显式参数启用。
 - turnover convention 明确记录为 `two_sided_notional` 或 `one_way`。
 - 提供按显式交易日生成的 calendar walk-forward manifest，可落实 5 年最短训练、12 个月测试、3 个月步长等研究协议，同时不虚构交易日期。
+
+## WP3/WP6 业务验收与实施路线
+
+| 序列 | 原始单位（当前配置） | 转换 | 派生单位 | 备注 |
+|---|---|---|---|---|
+| US_CPI | index（FRED CPIAUCSL） | `pct_change_12m` | percent | 指数水平先转同比百分比 |
+| US_CORE_PCE | index（FRED PCEPILFE） | `pct_change_12m` | percent | 指数水平先转同比百分比 |
+| US_INDUSTRIAL_PRODUCTION | index | `pct_change_12m` | percent | 指数水平先转同比百分比 |
+| CN_CPI/CN_PPI/CN_M1/CN_M2 | 未冻结 | `ambiguous_raw_semantics`（fail closed） | 不输出 | Wind 原始字段语义待证据快照核对，暂不进入宏观分数 |
+
+WP3 验收覆盖指数同比、同比增速变化 pp、缺月/缺季和 revision cutoff；正式研究仍需冻结来源快照与 PIT 证据。WP6 的 `generate_research_brief` 只渲染已有结构化市场事实和可选持仓字段；没有持仓时明确“未提供”，并保留数据时间、来源、缺失限制、人工研究问题、支持/反证、下次检查及不行动记录。当前交付是辅助研究，不代表交易建议或模型收益验证完成。后续路线是先由 CLI 统一装配这些结构化字段，再以真实周度周期测量追溯率和人工复盘使用情况；旧审计状态证据保留，不将其改写为完成。
 
 ## 目录约定
 
