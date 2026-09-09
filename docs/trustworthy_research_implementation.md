@@ -1,6 +1,6 @@
 # 可信研究入口实施记录
 
-本轮修复复用仓库已有的 `AssetReturnSpec`、`latest_formal_observations_asof`、`approved_observations_asof`、`ProvenanceStore` 和 DuckDB schema，没有新增依赖。依据项目 `AGENTS.md` 的官方/成熟实现复用要求，选择适配现有 PIT 查询和 provenance 存储；这些组件已经是仓库正式路径的一部分，替换为新框架会扩大迁移面而不增加可验证性。
+本轮修复复用仓库已有的 `AssetReturnSpec`、`latest_formal_observations_asof`、`approved_observations_asof`、`ProvenanceStore` 和 DuckDB schema，没有新增依赖。依据项目 `AGENTS.md` 的官方/成熟实现复用要求，选择适配现有 PIT 查询和 provenance 存储；这些组件已经是仓库正式路径的一部分，替换为新框架会扩大迁移面而不增加可验证性。复用核查参考 [Python 3.12 import system](https://docs.python.org/3.12/reference/import.html) 的模块初始化语义，以及 [DuckDB INSERT/ON CONFLICT](https://duckdb.org/docs/current/sql/statements/insert) 和 [transactions](https://duckdb.org/docs/current/sql/statements/transactions) 文档。
 
 ## 已交付
 
@@ -13,8 +13,7 @@
 fixture 示例：
 
 ```powershell
-$env:PYTHONPATH='D:\CROSS\repo\src'
-& 'D:\量化资产监控系统\.venv\Scripts\python.exe' -m cross_asset.cli research-brief examples/research_brief_fixture.json --output artifacts/reports/research_brief_fixture.md
+python -m cross_asset.cli research-brief examples/research_brief_fixture.json --output artifacts/reports/research_brief_fixture.md
 ```
 
 示例明确标记 `FIXTURE_ONLY`，不代表 Live、审批或研究收益验证。正式研究仍受 `DATA_BLOCKED`、协议审批和真实 PIT 证据约束。
@@ -24,10 +23,11 @@ $env:PYTHONPATH='D:\CROSS\repo\src'
 本轮使用独立 basetemp `D:\CROSS\pytest_integrated_20260909_3` 完成针对性集成测试 `25 passed`；全量验证命令为：
 
 ```powershell
-$env:PYTHONPATH='D:\CROSS\repo\src'
-& 'D:\量化资产监控系统\.venv\Scripts\ruff.exe' check src tests
-& 'D:\量化资产监控系统\.venv\Scripts\python.exe' -m pytest --basetemp D:\CROSS\pytest_integrated_<unique> -q
-& 'D:\量化资产监控系统\.venv\Scripts\python.exe' -m cross_asset.research.cli --help
+python -m ruff check src tests
+python -m pytest --basetemp D:\CROSS\pytest_integrated_<unique> -q
+python -m cross_asset.research.cli --help
 ```
+
+本机审计复现使用 `D:\量化资产监控系统\.venv\Scripts\python.exe` 与对应 ruff 路径；该路径不是项目运行要求。
 
 仍待真实数据权限、来源 vintage 和连续周度使用周期验证；本轮没有解锁正式研究、交易或服务发布。
