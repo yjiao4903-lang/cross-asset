@@ -53,6 +53,8 @@ WP3 验收覆盖指数同比、同比增速变化 pp、缺月/缺季和 revision
 
 ## 目录约定
 
+- `docs/LLM_HANDOFF_AND_ROADMAP.md`：面向后续 LLM 和维护者的当前基线、业务目标、分阶段路线、验收门槛与接手检查清单。
+
 - `config/`：canonical 资产、序列、来源映射、因子和配置约束。
 - `data/raw/`：不可变原始快照；`data/db/`：本地数据库文件。
 - `data/manual_inbox/`：专业数据手工导入入口；成功导入后归档。
