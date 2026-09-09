@@ -74,3 +74,4 @@ def test_build_layers_on_partial_facts():
     assert boxes["增长"] in {"走弱", "走弱偏平"}
     assert layers["stance"]["decision"] == "不行动"
     assert "宏观四格" in layers["markdown"]
+    assert "竞争叙事" in layers["markdown"]
