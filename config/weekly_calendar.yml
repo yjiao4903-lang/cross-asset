@@ -1,0 +1,13 @@
+version: "0.1"
+status: DEVELOPMENT_PRIOR
+purpose: Personal next-window journal. Not a live news feed.
+events:
+  - date: "2026-09-11"
+    label: "美国CPI"
+    why: "看油价是否进入核心通胀；关系黄金残差能否还写回利率叙事"
+  - date: "2026-09-16"
+    label: "FOMC"
+    why: "外部利率是否从中性变成约束；美债10Y一周超过5bp才算脉冲"
+  - date: "2026-09-30"
+    label: "中国制造业PMI"
+    why: "增长复合体要从断裂回到同向，需PMI回50以上且铜与A股同时转正"
