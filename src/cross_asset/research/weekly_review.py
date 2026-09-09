@@ -8,6 +8,7 @@ This module does not allocate, impute, or produce trade instructions.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
@@ -77,18 +78,11 @@ def default_review_cutoff(week_end_date: date, review_local_time: time | None = 
 def load_weekly_config(path: str | Path | None = None) -> dict[str, Any]:
     config_path = Path(path) if path else DEFAULT_CONFIG
     if not config_path.exists():
-        return {
-            "week_end_weekday": "Friday",
-            "review_weekday": "Saturday",
-            "review_local_time": "12:00",
-            "clock": {"timezone": "Asia/Shanghai"},
-            "lookbacks": {
-                "week": {"days": 7, "label": "1w"},
-                "month": {"days": 21, "label": "1m"},
-            },
-            "required_series": [],
-        }
-    return yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        raise FileNotFoundError(f"weekly review config not found: {config_path}")
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(config.get("required_series"), list) or not config["required_series"]:
+        raise ValueError("weekly review config must declare non-empty required_series")
+    return config
 
 
 def _review_time(config: dict[str, Any] | None) -> time:
@@ -101,7 +95,7 @@ def _review_time(config: dict[str, Any] | None) -> time:
 class Observation:
     series_id: str
     observation_date: date
-    value: float
+    value: float | None
     available_at: datetime
     source: str = "unspecified"
 
@@ -109,17 +103,17 @@ class Observation:
 def parse_observations(rows: list[dict[str, Any]]) -> list[Observation]:
     out: list[Observation] = []
     for row in rows:
-        if row.get("value") is None:
-            continue
         out.append(
             Observation(
                 series_id=str(row["series_id"]),
                 observation_date=_as_date(row["observation_date"]),
-                value=float(row["value"]),
+                value=None if row.get("value") is None else float(row["value"]),
                 available_at=to_beijing(row["available_at"]),
                 source=str(row.get("source", "unspecified")),
             )
         )
+        if out[-1].value is not None and not math.isfinite(out[-1].value):
+            raise ValueError(f"non-finite observation value for {out[-1].series_id}")
     return out
 
 
@@ -142,7 +136,7 @@ def latest_on_or_before(
 
 
 def _change(current: Observation | None, prior: Observation | None, kind: str) -> float | None:
-    if current is None or prior is None:
+    if current is None or prior is None or current.value is None or prior.value is None:
         return None
     if kind == "yield":
         return round((current.value - prior.value) * 100.0, 4)
@@ -157,9 +151,10 @@ def build_fact_table(
     as_of: date,
     cutoff: datetime,
     config: dict[str, Any] | None = None,
+    week_end_date: date | None = None,
 ) -> dict[str, Any]:
     cfg = config or {}
-    end = week_end(as_of, cfg.get("week_end_weekday", "Friday"))
+    end = week_end_date or week_end(as_of, cfg.get("week_end_weekday", "Friday"))
     lookbacks = cfg.get("lookbacks") or {
         "week": {"days": 7, "label": "1w"},
         "month": {"days": 21, "label": "1m"},
@@ -168,10 +163,29 @@ def build_fact_table(
     facts = []
     missing_levels = []
     missing_lookbacks = []
+    unverified_sources = []
     for spec in cfg.get("required_series", []):
         series_id = spec["series_id"]
         kind = spec.get("kind", "price")
         current = latest_on_or_before(rows, series_id, end, beijing_cutoff)
+        max_age = spec.get("max_age_days")
+        stale = (
+            current is not None
+            and max_age is not None
+            and (end - current.observation_date).days > int(max_age)
+        )
+        if stale:
+            current = None
+        expected_provider = spec.get("provider")
+        source_status = "UNVERIFIED"
+        if current is not None and current.value is not None:
+            source_status = (
+                "ADMITTED"
+                if expected_provider is None or current.source.lower() == str(expected_provider).lower()
+                else "UNVERIFIED"
+            )
+            if source_status == "UNVERIFIED":
+                unverified_sources.append(series_id)
         fact = {
             "label": spec.get("asset_id", series_id),
             "series_id": series_id,
@@ -181,10 +195,12 @@ def build_fact_table(
             "value": None if current is None else current.value,
             "observation_date": None if current is None else current.observation_date.isoformat(),
             "available_at": None if current is None else to_beijing(current.available_at).isoformat(),
-            "source": "missing" if current is None else current.source,
+            "source": "missing" if current is None or current.value is None else current.source,
+            "usage": spec.get("usage", "PERSONAL_WEEKLY"),
+            "source_status": source_status,
             "changes": {},
         }
-        if current is None:
+        if current is None or current.value is None:
             missing_levels.append(series_id)
         for name, window in lookbacks.items():
             days = int(window["days"])
@@ -199,11 +215,15 @@ def build_fact_table(
                 if prior is None
                 else prior.observation_date.isoformat(),
             }
+            # Keep the historical internal alias while exposing the explicit
+            # configured window label to consumers and reports.
+            if name == "month" and window.get("label") != "1m":
+                fact["changes"]["1m"] = fact["changes"][window.get("label", name)]
             if current is not None and change is None:
                 missing_lookbacks.append(f"{series_id}:{window.get('label', name)}")
         facts.append(fact)
 
-    if missing_levels:
+    if missing_levels or unverified_sources:
         status = "DATA_BLOCKED"
     elif missing_lookbacks:
         status = "PARTIAL"
@@ -215,8 +235,10 @@ def build_fact_table(
         "as_of": as_of.isoformat(),
         "week_end": end.isoformat(),
         "data_cutoff": beijing_cutoff.isoformat(),
+        "review_cutoff": beijing_cutoff.isoformat(),
         "missing_levels": missing_levels,
         "missing_lookbacks": missing_lookbacks,
+        "unverified_sources": unverified_sources,
         "facts": facts,
     }
 
@@ -320,17 +342,38 @@ def run_weekly_review(
     prior_snapshot: str | Path | None = None,
     snapshot_output: str | Path | None = None,
     config_path: str | Path | None = None,
+    week_end_date: str | date | None = None,
+    review_cutoff: Any | None = None,
 ) -> dict[str, Any]:
     payload = json.loads(Path(observations_json).read_text(encoding="utf-8"))
     config = load_weekly_config(config_path)
     rows = parse_observations(list(payload.get("observations") or payload.get("rows") or []))
     review_date = _as_date(as_of)
-    cutoff = resolve_cutoff(
+    observation_week_end = _as_date(week_end_date) if week_end_date is not None else None
+    if review_cutoff is not None:
+        # Explicitly separate the Friday observation week from the Saturday
+        # information cutoff while never permitting data after the configured
+        # review boundary.
+        review_end = observation_week_end or week_end(
+            review_date, config.get("week_end_weekday", "Friday")
+        )
+        cutoff = min(
+            to_beijing(review_cutoff),
+            default_review_cutoff(review_end, _review_time(config)),
+        )
+    else:
+        cutoff = resolve_cutoff(
+            as_of=review_date,
+            payload_cutoff=payload.get("data_cutoff"),
+            config=config,
+        )
+    table = build_fact_table(
+        rows,
         as_of=review_date,
-        payload_cutoff=payload.get("data_cutoff"),
+        cutoff=cutoff,
         config=config,
+        week_end_date=observation_week_end,
     )
-    table = build_fact_table(rows, as_of=review_date, cutoff=cutoff, config=config)
     prior = None
     if prior_snapshot and Path(prior_snapshot).exists():
         prior = json.loads(Path(prior_snapshot).read_text(encoding="utf-8"))
@@ -402,10 +445,12 @@ def run_weekly_review(
         "timezone": "Asia/Shanghai",
         "week_end": table["week_end"],
         "data_cutoff": table["data_cutoff"],
+        "review_cutoff": table["data_cutoff"],
         "brief_output": str(brief_path),
         "snapshot_output": str(snap_path),
         "missing_levels": table["missing_levels"],
         "missing_lookbacks": table["missing_lookbacks"],
+        "unverified_sources": table["unverified_sources"],
         "facts": table["facts"],
         "prior_week_changes": changes,
         "stance": stance,

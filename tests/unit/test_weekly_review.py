@@ -2,6 +2,8 @@ from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from cross_asset.research.weekly_review import (
     BEIJING,
     Observation,
@@ -165,3 +167,34 @@ def test_compare_weeks_and_cli_fixture(tmp_path: Path):
     assert "CN_EQ_LARGE" in snapshot
     assert "Asia/Shanghai" in snapshot
     assert "scorecard" in snapshot
+
+
+def test_missing_config_and_explicit_none_do_not_fallback(tmp_path: Path):
+    with pytest.raises(FileNotFoundError):
+        __import__("cross_asset.research.weekly_review", fromlist=["load_weekly_config"]).load_weekly_config(
+            tmp_path / "missing.yml"
+        )
+    rows = [
+        _obs("US_EQ", "2026-08-28", 100),
+        _obs("US_EQ", "2026-09-04", None, "2026-09-05T12:00:00+08:00"),
+    ]
+    table = build_fact_table(
+        rows,
+        as_of=date(2026, 9, 4),
+        cutoff=datetime(2026, 9, 5, 12, 0, tzinfo=BEIJING),
+        config=CONFIG,
+    )
+    assert table["status"] == "DATA_BLOCKED"
+    assert table["missing_levels"] == ["US_EQ", "CN_BOND_10Y"]
+
+
+def test_explicit_week_end_and_review_cutoff_keep_saturday_close_visible():
+    rows = [_obs("US_EQ", "2026-09-04", 5500, "2026-09-05T12:00:00+08:00")]
+    table = build_fact_table(
+        rows,
+        as_of=date(2026, 9, 4),
+        cutoff=datetime(2026, 9, 5, 12, 0, tzinfo=BEIJING),
+        config=CONFIG,
+        week_end_date=date(2026, 9, 4),
+    )
+    assert table["facts"][0]["value"] == 5500

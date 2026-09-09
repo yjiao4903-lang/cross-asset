@@ -64,7 +64,7 @@ def test_weekly_report_aggregates_real_manifests(tmp_path):
 
 def test_schedule_schema_and_scripts():
     from pathlib import Path
-    data=load_schedule(); assert data['timezone']=='Asia/Shanghai' and {j['command'] for j in data['jobs']}=={'shadow-run','weekly-shadow-report'}
+    data=load_schedule(); assert data['timezone']=='Asia/Shanghai' and {j['command'] for j in data['jobs']}=={'shadow-run','weekly-shadow-report','weekly-review'}
     assert all(isinstance(j['enabled'], bool) and len(j['local_time']) == 5 for j in data['jobs'])
     assert any(j['frequency']=='weekly' and j.get('day') for j in data['jobs'])
     for path in ('scripts/run_live_daily.ps1','scripts/run_live_daily.sh','scripts/run_live_weekly.ps1','scripts/run_live_weekly.sh'):

@@ -10,14 +10,14 @@ review_weekday: Saturday
 review_local_time: "12:00"
 lookbacks:
   week: {days: 7, label: 1w}
-  month: {days: 21, label: 1m}
+  month: {days: 21, label: 21d_calendar}
 required_series:
-  - {series_id: CN_EQ_LARGE, asset_id: CN_EQ, kind: price, unit: index_points}
-  - {series_id: HK_EQ, asset_id: HK_EQ, kind: price, unit: index_points}
-  - {series_id: US_EQ, asset_id: US_EQ, kind: price, unit: index_points}
-  - {series_id: CN_BOND_10Y, asset_id: CN_BOND, kind: yield, unit: percent}
-  - {series_id: GOLD, asset_id: GOLD, kind: price, unit: price}
-  - {series_id: COPPER, asset_id: COMMODITY, kind: price, unit: price}
+  - {series_id: CN_EQ_LARGE, asset_id: CN_EQ, kind: price, unit: index_points, max_age_days: 7, usage: PERSONAL_WEEKLY, provider: manual}
+  - {series_id: HK_EQ, asset_id: HK_EQ, kind: price, unit: index_points, max_age_days: 7, usage: PERSONAL_WEEKLY, provider: manual}
+  - {series_id: US_EQ, asset_id: US_EQ, kind: price, unit: index_points, max_age_days: 7, usage: PERSONAL_WEEKLY, provider: fred}
+  - {series_id: CN_BOND_10Y, asset_id: CN_BOND, kind: yield, unit: percent, max_age_days: 7, usage: PERSONAL_WEEKLY, provider: manual}
+  - {series_id: GOLD, asset_id: GOLD, kind: price, unit: price, max_age_days: 7, usage: PERSONAL_WEEKLY, provider: manual}
+  - {series_id: COPPER, asset_id: COMMODITY, kind: price, unit: price, max_age_days: 7, usage: PERSONAL_WEEKLY, provider: manual}
 overlay_series:
   - {series_id: CN_BOND_2Y, kind: yield, unit: percent}
   - {series_id: US_GOV_10Y, kind: yield, unit: percent}
@@ -39,6 +39,7 @@ notes:
   - 观察日仍按各市场交易日（周五周终），复盘截止默认为次日周六 12:00 北京时间。
   - 周五北京晚间看不到当周美股/COMEX 收盘；周六 12:00 可以看到。
   - Missing required latest level fails closed as DATA_BLOCKED.
+  - The month label is explicitly 21d_calendar; actual prior date is retained, never presented as a natural month or trading-month return.
   - Missing lookback windows are PARTIAL, never zero-filled.
   - Yield series report level change in basis points, not percent return.
   - This contract does not change strategic weights or authorize trades.

@@ -553,6 +553,9 @@ def build_location(
                     "series_id": series_id,
                     "percentile_1y": None,
                     "samples": 0,
+                    "history_start": None,
+                    "history_end": None,
+                    "n_unique_periods": 0,
                     "note": "本周缺水平，不估分位",
                 }
             )
@@ -570,12 +573,27 @@ def build_location(
             if to_beijing(available) > edge:
                 continue
             history.append(float(row.value))
+        history_days = []
+        for row in rows:
+            day = getattr(row, "observation_date", None)
+            available = getattr(row, "available_at", None)
+            if (
+                getattr(row, "series_id", None) == series_id
+                and day is not None
+                and start <= day <= week_end
+                and available is not None
+                and to_beijing(available) <= edge
+            ):
+                history_days.append(day)
         if len(history) < MIN_PERCENTILE_SAMPLES:
             out.append(
                 {
                     "series_id": series_id,
                     "percentile_1y": None,
                     "samples": len(history),
+                    "history_start": min(history_days).isoformat() if history_days else None,
+                    "history_end": max(history_days).isoformat() if history_days else None,
+                    "n_unique_periods": len(set(history_days)),
                     "note": "一年样本不足 20，分位留空，避免用三个点假装历史",
                 }
             )
@@ -585,6 +603,9 @@ def build_location(
                 "series_id": series_id,
                 "percentile_1y": _percentile(history, float(current)),
                 "samples": len(history),
+                "history_start": min(history_days).isoformat() if history_days else None,
+                "history_end": max(history_days).isoformat() if history_days else None,
+                "n_unique_periods": len(set(history_days)),
                 "note": "可见样本内的经验分位，不是正式风险模型",
             }
         )

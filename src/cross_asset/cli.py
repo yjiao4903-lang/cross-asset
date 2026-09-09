@@ -247,6 +247,44 @@ def research_brief_command(
     typer.echo(json.dumps({"status": "SUCCESS", "output": str(path)}, ensure_ascii=False))
 
 
+@app.command("weekly-review")
+def weekly_review_command(
+    as_of: str = typer.Option(..., "--as-of", help="Information cutoff date (ISO date)."),
+    observations_json: str = typer.Option(..., "--observations-json", help="Observation JSON."),
+    output: str = typer.Option("artifacts/reports/weekly_review.md", "--output"),
+    prior_snapshot: str | None = typer.Option(None, "--prior-snapshot"),
+    snapshot_output: str | None = typer.Option(None, "--snapshot-output"),
+    config: str | None = typer.Option(None, "--config"),
+    week_end: str | None = typer.Option(None, "--week-end", help="Observation week end date."),
+    review_cutoff: str | None = typer.Option(
+        None, "--review-cutoff", help="Information cutoff timestamp; never beyond Saturday noon."
+    ),
+) -> None:
+    """Build the point-in-time weekly fact table and traceable brief."""
+    from .research.weekly_review import run_weekly_review
+
+    try:
+        result = run_weekly_review(
+            as_of=as_of,
+            observations_json=observations_json,
+            output=output,
+            prior_snapshot=prior_snapshot,
+            snapshot_output=snapshot_output,
+            config_path=config,
+            week_end_date=week_end,
+            review_cutoff=review_cutoff,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        typer.echo(json.dumps({"status": "CONFIG_BLOCKED", "error": str(exc)}, ensure_ascii=False))
+        raise typer.Exit(1) from exc
+    typer.echo(json.dumps(result, ensure_ascii=False, sort_keys=True, default=str))
+    status = result.get("status")
+    if status == "DATA_BLOCKED":
+        raise typer.Exit(2)
+    if status not in {"READY", "PARTIAL"}:
+        raise typer.Exit(1)
+
+
 @app.command("current-state")
 def current_state_command(
     run_tests: bool = typer.Option(False, "--run-tests"),
