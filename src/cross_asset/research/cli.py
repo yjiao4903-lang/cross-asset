@@ -35,6 +35,7 @@ from . import (
     stitch_oos_path,
     verdict_from_thresholds,
 )
+from .dependencies import research_required_series_ids
 from .execution_timing import (
     annotate_research_execution_timing,
     research_execution_timing_summary,
@@ -104,18 +105,14 @@ def readiness_command(
     """Evaluate whether admitted PIT data is ready for the frozen OOS protocol."""
     protocol = load_research_protocol(config)
     model_config = load_research_model_config()
-    return_series = [
-        spec.series_id
-        for spec in model_config.return_specs.values()
-        if spec.series_id is not None
-    ]
+    required_series = research_required_series_ids(model_config)
     store = init_db(_database_path(database))
     try:
         dates = load_decision_dates(decision_dates) if decision_dates else None
         result = evaluate_research_readiness(
             store.conn,
             protocol,
-            required_series=return_series,
+            required_series=required_series,
             decision_times=dates,
         )
     finally:
@@ -175,16 +172,12 @@ def run_oos_command(
     effective_config_hash = config_hash(research_effective_config_paths(config))
     try:
         model_config = load_research_model_config()
-        return_series = [
-            spec.series_id
-            for spec in model_config.return_specs.values()
-            if spec.series_id is not None
-        ]
+        required_series = research_required_series_ids(model_config)
         development_dates = dates[: plan.development_count]
         readiness = evaluate_research_readiness(
             store.conn,
             protocol,
-            required_series=return_series,
+            required_series=required_series,
             decision_times=development_dates,
         )
         if readiness["status"] != "READY_FOR_OOS" or plan.status != "READY_FOR_OOS":
@@ -206,6 +199,10 @@ def run_oos_command(
             required_usage_status="RESEARCH_ADMISSIBLE",
             allowed_quality={"ok", "closed"},
         ).df()
+        if not snapshot_rows.empty:
+            snapshot_rows = snapshot_rows[
+                snapshot_rows["series_id"].isin(required_series)
+            ].copy()
         if snapshot_rows.empty:
             raise ValueError("research_data_snapshot_missing")
         snapshot_records = snapshot_rows.to_dict("records")
