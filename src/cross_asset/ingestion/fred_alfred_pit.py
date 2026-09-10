@@ -27,7 +27,7 @@ class VintageObservation:
     observation_date: date
     value: float | None
     realtime_start: date
-    realtime_end: date
+    realtime_end: date | None
     conservative_available_at: datetime
     mode: str
     request_vintage: date | None
@@ -37,7 +37,9 @@ class VintageObservation:
         payload = asdict(self)
         payload["observation_date"] = self.observation_date.isoformat()
         payload["realtime_start"] = self.realtime_start.isoformat()
-        payload["realtime_end"] = self.realtime_end.isoformat()
+        payload["realtime_end"] = (
+            self.realtime_end.isoformat() if self.realtime_end is not None else None
+        )
         payload["conservative_available_at"] = self.conservative_available_at.isoformat()
         payload["request_vintage"] = (
             self.request_vintage.isoformat() if self.request_vintage is not None else None
@@ -70,6 +72,15 @@ def _numeric(raw: Any) -> float | None:
     return value
 
 
+def _realtime_end(row: dict[str, Any], *, mode: str) -> date | None:
+    raw = row.get("realtime_end")
+    if raw in {None, "", ".", "#NA"}:
+        if mode == MODE_INITIAL_RELEASE:
+            return None
+        raise FredPITError(f"fred_invalid_realtime_end:{raw}")
+    return _date(raw, field="realtime_end")
+
+
 def parse_observations(
     *,
     canonical_series_id: str,
@@ -90,8 +101,8 @@ def parse_observations(
             raise FredPITError("fred_observation_row_invalid")
         observation_date = _date(row.get("date"), field="observation_date")
         realtime_start = _date(row.get("realtime_start"), field="realtime_start")
-        realtime_end = _date(row.get("realtime_end"), field="realtime_end")
-        if realtime_end < realtime_start:
+        realtime_end = _realtime_end(row, mode=mode)
+        if realtime_end is not None and realtime_end < realtime_start:
             raise FredPITError("fred_realtime_period_reversed")
         if requested is not None and realtime_start > requested:
             raise FredPITError(
@@ -123,6 +134,10 @@ def require_causal_vintage(records: Iterable[VintageObservation]) -> list[Vintag
     return rows
 
 
+def _version_key(row: VintageObservation) -> tuple[date, date]:
+    return row.realtime_start, row.realtime_end or row.realtime_start
+
+
 def snapshot_asof(
     records: Iterable[VintageObservation],
     decision_time: datetime | str,
@@ -151,13 +166,7 @@ def snapshot_asof(
     for row in eligible:
         key = (row.canonical_series_id, row.observation_date)
         current = chosen.get(key)
-        if current is None or (
-            row.realtime_start,
-            row.realtime_end,
-        ) > (
-            current.realtime_start,
-            current.realtime_end,
-        ):
+        if current is None or _version_key(row) > _version_key(current):
             chosen[key] = row
     return sorted(
         chosen.values(),
