@@ -46,6 +46,28 @@ def test_independence_day_saturday_observed_friday():
     assert date(2026, 7, 4) not in us_federal_holidays(2026)
 
 
+@pytest.mark.parametrize(
+    ("observed_date", "nominal_year"),
+    [
+        (date(2010, 12, 31), 2011),
+        (date(2021, 12, 31), 2022),
+    ],
+)
+def test_cross_year_observed_new_year_is_not_business_day(observed_date, nominal_year):
+    assert observed_date in us_federal_holidays(nominal_year)
+    assert not is_us_federal_business_day(observed_date)
+
+
+def test_following_business_day_skips_cross_year_observed_new_year():
+    assert date(2022, 1, 1).weekday() == 5
+    assert not is_us_federal_business_day(date(2021, 12, 31))
+    available = available_at_for_policy(
+        observation_date=date(2021, 12, 30),
+        policy="FOLLOWING_US_FEDERAL_BUSINESS_DAY_1600_ET",
+    )
+    assert available == datetime(2022, 1, 3, 16, 0, 0, tzinfo=ZoneInfo("America/New_York"))
+
+
 def test_thanksgiving_and_juneteenth():
     assert date(2026, 11, 26) in us_federal_holidays(2026)
     assert date(2026, 6, 19) in us_federal_holidays(2026)
