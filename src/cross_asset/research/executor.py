@@ -11,10 +11,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from cross_asset.backtest.accounting import (
-    embedded_accounting_disclosure,
-    embedded_accounting_required_series_ids,
-)
+from cross_asset.backtest.accounting import embedded_accounting_disclosure
 from cross_asset.backtest.replay import FullModelStrategy
 from cross_asset.backtest.returns import (
     AssetReturnSpec,
@@ -27,6 +24,8 @@ from cross_asset.engines.asset_score import score_asset
 from cross_asset.engines.macro import build_macro_state
 from cross_asset.engines.market import MarketEngine
 from cross_asset.storage import latest_formal_observations_asof
+
+from .dependencies import research_required_series_ids
 
 
 @dataclass(frozen=True)
@@ -236,16 +235,7 @@ def execute_walk_forward(
     if len(dates) <= development_count:
         raise ValueError("sealed_holdout_dates_missing_from_input")
 
-    accounting_series = embedded_accounting_required_series_ids(model_config.return_specs)
-    series_ids = sorted(
-        {
-            spec.series_id
-            for spec in model_config.return_specs.values()
-            if spec.series_id is not None
-        }
-        | accounting_series
-        | set(model_config.macro_config.get("series", {}))
-    )
+    series_ids = research_required_series_ids(model_config)
 
     # Realized-return inputs keep the existing formal selection behavior, but
     # they never need data beyond the development sample. Decision information
