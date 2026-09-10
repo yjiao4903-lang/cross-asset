@@ -67,45 +67,54 @@ class DuckDBStore:
         )
 
     def insert_observations(self, rows, run_id=None):
-        """Insert observations idempotently; returns number newly inserted."""
+        """Insert observations idempotently; returns number newly inserted.
+
+        Bulk multi-row insert (semantics identical to the previous per-row
+        SELECT+INSERT: unique-key conflicts are skipped, return value is the
+        number of rows newly present) to avoid O(n) per-row scans.
+        """
         if not rows:
             return 0
+        prepared = []
+        for row in rows:
+            r = dict(row)
+            r["run_id"] = str(run_id or r.get("run_id", ""))
+            r["available_at"] = utc_naive(r.get("available_at"))
+            r["ingested_at"] = utc_naive(r.get("ingested_at"))
+            prepared.append(r)
+        cols = [
+            "series_id",
+            "observation_date",
+            "available_at",
+            "value",
+            "source",
+            "source_series_id",
+            "vintage_date",
+            "ingested_at",
+            "quality",
+            "raw_file",
+            "run_id",
+        ]
+        before = self.connection.execute("SELECT count(*) FROM observations").fetchone()[0]
         self.connection.execute("BEGIN")
         try:
-            count = 0
-            for row in rows:
-                r = dict(row)
-                r["run_id"] = str(run_id or r.get("run_id", ""))
-                cols = [
-                    "series_id",
-                    "observation_date",
-                    "available_at",
-                    "value",
-                    "source",
-                    "source_series_id",
-                    "vintage_date",
-                    "ingested_at",
-                    "quality",
-                    "raw_file",
-                    "run_id",
-                ]
-                r["available_at"] = utc_naive(r.get("available_at"))
-                r["ingested_at"] = utc_naive(r.get("ingested_at"))
-                vals = [r.get(c) for c in cols]
-                before = self.connection.execute(
-                    "SELECT count(*) FROM observations WHERE series_id=? AND observation_date=? AND available_at=? AND source=? AND source_series_id=?",
-                    vals[:1] + [vals[1], vals[2], vals[4], vals[5]],
-                ).fetchone()[0]
-                self.connection.execute(
-                    "INSERT INTO observations VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING",
-                    vals,
+            for start in range(0, len(prepared), 1000):
+                chunk = prepared[start : start + 1000]
+                placeholders = ",".join(
+                    "(" + ",".join("?" for _ in cols) + ")" for _ in chunk
                 )
-                count += int(before == 0)
+                flat = [r.get(c) for r in chunk for c in cols]
+                self.connection.execute(
+                    f"INSERT INTO observations VALUES {placeholders} "
+                    "ON CONFLICT DO NOTHING",
+                    flat,
+                )
             self.connection.execute("COMMIT")
-            return count
         except Exception:
             self.connection.execute("ROLLBACK")
             raise
+        after = self.connection.execute("SELECT count(*) FROM observations").fetchone()[0]
+        return int(after - before)
 
     def query(self, sql, params=None):
         return self.connection.execute(sql, params or [])

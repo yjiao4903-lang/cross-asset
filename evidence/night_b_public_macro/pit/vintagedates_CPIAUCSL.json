@@ -1,0 +1,20 @@
+{
+  "endpoint": "series/vintagedates",
+  "fetched_at": "2026-09-10T11:05:41.394567+00:00",
+  "params": {
+    "file_type": "json",
+    "limit": 10000,
+    "realtime_end": "9999-12-31",
+    "realtime_start": "1776-07-04",
+    "series_id": "CPIAUCSL",
+    "sort_order": "asc"
+  },
+  "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\88f818bf499e639ac66f7e450f38a287c54ef7397ff738f191b613b18592c5b9\\2026\\09\\20260910T110541Z_eaf28247c14883ee.json",
+  "raw_sha256": "eaf28247c14883eee76beb3f713bdba70bd4c2276feb3d906814ef2872e4d8da",
+  "request_fingerprint": "88f818bf499e639ac66f7e450f38a287c54ef7397ff738f191b613b18592c5b9",
+  "selection_rule": "latest_official_vintage_with_conservative_availability_le_cutoff",
+  "vintage_count": 668,
+  "vintage_first": "1972-07-21",
+  "vintage_last": "2026-08-12",
+  "vintage_selected": "2026-08-12"
+}

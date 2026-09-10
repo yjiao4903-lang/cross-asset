@@ -226,6 +226,21 @@ class FredAlfredClient:
                     fetched_at=fetched_at,
                     ingested_at=datetime.now(UTC),
                     cache_hit=True,
+                    # Archive cached bytes too: keeps the invariant that every
+                    # served payload has an immutable raw archive entry. Using
+                    # the original fetched_at keeps the path deterministic and
+                    # identical to the first (network) fetch.
+                    raw_archive_path=(
+                        self.raw_archive.write(
+                            "fred_alfred",
+                            fingerprint,
+                            raw,
+                            captured_at=fetched_at,
+                            extension="json",
+                        )
+                        if self.raw_archive is not None
+                        else None
+                    ),
                 )
 
         request_params = dict(clean_params)

@@ -1,0 +1,20 @@
+{
+  "endpoint": "series/vintagedates",
+  "fetched_at": "2026-09-10T11:06:04.109790+00:00",
+  "params": {
+    "file_type": "json",
+    "limit": 10000,
+    "realtime_end": "9999-12-31",
+    "realtime_start": "1776-07-04",
+    "series_id": "DFII10",
+    "sort_order": "asc"
+  },
+  "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\0a37057465af20b07a333b89d7ad352d012b784602427ac78cd7819dbf42b00e\\2026\\09\\20260910T110604Z_388c6e6920dc6269.json",
+  "raw_sha256": "388c6e6920dc6269d6f1c72734f32404f17b1fa21c7008a96d413f4d4e0b5408",
+  "request_fingerprint": "0a37057465af20b07a333b89d7ad352d012b784602427ac78cd7819dbf42b00e",
+  "selection_rule": "latest_official_vintage_with_conservative_availability_le_cutoff",
+  "vintage_count": 5087,
+  "vintage_first": "2005-10-12",
+  "vintage_last": "2026-09-09",
+  "vintage_selected": "2026-09-08"
+}

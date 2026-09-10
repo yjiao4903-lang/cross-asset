@@ -1,0 +1,20 @@
+{
+  "endpoint": "series/vintagedates",
+  "fetched_at": "2026-09-10T11:05:58.822170+00:00",
+  "params": {
+    "file_type": "json",
+    "limit": 10000,
+    "realtime_end": "9999-12-31",
+    "realtime_start": "1776-07-04",
+    "series_id": "INDPRO",
+    "sort_order": "asc"
+  },
+  "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\6a297aa391a24e7108a9e3008645480ed124701961e908008989bd876b22a525\\2026\\09\\20260910T110558Z_4a4adc4a1f9e7635.json",
+  "raw_sha256": "4a4adc4a1f9e7635e4aa30752c783694a98a66d3260cf9aaca7d56b2e2a9fd1a",
+  "request_fingerprint": "6a297aa391a24e7108a9e3008645480ed124701961e908008989bd876b22a525",
+  "selection_rule": "latest_official_vintage_with_conservative_availability_le_cutoff",
+  "vintage_count": 1222,
+  "vintage_first": "1927-01-26",
+  "vintage_last": "2026-08-18",
+  "vintage_selected": "2026-08-18"
+}

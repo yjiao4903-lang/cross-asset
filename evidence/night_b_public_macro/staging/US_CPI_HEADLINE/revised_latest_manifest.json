@@ -1,0 +1,36 @@
+{
+  "blockers": [
+    "impossible_future_available_at"
+  ],
+  "cache_hit": false,
+  "canonical_series_id": "US_CPI_HEADLINE",
+  "duplicate_count": 0,
+  "frequency": "Monthly",
+  "latest_observation": "2026-07-01",
+  "latest_vintage": "2026-09-10",
+  "metadata_as_of_safe": null,
+  "metadata_last_updated": "2026-08-12 09:10:19-05",
+  "metadata_raw_sha256": "371e87c2e58b7b27d59079174e43df4e4438ad1633dfdf9468aedb69c61f428b",
+  "metadata_realtime_end": "2026-08-12",
+  "metadata_realtime_start": "2026-08-12",
+  "metadata_request_fingerprint": "e6b8546fd683c4f633f39a15d7bf258bc1e1c6fbfac71acd6e05a307de7b3fb7",
+  "missing_ratio": 0.002004008016032064,
+  "mode": "REVISED_LATEST",
+  "provider_series_id": "CPIAUCSL",
+  "raw_archive_path": "d:\\\u8de8\u8d44\u4ea7\u76d1\u63a7\u9879\u76ee\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\ae93ad5af1a824ea4d0c633da01dfdca7757c2a42a4bfc55d6d692723021e4ef\\2026\\09\\20260910T110540Z_59575ee2cec1631e.json",
+  "raw_sha256": "59575ee2cec1631e9ebd286883d2ceb222ce7dd6af04797ed99b83b069499570",
+  "request_fingerprint": "ae93ad5af1a824ea4d0c633da01dfdca7757c2a42a4bfc55d6d692723021e4ef",
+  "requested_as_of": null,
+  "requested_end": "2026-09-10",
+  "requested_start": "1985-01-01",
+  "returned_end": "2026-07-01",
+  "returned_start": "1985-01-01",
+  "row_count": 499,
+  "seasonal_adjustment": "Seasonally Adjusted",
+  "source_health": "BLOCKED",
+  "title": "Consumer Price Index for All Urban Consumers: All Items in U.S. City Average",
+  "units": "Index 1982-1984=100",
+  "warnings": [
+    "missing_values"
+  ]
+}

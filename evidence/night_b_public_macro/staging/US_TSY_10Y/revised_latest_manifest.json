@@ -1,0 +1,36 @@
+{
+  "blockers": [
+    "impossible_future_available_at"
+  ],
+  "cache_hit": false,
+  "canonical_series_id": "US_TSY_10Y",
+  "duplicate_count": 0,
+  "frequency": "Daily",
+  "latest_observation": "2026-09-08",
+  "latest_vintage": "2026-09-10",
+  "metadata_as_of_safe": null,
+  "metadata_last_updated": "2026-09-09 15:16:27-05",
+  "metadata_raw_sha256": "8b9b8a6fd502d06ded183dceeb231809219d67c0e0faafebdda72140bc678912",
+  "metadata_realtime_end": "2026-09-09",
+  "metadata_realtime_start": "2026-09-09",
+  "metadata_request_fingerprint": "1ff3e0debe9f5cf848656672e1e9bd1fcf8f0708f578928813b6131ca424d803",
+  "missing_ratio": 0.04146745126884884,
+  "mode": "REVISED_LATEST",
+  "provider_series_id": "DGS10",
+  "raw_archive_path": "d:\\\u8de8\u8d44\u4ea7\u76d1\u63a7\u9879\u76ee\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\5994f6fa46381195daf9cede834ee6bdd7a5141972cc812ae1b6fa2eab1e52c5\\2026\\09\\20260910T110607Z_b3cd12fdf14d31a8.json",
+  "raw_sha256": "b3cd12fdf14d31a87013b3113b0d94cedc8228f91315a26a1bc67a8601189829",
+  "request_fingerprint": "5994f6fa46381195daf9cede834ee6bdd7a5141972cc812ae1b6fa2eab1e52c5",
+  "requested_as_of": null,
+  "requested_end": "2026-09-10",
+  "requested_start": "1985-01-01",
+  "returned_end": "2026-09-08",
+  "returned_start": "1985-01-01",
+  "row_count": 10876,
+  "seasonal_adjustment": "Not Seasonally Adjusted",
+  "source_health": "BLOCKED",
+  "title": "Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted on an Investment Basis",
+  "units": "Percent",
+  "warnings": [
+    "missing_values"
+  ]
+}

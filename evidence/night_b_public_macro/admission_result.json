@@ -1,0 +1,72 @@
+{
+  "US_CORE_PCE": {
+    "collection_row_count": 499,
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "pending_release_count": 0,
+    "provider_series_id": "PCEPILFE",
+    "raw_hash_verified": true,
+    "released_row_count": 499,
+    "written": 499
+  },
+  "US_CPI": {
+    "collection_row_count": 499,
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "pending_release_count": 1,
+    "provider_series_id": "CPIAUCSL",
+    "raw_hash_verified": true,
+    "released_row_count": 498,
+    "written": 498
+  },
+  "US_GOV_10Y": {
+    "collection_row_count": 10874,
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "pending_release_count": 450,
+    "provider_series_id": "DGS10",
+    "raw_hash_verified": true,
+    "released_row_count": 10424,
+    "written": 10424
+  },
+  "US_INDUSTRIAL_PRODUCTION": {
+    "collection_row_count": 499,
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "pending_release_count": 0,
+    "provider_series_id": "INDPRO",
+    "raw_hash_verified": true,
+    "released_row_count": 499,
+    "written": 499
+  },
+  "US_INITIAL_CLAIMS": {
+    "collection_row_count": 2174,
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "pending_release_count": 0,
+    "provider_series_id": "ICSA",
+    "raw_hash_verified": true,
+    "released_row_count": 2174,
+    "written": 2174
+  },
+  "US_REAL_10Y": {
+    "collection_row_count": 6177,
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "pending_release_count": 253,
+    "provider_series_id": "DFII10",
+    "raw_hash_verified": true,
+    "released_row_count": 5924,
+    "written": 5924
+  },
+  "US_UNEMPLOYMENT": {
+    "collection_row_count": 500,
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "pending_release_count": 1,
+    "provider_series_id": "UNRATE",
+    "raw_hash_verified": true,
+    "released_row_count": 499,
+    "written": 499
+  }
+}

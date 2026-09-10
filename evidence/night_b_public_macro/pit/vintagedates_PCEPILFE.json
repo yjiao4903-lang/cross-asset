@@ -1,0 +1,20 @@
+{
+  "endpoint": "series/vintagedates",
+  "fetched_at": "2026-09-10T11:05:46.129415+00:00",
+  "params": {
+    "file_type": "json",
+    "limit": 10000,
+    "realtime_end": "9999-12-31",
+    "realtime_start": "1776-07-04",
+    "series_id": "PCEPILFE",
+    "sort_order": "asc"
+  },
+  "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\82b9ce6cd189eee36c6e9e65acffbc46d05a0f3f8ea257438e0ec03514a89916\\2026\\09\\20260910T110546Z_8244a205c1bc617f.json",
+  "raw_sha256": "8244a205c1bc617f313948d01115afdc4fcec9c8dffc37bf3cad6dc4c28933be",
+  "request_fingerprint": "82b9ce6cd189eee36c6e9e65acffbc46d05a0f3f8ea257438e0ec03514a89916",
+  "selection_rule": "latest_official_vintage_with_conservative_availability_le_cutoff",
+  "vintage_count": 315,
+  "vintage_first": "2000-08-01",
+  "vintage_last": "2026-08-26",
+  "vintage_selected": "2026-08-26"
+}

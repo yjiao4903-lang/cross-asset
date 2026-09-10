@@ -1,0 +1,74 @@
+{
+  "canonical_series_id": "US_CPI",
+  "distinct_observation_dates": 24,
+  "distinct_vintages": 30,
+  "fetched_at": "2026-09-10T11:06:10.534859+00:00",
+  "mode": "ALL_REALTIME_PERIODS",
+  "provider_series_id": "CPIAUCSL",
+  "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\9e53083cd071e3575e4c786981d688bf9cbc238ffc262a616e92f85bd66cab96\\2026\\09\\20260910T110610Z_05cf4a0fdeb01b65.json",
+  "raw_sha256": "05cf4a0fdeb01b657472689dea7ebb256d63121c23ade684a6b46662085ea44b",
+  "request_fingerprint": "9e53083cd071e3575e4c786981d688bf9cbc238ffc262a616e92f85bd66cab96",
+  "row_count": 144,
+  "sample": [
+    {
+      "canonical_series_id": "US_CPI",
+      "conservative_available_at": "2020-02-15T00:00:00+00:00",
+      "mode": "ALL_REALTIME_PERIODS",
+      "observation_date": "2020-01-01",
+      "provider_series_id": "CPIAUCSL",
+      "raw_value": "258.820",
+      "realtime_end": "2021-02-07",
+      "realtime_start": "2020-02-13",
+      "request_vintage": null,
+      "value": 258.82
+    },
+    {
+      "canonical_series_id": "US_CPI",
+      "conservative_available_at": "2021-02-10T00:00:00+00:00",
+      "mode": "ALL_REALTIME_PERIODS",
+      "observation_date": "2020-01-01",
+      "provider_series_id": "CPIAUCSL",
+      "raw_value": "258.687",
+      "realtime_end": "2022-02-07",
+      "realtime_start": "2021-02-08",
+      "request_vintage": null,
+      "value": 258.687
+    },
+    {
+      "canonical_series_id": "US_CPI",
+      "conservative_available_at": "2022-02-10T00:00:00+00:00",
+      "mode": "ALL_REALTIME_PERIODS",
+      "observation_date": "2020-01-01",
+      "provider_series_id": "CPIAUCSL",
+      "raw_value": "258.682",
+      "realtime_end": "2023-02-09",
+      "realtime_start": "2022-02-08",
+      "request_vintage": null,
+      "value": 258.682
+    },
+    {
+      "canonical_series_id": "US_CPI",
+      "conservative_available_at": "2023-02-12T00:00:00+00:00",
+      "mode": "ALL_REALTIME_PERIODS",
+      "observation_date": "2020-01-01",
+      "provider_series_id": "CPIAUCSL",
+      "raw_value": "259.037",
+      "realtime_end": "2024-02-08",
+      "realtime_start": "2023-02-10",
+      "request_vintage": null,
+      "value": 259.037
+    },
+    {
+      "canonical_series_id": "US_CPI",
+      "conservative_available_at": "2024-02-11T00:00:00+00:00",
+      "mode": "ALL_REALTIME_PERIODS",
+      "observation_date": "2020-01-01",
+      "provider_series_id": "CPIAUCSL",
+      "raw_value": "258.906",
+      "realtime_end": "2025-02-11",
+      "realtime_start": "2024-02-09",
+      "request_vintage": null,
+      "value": 258.906
+    }
+  ]
+}

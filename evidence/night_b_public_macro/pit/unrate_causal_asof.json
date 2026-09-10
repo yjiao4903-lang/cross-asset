@@ -1,0 +1,16 @@
+{
+  "2020-04-15": {
+    "conservative_available_at": "2020-04-17T00:00:00+00:00",
+    "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\037731f9b21d4dc0b127cff1f9ce2d7332f9ce5e6b64fb979e5fbbfd254e542c\\2026\\09\\20260910T110613Z_990432a6cb78d067.json",
+    "raw_sha256": "990432a6cb78d067c8b92357844bd69c7c876bf87156f133635902a83da7b36f",
+    "request_fingerprint": "037731f9b21d4dc0b127cff1f9ce2d7332f9ce5e6b64fb979e5fbbfd254e542c",
+    "value": 3.6
+  },
+  "2022-01-15": {
+    "conservative_available_at": "2022-01-17T00:00:00+00:00",
+    "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\7654f0ddaecd2007e630cbaab584c1f23f5b2bc0387b997192ff366788abf777\\2026\\09\\20260910T110614Z_372dab1fba7f0bdf.json",
+    "raw_sha256": "372dab1fba7f0bdff8fafacd53314e1a7035331435a46c2175e1b7dbe1382fdc",
+    "request_fingerprint": "7654f0ddaecd2007e630cbaab584c1f23f5b2bc0387b997192ff366788abf777",
+    "value": 3.5
+  }
+}

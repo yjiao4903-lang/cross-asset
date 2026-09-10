@@ -59,6 +59,17 @@ series:
     release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
     source_url: "https://fred.stlouisfed.org/series/DGS10"
     status: CANDIDATE
+  US_REAL_10Y:
+    provider_series_id: DFII10
+    title: "Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted on an Investment Basis, Inflation-Indexed"
+    units: "Percent"
+    frequency: "Daily"
+    seasonal_adjustment: "Not Seasonally Adjusted"
+    observation_semantics: "Treasury constant-maturity real yield (TIPS)"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/DFII10"
+    status: CANDIDATE
   US_TSY_30Y:
     provider_series_id: DGS30
     title: "Market Yield on U.S. Treasury Securities at 30-Year Constant Maturity, Quoted on an Investment Basis"

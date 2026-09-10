@@ -1,0 +1,36 @@
+{
+  "blockers": [
+    "impossible_future_available_at"
+  ],
+  "cache_hit": false,
+  "canonical_series_id": "US_UNEMPLOYMENT",
+  "duplicate_count": 0,
+  "frequency": "Monthly",
+  "latest_observation": "2026-08-01",
+  "latest_vintage": "2026-09-10",
+  "metadata_as_of_safe": null,
+  "metadata_last_updated": "2026-09-04 08:27:31-05",
+  "metadata_raw_sha256": "d4455cb505d4dab10a12153aaddb318c91550996298b3e9f54d83cbc637b70e4",
+  "metadata_realtime_end": "2026-09-04",
+  "metadata_realtime_start": "2026-09-04",
+  "metadata_request_fingerprint": "6373509c0d68deb014da72151c557dc5e9459db6108d9e314c60aea95e20da6f",
+  "missing_ratio": 0.002,
+  "mode": "REVISED_LATEST",
+  "provider_series_id": "UNRATE",
+  "raw_archive_path": "d:\\\u8de8\u8d44\u4ea7\u76d1\u63a7\u9879\u76ee\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\0637875c9df1b6604b58fe44321798ba8a10855b66de5a48699a424602a3b7d9\\2026\\09\\20260910T110548Z_25c96bc4a510dc57.json",
+  "raw_sha256": "25c96bc4a510dc57f2bf71dd5c25b1fbce3c2fde7a7531635d19060b53bc92c4",
+  "request_fingerprint": "0637875c9df1b6604b58fe44321798ba8a10855b66de5a48699a424602a3b7d9",
+  "requested_as_of": null,
+  "requested_end": "2026-09-10",
+  "requested_start": "1985-01-01",
+  "returned_end": "2026-08-01",
+  "returned_start": "1985-01-01",
+  "row_count": 500,
+  "seasonal_adjustment": "Seasonally Adjusted",
+  "source_health": "BLOCKED",
+  "title": "Unemployment Rate",
+  "units": "Percent",
+  "warnings": [
+    "missing_values"
+  ]
+}

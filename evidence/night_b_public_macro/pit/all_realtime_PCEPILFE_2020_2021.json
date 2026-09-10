@@ -1,0 +1,74 @@
+{
+  "canonical_series_id": "US_CORE_PCE",
+  "distinct_observation_dates": 24,
+  "distinct_vintages": 30,
+  "fetched_at": "2026-09-10T11:06:11.900906+00:00",
+  "mode": "ALL_REALTIME_PERIODS",
+  "provider_series_id": "PCEPILFE",
+  "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\85a8f06da7e520de4b6e65725af93fc70da6f9f67817fc90eba69eabd8b6e1c3\\2026\\09\\20260910T110611Z_605eb77451079610.json",
+  "raw_sha256": "605eb7745107961018d12c68a7f603021433ffa793f7b69e944913a3902bc009",
+  "request_fingerprint": "85a8f06da7e520de4b6e65725af93fc70da6f9f67817fc90eba69eabd8b6e1c3",
+  "row_count": 207,
+  "sample": [
+    {
+      "canonical_series_id": "US_CORE_PCE",
+      "conservative_available_at": "2020-03-01T00:00:00+00:00",
+      "mode": "ALL_REALTIME_PERIODS",
+      "observation_date": "2020-01-01",
+      "provider_series_id": "PCEPILFE",
+      "raw_value": "112.659",
+      "realtime_end": "2020-03-26",
+      "realtime_start": "2020-02-28",
+      "request_vintage": null,
+      "value": 112.659
+    },
+    {
+      "canonical_series_id": "US_CORE_PCE",
+      "conservative_available_at": "2020-03-29T00:00:00+00:00",
+      "mode": "ALL_REALTIME_PERIODS",
+      "observation_date": "2020-01-01",
+      "provider_series_id": "PCEPILFE",
+      "raw_value": "112.739",
+      "realtime_end": "2020-04-29",
+      "realtime_start": "2020-03-27",
+      "request_vintage": null,
+      "value": 112.739
+    },
+    {
+      "canonical_series_id": "US_CORE_PCE",
+      "conservative_available_at": "2020-05-02T00:00:00+00:00",
+      "mode": "ALL_REALTIME_PERIODS",
+      "observation_date": "2020-01-01",
+      "provider_series_id": "PCEPILFE",
+      "raw_value": "112.758",
+      "realtime_end": "2020-05-28",
+      "realtime_start": "2020-04-30",
+      "request_vintage": null,
+      "value": 112.758
+    },
+    {
+      "canonical_series_id": "US_CORE_PCE",
+      "conservative_available_at": "2020-05-31T00:00:00+00:00",
+      "mode": "ALL_REALTIME_PERIODS",
+      "observation_date": "2020-01-01",
+      "provider_series_id": "PCEPILFE",
+      "raw_value": "112.725",
+      "realtime_end": "2020-06-25",
+      "realtime_start": "2020-05-29",
+      "request_vintage": null,
+      "value": 112.725
+    },
+    {
+      "canonical_series_id": "US_CORE_PCE",
+      "conservative_available_at": "2020-06-28T00:00:00+00:00",
+      "mode": "ALL_REALTIME_PERIODS",
+      "observation_date": "2020-01-01",
+      "provider_series_id": "PCEPILFE",
+      "raw_value": "112.73",
+      "realtime_end": "2020-07-30",
+      "realtime_start": "2020-06-26",
+      "request_vintage": null,
+      "value": 112.73
+    }
+  ]
+}

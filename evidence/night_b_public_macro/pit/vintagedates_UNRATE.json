@@ -1,0 +1,20 @@
+{
+  "endpoint": "series/vintagedates",
+  "fetched_at": "2026-09-10T11:05:50.548561+00:00",
+  "params": {
+    "file_type": "json",
+    "limit": 10000,
+    "realtime_end": "9999-12-31",
+    "realtime_start": "1776-07-04",
+    "series_id": "UNRATE",
+    "sort_order": "asc"
+  },
+  "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\fb3c31b90b1bc3e9f52d5b5c39b6112b2b03e3c5dd26d6ba141d7638034db566\\2026\\09\\20260910T110550Z_161a8b8a0b4ab65a.json",
+  "raw_sha256": "161a8b8a0b4ab65af58e02712e38eadf91d6309445454a28068e14b671c3e603",
+  "request_fingerprint": "fb3c31b90b1bc3e9f52d5b5c39b6112b2b03e3c5dd26d6ba141d7638034db566",
+  "selection_rule": "latest_official_vintage_with_conservative_availability_le_cutoff",
+  "vintage_count": 799,
+  "vintage_first": "1960-03-15",
+  "vintage_last": "2026-09-04",
+  "vintage_selected": "2026-09-04"
+}

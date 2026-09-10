@@ -1,0 +1,20 @@
+{
+  "endpoint": "series/vintagedates",
+  "fetched_at": "2026-09-10T11:05:54.657265+00:00",
+  "params": {
+    "file_type": "json",
+    "limit": 10000,
+    "realtime_end": "9999-12-31",
+    "realtime_start": "1776-07-04",
+    "series_id": "ICSA",
+    "sort_order": "asc"
+  },
+  "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-night-public-macro\\data\\raw\\fred_alfred_local_b\\fred_alfred\\b427afb6c4bad353a8d585aaa57366098c0a436d2263498a87d7e8c670c6564a\\2026\\09\\20260910T110554Z_4d61e0e66ac4fdce.json",
+  "raw_sha256": "4d61e0e66ac4fdce54b1291ddf4b731ef29ac8a78416048536f7eb38dc29903f",
+  "request_fingerprint": "b427afb6c4bad353a8d585aaa57366098c0a436d2263498a87d7e8c670c6564a",
+  "selection_rule": "latest_official_vintage_with_conservative_availability_le_cutoff",
+  "vintage_count": 896,
+  "vintage_first": "2009-05-28",
+  "vintage_last": "2026-09-03",
+  "vintage_selected": "2026-09-03"
+}
