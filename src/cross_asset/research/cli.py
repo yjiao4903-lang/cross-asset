@@ -21,7 +21,6 @@ from cross_asset.storage import (
     approved_observations_asof,
     code_version,
     config_hash,
-    data_snapshot_id,
     init_db,
 )
 
@@ -40,7 +39,10 @@ from .execution_timing import (
     annotate_research_execution_timing,
     research_execution_timing_summary,
 )
-from .model_config import load_research_asset_market_map
+from .model_config import (
+    load_research_asset_market_map,
+    research_effective_config_paths,
+)
 from .storage import persist_fold_result, persist_research_plan
 
 app = typer.Typer(
@@ -141,24 +143,18 @@ def plan_command(
         + "\n",
         encoding="utf-8",
     )
+    effective_config_hash = config_hash(research_effective_config_paths(config))
     store = init_db(_database_path(database))
     try:
         persisted = persist_research_plan(
             store,
             plan=payload,
-            config_hash=config_hash(
-                [
-                    config,
-                    "config/research_universe.yml",
-                    "config/allocation.yml",
-                    "config/macro.yml",
-                ]
-            ),
+            config_hash=effective_config_hash,
             code_version=code_version("."),
         )
     finally:
         store.close()
-    result = {**payload, **persisted}
+    result = {**payload, **persisted, "config_hash": effective_config_hash}
     _emit(result)
     if plan.status != "READY_FOR_OOS":
         raise typer.Exit(2)
@@ -176,12 +172,7 @@ def run_oos_command(
     dates = load_decision_dates(decision_dates)
     plan = build_research_plan(dates, protocol)
     store = init_db(_database_path(database))
-    config_paths = [
-        config,
-        "config/research_universe.yml",
-        "config/allocation.yml",
-        "config/macro.yml",
-    ]
+    effective_config_hash = config_hash(research_effective_config_paths(config))
     try:
         model_config = load_research_model_config()
         return_series = [
@@ -206,9 +197,8 @@ def run_oos_command(
             )
             raise typer.Exit(2)
 
-        # A formal run is only reproducible when its admitted information set
-        # has an immutable identity.  Keep this explicit at the CLI boundary
-        # so a successful walk-forward can never persist ``NULL`` fold IDs.
+        # A formal run is only reproducible when both its admitted information set
+        # and every effective consumed config participate in immutable provenance.
         snapshot_cutoff = pd.Timestamp(development_dates.max()).to_pydatetime()
         snapshot_rows = approved_observations_asof(
             store.conn,
@@ -218,11 +208,11 @@ def run_oos_command(
         ).df()
         if snapshot_rows.empty:
             raise ValueError("research_data_snapshot_missing")
-        snapshot_id = data_snapshot_id(snapshot_rows.to_dict("records"))
-        ProvenanceStore(store.conn).create_snapshot(
-            snapshot_rows.to_dict("records"),
+        snapshot_records = snapshot_rows.to_dict("records")
+        snapshot_id = ProvenanceStore(store.conn).create_snapshot(
+            snapshot_records,
             data_cutoff=snapshot_cutoff,
-            config_hash_value=config_hash(config_paths),
+            config_hash_value=effective_config_hash,
         )
 
         fold_rows = execute_walk_forward(
@@ -264,7 +254,7 @@ def run_oos_command(
         persisted = persist_research_plan(
             store,
             plan=plan.to_dict(),
-            config_hash=config_hash(config_paths),
+            config_hash=effective_config_hash,
             code_version=code_version("."),
             data_snapshot_id=snapshot_id,
         )
@@ -299,6 +289,8 @@ def run_oos_command(
                 "status": "OOS_COMPLETE",
                 "holdout_sealed": True,
                 "protocol_hash": protocol.protocol_hash,
+                "config_hash": effective_config_hash,
+                "data_snapshot_id": snapshot_id,
                 "research_run_id": research_run_id,
                 "execution_timing": execution_timing,
                 "metrics_vs_static": metrics,
