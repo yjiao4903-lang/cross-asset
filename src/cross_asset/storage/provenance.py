@@ -44,8 +44,10 @@ def config_hash(paths):
         h.update(str(p).replace('\\','/').encode()); h.update(b'\0'); h.update(p.read_bytes()); h.update(b'\0')
     return h.hexdigest()
 
-def data_snapshot_id(rows):
-    # Only information-set identity participates; ordering and dict insertion order do not.
+def data_snapshot_id(rows, config_hash_value=None):
+    # Data-only identity remains the default.  When a caller supplies an effective
+    # config hash, bind the formal snapshot identity to both the admitted rows and
+    # the configuration that determines how those rows are consumed.
     keys=(
         'series_id','source','source_series_id','observation_date','value',
         'available_at','latest_available_at','vintage_date','raw_hash'
@@ -58,7 +60,12 @@ def data_snapshot_id(rows):
             get = lambda k, item=row: getattr(item, k, None)
         out.append({k:(str(get(k)) if get(k) is not None else None) for k in keys})
     out.sort(key=lambda x:tuple(x[k] or '' for k in keys)); manifest=json.dumps(out,sort_keys=True,separators=(',',':')).encode()
-    return _sha(manifest)
+    manifest_hash=_sha(manifest)
+    if config_hash_value is None:
+        return manifest_hash
+    if not isinstance(config_hash_value,str) or not config_hash_value.strip():
+        raise ValueError('config_hash must be a non-empty string')
+    return _sha(manifest_hash.encode()+b'\0config_hash\0'+config_hash_value.encode())
 
 class ProvenanceStore:
     def __init__(self,connection): self.connection=connection
@@ -73,7 +80,10 @@ class ProvenanceStore:
     def __exit__(self, exc_type, exc, tb): self.close(); return False
 
     def create_snapshot(self,rows,data_cutoff=None,config_hash_value=None):
-        rows=list(rows); sid=data_snapshot_id(rows); now=datetime.now(UTC).replace(tzinfo=None)
+        rows=list(rows)
+        manifest_hash=data_snapshot_id(rows)
+        sid=data_snapshot_id(rows, config_hash_value=config_hash_value)
+        now=datetime.now(UTC).replace(tzinfo=None)
         if config_hash_value is not None and (not isinstance(config_hash_value,str) or not config_hash_value.strip()):
             raise ValueError('config_hash must be a non-empty string')
         manifest=json.dumps(rows,default=_json_default,sort_keys=True,separators=(",", ":"))
@@ -83,7 +93,7 @@ class ProvenanceStore:
         self.connection.execute('''INSERT INTO data_snapshots
             (snapshot_id,created_at,series_count,observation_count,max_available_at,data_cutoff,manifest_hash,manifest_json,config_hash)
             VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING''',
-            [sid,now,len({(r.get("series_id") if isinstance(r,dict) else getattr(r,"series_id",None)) for r in rows}),len(rows),max_available,data_cutoff,sid,manifest,config_hash_value])
+            [sid,now,len({(r.get("series_id") if isinstance(r,dict) else getattr(r,"series_id",None)) for r in rows}),len(rows),max_available,data_cutoff,manifest_hash,manifest,config_hash_value])
         return sid
     def start_model_run(self,run_type,decision_time,model_version,config_hash_value,code_version_value,data_snapshot_id_value,data_cutoff=None,warnings=None,run_id=None):
         if not isinstance(config_hash_value,str) or not config_hash_value.strip(): raise ValueError('config_hash must be a non-empty string')
