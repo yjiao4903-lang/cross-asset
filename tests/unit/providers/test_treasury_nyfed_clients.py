@@ -70,3 +70,60 @@ def test_omo_history_stays_unresolved():
         assert exc.code == "UNRESOLVED"
     else:
         raise AssertionError("expected UNRESOLVED")
+
+
+def test_fiscaldata_exposes_page_and_aggregate_provenance():
+    page1 = json.dumps(
+        {"data": [{"record_date": "2026-09-02", "close_today_bal": "1"}], "meta": {"count": 1, "total-count": 2}}
+    ).encode()
+    page2 = json.dumps(
+        {"data": [{"record_date": "2026-09-03", "close_today_bal": "2"}], "meta": {"count": 1, "total-count": 2}}
+    ).encode()
+
+    def transport(url: str, timeout: float):
+        if "page%5Bnumber%5D=2" in url or "page[number]=2" in url:
+            return 200, page2, {}
+        return 200, page1, {}
+
+    client = TreasuryFiscalDataClient(transport=transport, page_size=1)
+    payload = client.fetch_pages("https://api.fiscaldata.treasury.gov/example")
+    assert payload.page_count == 2
+    assert len(payload.page_raw_hashes) == 2
+    assert len(payload.page_fingerprints) == 2
+    assert payload.raw_hash != payload.page_raw_hashes[0]
+    assert payload.ingested_at
+    assert payload.cache_hit is False
+
+
+def test_nyfed_search_uses_official_date_range():
+    body = json.dumps(
+        {
+            "repo": {
+                "operations": [
+                    {
+                        "operationId": "1",
+                        "operationDate": "2020-01-02",
+                        "operationType": "Reverse Repo",
+                    },
+                    {
+                        "operationId": "2",
+                        "operationDate": "2020-01-03",
+                        "operationType": "Repo",
+                    },
+                ]
+            }
+        }
+    ).encode()
+    seen = {}
+
+    def transport(url: str, timeout: float):
+        seen["url"] = url
+        return 200, body, {}
+
+    client = NYFedMarketsClient(transport=transport)
+    payload = client.fetch_repo_search(start="2020-01-01", end="2020-01-31", operation_type="Reverse Repo")
+    assert "startDate=2020-01-01" in seen["url"]
+    assert "endDate=2020-01-31" in seen["url"]
+    assert "/rp/results/search.json" in seen["url"]
+    assert payload.retrieval_mode == "official_search"
+    assert [row["operationId"] for row in payload.rows] == ["1"]

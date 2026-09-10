@@ -76,3 +76,69 @@ def test_unresolved_dataset_does_not_collect_live_rows():
     rows, manifest = collect_dataset(spec, live=True)
     assert rows == []
     assert manifest.source_health == "BLOCKED"
+
+
+def test_recent_window_requested_range_is_incomplete():
+    spec = load_registry().get("NYFED_ONRRP_RESULTS")
+    rows, manifest = collect_dataset(
+        spec,
+        start="2020-01-01",
+        end="2020-01-31",
+        live=False,
+        fetched_at=datetime(2026, 9, 10, 12, tzinfo=ZoneInfo("UTC")),
+    )
+    assert manifest.historical_coverage == "INCOMPLETE"
+    assert "historical_coverage_incomplete" in manifest.blockers
+    assert manifest.source_health == "BLOCKED"
+
+
+def test_official_search_marks_range_query_coverage():
+    spec = load_registry().get("NYFED_ONRRP_RESULTS")
+    payload = {
+        "repo": {
+            "operations": [
+                {
+                    "operationId": "RP 010220",
+                    "operationDate": "2020-01-02",
+                    "settlementDate": "2020-01-02",
+                    "operationType": "Reverse Repo",
+                    "term": "Overnight",
+                    "lastUpdated": "2020-01-02 13:15:00",
+                    "totalAmtAccepted": 1,
+                    "totalAmtSubmitted": 1,
+                }
+            ]
+        }
+    }
+
+    class FakeNYFed:
+        def fetch_repo_search(self, **kwargs):
+            from types import SimpleNamespace
+
+            return SimpleNamespace(
+                rows=payload["repo"]["operations"],
+                raw_hash="abc",
+                fetched_at="2026-09-10T12:00:00+00:00",
+                ingested_at="2026-09-10T12:00:01+00:00",
+                fingerprint="fp",
+                cache_hit=False,
+                retrieval_mode="official_search",
+            )
+
+        def fetch_repo_results(self, endpoint):
+            raise AssertionError("recent_window must not be used for a requested range")
+
+    rows, manifest = collect_dataset(
+        spec,
+        start="2020-01-01",
+        end="2020-01-31",
+        live=True,
+        nyfed=FakeNYFed(),
+        fetched_at=datetime(2026, 9, 10, 12, tzinfo=ZoneInfo("UTC")),
+    )
+    assert manifest.retrieval_mode == "official_search"
+    assert manifest.historical_coverage == "RANGE_QUERY"
+    assert "historical_coverage_incomplete" not in manifest.blockers
+    assert manifest.fetched_at
+    assert manifest.ingested_at
+    assert manifest.cache_hit is False
