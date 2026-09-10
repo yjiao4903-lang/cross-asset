@@ -1,0 +1,9 @@
+{
+  "content": "LOCAL-A #82: all six market/FX series + accounting + calendars BLOCKED (no real Wind path on host). No resolved market/FX inputs exist to re-ingest.",
+  "hash_match": true,
+  "md_path": "D:\\跨资产监控项目\\worktrees\\local-a-night-wind\\evidence\\night-a_wind_market_accounting_20260910.md",
+  "md_sha256": "4eaaae9a07ed965eac8d0639071213337d393f089c9acc6fb658c1eeba93d136",
+  "sidecar_path": "D:\\跨资产监控项目\\worktrees\\local-a-night-wind\\evidence\\night-a_wind_market_accounting_20260910.sidecar.json",
+  "sidecar_sha256_expected": "4EAAAE9A07ED965EAC8D0639071213337D393F089C9ACC6FB658C1EEBA93D136",
+  "status": "ACCESSIBLE"
+}

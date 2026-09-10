@@ -1,0 +1,320 @@
+{
+  "activation_verdict": "NO: 13/20 required series still have no admitted data (6 return via Wind BLOCKED, 6 CN macro awaiting #77/LOCAL-A A6, DXY semantic mismatch); 7 admitted US macro series have PIT coverage ~0 on the development grid (single-vintage as-of snapshot); protocol is PLANNING_ONLY (needs freeze + owner/reviewer approval); #77 transform semantics not CONTROL_ACCEPTED/merged. Even with PR #90 merged, none of these close.",
+  "authoritative_required_count": 20,
+  "authoritative_required_series": [
+    "CN_BOND_10Y",
+    "CN_CPI",
+    "CN_DR007",
+    "CN_EQ_LARGE",
+    "CN_M1",
+    "CN_M2",
+    "CN_PMI",
+    "CN_PPI",
+    "COPPER",
+    "DXY",
+    "GOLD",
+    "HK_EQ",
+    "US_CORE_PCE",
+    "US_CPI",
+    "US_EQ",
+    "US_GOV_10Y",
+    "US_INDUSTRIAL_PRODUCTION",
+    "US_INITIAL_CLAIMS",
+    "US_REAL_10Y",
+    "US_UNEMPLOYMENT"
+  ],
+  "blockers_flat": [
+    "CN_BOND_10Y:formal_observations_missing",
+    "CN_BOND_10Y:pit_coverage_below_threshold",
+    "CN_BOND_10Y:registry_pass_research_admissible_required",
+    "CN_CPI:formal_observations_missing",
+    "CN_CPI:pit_coverage_below_threshold",
+    "CN_CPI:registry_pass_research_admissible_required",
+    "CN_DR007:formal_observations_missing",
+    "CN_DR007:pit_coverage_below_threshold",
+    "CN_DR007:registry_pass_research_admissible_required",
+    "CN_EQ_LARGE:formal_observations_missing",
+    "CN_EQ_LARGE:pit_coverage_below_threshold",
+    "CN_EQ_LARGE:registry_pass_research_admissible_required",
+    "CN_M1:formal_observations_missing",
+    "CN_M1:pit_coverage_below_threshold",
+    "CN_M1:registry_pass_research_admissible_required",
+    "CN_M2:formal_observations_missing",
+    "CN_M2:pit_coverage_below_threshold",
+    "CN_M2:registry_pass_research_admissible_required",
+    "CN_PMI:formal_observations_missing",
+    "CN_PMI:pit_coverage_below_threshold",
+    "CN_PMI:registry_pass_research_admissible_required",
+    "CN_PPI:formal_observations_missing",
+    "CN_PPI:pit_coverage_below_threshold",
+    "CN_PPI:registry_pass_research_admissible_required",
+    "COPPER:formal_observations_missing",
+    "COPPER:pit_coverage_below_threshold",
+    "COPPER:registry_pass_research_admissible_required",
+    "DXY:formal_observations_missing",
+    "DXY:pit_coverage_below_threshold",
+    "DXY:registry_pass_research_admissible_required",
+    "GOLD:formal_observations_missing",
+    "GOLD:pit_coverage_below_threshold",
+    "GOLD:registry_pass_research_admissible_required",
+    "HK_EQ:formal_observations_missing",
+    "HK_EQ:pit_coverage_below_threshold",
+    "HK_EQ:registry_pass_research_admissible_required",
+    "US_CORE_PCE:pit_coverage_below_threshold",
+    "US_CPI:pit_coverage_below_threshold",
+    "US_EQ:formal_observations_missing",
+    "US_EQ:pit_coverage_below_threshold",
+    "US_EQ:registry_pass_research_admissible_required",
+    "US_GOV_10Y:pit_coverage_below_threshold",
+    "US_INDUSTRIAL_PRODUCTION:pit_coverage_below_threshold",
+    "US_INITIAL_CLAIMS:pit_coverage_below_threshold",
+    "US_REAL_10Y:pit_coverage_below_threshold",
+    "US_UNEMPLOYMENT:pit_coverage_below_threshold",
+    "not_all_critical_series_ready",
+    "protocol_owner_reviewer_approval_required",
+    "protocol_status_requires_frozen"
+  ],
+  "blockers_grouped": {
+    "accounting_fx": [],
+    "admission": [
+      "CN_BOND_10Y:registry_pass_research_admissible_required",
+      "CN_CPI:registry_pass_research_admissible_required",
+      "CN_DR007:registry_pass_research_admissible_required",
+      "CN_EQ_LARGE:registry_pass_research_admissible_required",
+      "CN_M1:registry_pass_research_admissible_required",
+      "CN_M2:registry_pass_research_admissible_required",
+      "CN_PMI:registry_pass_research_admissible_required",
+      "CN_PPI:registry_pass_research_admissible_required",
+      "COPPER:registry_pass_research_admissible_required",
+      "DXY:registry_pass_research_admissible_required",
+      "GOLD:registry_pass_research_admissible_required",
+      "HK_EQ:registry_pass_research_admissible_required",
+      "US_EQ:registry_pass_research_admissible_required"
+    ],
+    "code_integration": [],
+    "freshness_history": [],
+    "pit_vintage": [
+      "CN_BOND_10Y:pit_coverage_below_threshold",
+      "CN_CPI:pit_coverage_below_threshold",
+      "CN_DR007:pit_coverage_below_threshold",
+      "CN_EQ_LARGE:pit_coverage_below_threshold",
+      "CN_M1:pit_coverage_below_threshold",
+      "CN_M2:pit_coverage_below_threshold",
+      "CN_PMI:pit_coverage_below_threshold",
+      "CN_PPI:pit_coverage_below_threshold",
+      "COPPER:pit_coverage_below_threshold",
+      "DXY:pit_coverage_below_threshold",
+      "GOLD:pit_coverage_below_threshold",
+      "HK_EQ:pit_coverage_below_threshold",
+      "US_CORE_PCE:pit_coverage_below_threshold",
+      "US_CPI:pit_coverage_below_threshold",
+      "US_EQ:pit_coverage_below_threshold",
+      "US_GOV_10Y:pit_coverage_below_threshold",
+      "US_INDUSTRIAL_PRODUCTION:pit_coverage_below_threshold",
+      "US_INITIAL_CLAIMS:pit_coverage_below_threshold",
+      "US_REAL_10Y:pit_coverage_below_threshold",
+      "US_UNEMPLOYMENT:pit_coverage_below_threshold"
+    ],
+    "protocol_metadata": [
+      "not_all_critical_series_ready",
+      "protocol_owner_reviewer_approval_required",
+      "protocol_status_requires_frozen"
+    ],
+    "source_identity": [
+      "CN_BOND_10Y:formal_observations_missing",
+      "CN_CPI:formal_observations_missing",
+      "CN_DR007:formal_observations_missing",
+      "CN_EQ_LARGE:formal_observations_missing",
+      "CN_M1:formal_observations_missing",
+      "CN_M2:formal_observations_missing",
+      "CN_PMI:formal_observations_missing",
+      "CN_PPI:formal_observations_missing",
+      "COPPER:formal_observations_missing",
+      "DXY:formal_observations_missing",
+      "GOLD:formal_observations_missing",
+      "HK_EQ:formal_observations_missing",
+      "US_EQ:formal_observations_missing"
+    ],
+    "unit_transform": []
+  },
+  "can_activate_81_immediately": false,
+  "critical_ready_fraction": 0.0,
+  "formal_observation_count": 20517,
+  "integration_db_path": "D:\\跨资产监控项目\\worktrees\\local-b-night-integration\\data\\db\\local_b_integration\\cross_asset_integration.duckdb",
+  "local_a_evidence": {
+    "content": "LOCAL-A #82: all six market/FX series + accounting + calendars BLOCKED (no real Wind path on host). No resolved market/FX inputs exist to re-ingest.",
+    "hash_match": true,
+    "md_path": "D:\\跨资产监控项目\\worktrees\\local-a-night-wind\\evidence\\night-a_wind_market_accounting_20260910.md",
+    "md_sha256": "4eaaae9a07ed965eac8d0639071213337d393f089c9acc6fb658c1eeba93d136",
+    "sidecar_path": "D:\\跨资产监控项目\\worktrees\\local-a-night-wind\\evidence\\night-a_wind_market_accounting_20260910.sidecar.json",
+    "sidecar_sha256_expected": "4EAAAE9A07ED965EAC8D0639071213337D393F089C9ACC6FB658C1EEBA93D136",
+    "status": "ACCESSIBLE"
+  },
+  "query_smoke": {
+    "cutoff": "2026-09-10T23:59:00+00:00",
+    "series": {
+      "US_CORE_PCE": {
+        "approved_distinct_identities": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "approved_observation_count": 499,
+        "duplicate_observation_dates": 0,
+        "formal_latest_count": 499,
+        "identity_ok": true,
+        "newest_vintage": {
+          "available_at": "2026-08-28 00:00:00",
+          "observation_date": "2026-07-01 00:00:00",
+          "value": 130.658,
+          "vintage_date": "2026-08-26 00:00:00"
+        },
+        "no_silent_fallback": true,
+        "provider_series_id": "PCEPILFE"
+      },
+      "US_CPI": {
+        "approved_distinct_identities": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "approved_observation_count": 498,
+        "duplicate_observation_dates": 0,
+        "formal_latest_count": 498,
+        "identity_ok": true,
+        "newest_vintage": {
+          "available_at": "2026-08-14 00:00:00",
+          "observation_date": "2026-07-01 00:00:00",
+          "value": 332.813,
+          "vintage_date": "2026-08-12 00:00:00"
+        },
+        "no_silent_fallback": true,
+        "provider_series_id": "CPIAUCSL"
+      },
+      "US_GOV_10Y": {
+        "approved_distinct_identities": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "approved_observation_count": 10424,
+        "duplicate_observation_dates": 0,
+        "formal_latest_count": 10424,
+        "identity_ok": true,
+        "newest_vintage": {
+          "available_at": "2026-09-10 00:00:00",
+          "observation_date": "2026-09-04 00:00:00",
+          "value": 4.78,
+          "vintage_date": "2026-09-08 00:00:00"
+        },
+        "no_silent_fallback": true,
+        "provider_series_id": "DGS10"
+      },
+      "US_INDUSTRIAL_PRODUCTION": {
+        "approved_distinct_identities": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "approved_observation_count": 499,
+        "duplicate_observation_dates": 0,
+        "formal_latest_count": 499,
+        "identity_ok": true,
+        "newest_vintage": {
+          "available_at": "2026-08-20 00:00:00",
+          "observation_date": "2026-07-01 00:00:00",
+          "value": 102.9939,
+          "vintage_date": "2026-08-18 00:00:00"
+        },
+        "no_silent_fallback": true,
+        "provider_series_id": "INDPRO"
+      },
+      "US_INITIAL_CLAIMS": {
+        "approved_distinct_identities": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "approved_observation_count": 2174,
+        "duplicate_observation_dates": 0,
+        "formal_latest_count": 2174,
+        "identity_ok": true,
+        "newest_vintage": {
+          "available_at": "2026-09-05 00:00:00",
+          "observation_date": "2026-08-29 00:00:00",
+          "value": 206000.0,
+          "vintage_date": "2026-09-03 00:00:00"
+        },
+        "no_silent_fallback": true,
+        "provider_series_id": "ICSA"
+      },
+      "US_REAL_10Y": {
+        "approved_distinct_identities": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "approved_observation_count": 5924,
+        "duplicate_observation_dates": 0,
+        "formal_latest_count": 5924,
+        "identity_ok": true,
+        "newest_vintage": {
+          "available_at": "2026-09-10 00:00:00",
+          "observation_date": "2026-09-04 00:00:00",
+          "value": 2.43,
+          "vintage_date": "2026-09-08 00:00:00"
+        },
+        "no_silent_fallback": true,
+        "provider_series_id": "DFII10"
+      },
+      "US_UNEMPLOYMENT": {
+        "approved_distinct_identities": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "approved_observation_count": 499,
+        "duplicate_observation_dates": 0,
+        "formal_latest_count": 499,
+        "identity_ok": true,
+        "newest_vintage": {
+          "available_at": "2026-09-06 00:00:00",
+          "observation_date": "2026-08-01 00:00:00",
+          "value": 4.1,
+          "vintage_date": "2026-09-04 00:00:00"
+        },
+        "no_silent_fallback": true,
+        "provider_series_id": "UNRATE"
+      }
+    }
+  },
+  "readiness_status": "BLOCKED",
+  "reingested_admitted_count": 7,
+  "reingested_admitted_series": [
+    "US_CORE_PCE",
+    "US_CPI",
+    "US_GOV_10Y",
+    "US_INDUSTRIAL_PRODUCTION",
+    "US_INITIAL_CLAIMS",
+    "US_REAL_10Y",
+    "US_UNEMPLOYMENT"
+  ],
+  "shas": {
+    "expected_main_sha": "481e7fde015dbddaa3615e397b2c2f258b68ee95",
+    "generated_at": "2026-09-10T12:29:42.483529+00:00",
+    "integration_branch_head": "71c959521e84638447696d6767ba0c44dd056bfd",
+    "local_a_branch_sha": "24051042c4ce31488f3ee668feafd1e14164690a",
+    "local_a_evidence_worktree": "D:\\跨资产监控项目\\worktrees\\local-a-night-wind",
+    "local_b_candidate_label": "PRE_MERGE_INTEGRATION_EVIDENCE (PR #90; not merged to main)",
+    "local_b_candidate_sha": "71c9595",
+    "main_sha": "481e7fde015dbddaa3615e397b2c2f258b68ee95"
+  },
+  "success_level": "READINESS_PARTIAL"
+}

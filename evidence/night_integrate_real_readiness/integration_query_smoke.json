@@ -1,0 +1,145 @@
+{
+  "cutoff": "2026-09-10T23:59:00+00:00",
+  "series": {
+    "US_CORE_PCE": {
+      "approved_distinct_identities": [
+        [
+          "fred/alfred",
+          "PCEPILFE"
+        ]
+      ],
+      "approved_observation_count": 499,
+      "duplicate_observation_dates": 0,
+      "formal_latest_count": 499,
+      "identity_ok": true,
+      "newest_vintage": {
+        "available_at": "2026-08-28 00:00:00",
+        "observation_date": "2026-07-01 00:00:00",
+        "value": 130.658,
+        "vintage_date": "2026-08-26 00:00:00"
+      },
+      "no_silent_fallback": true,
+      "provider_series_id": "PCEPILFE"
+    },
+    "US_CPI": {
+      "approved_distinct_identities": [
+        [
+          "fred/alfred",
+          "CPIAUCSL"
+        ]
+      ],
+      "approved_observation_count": 498,
+      "duplicate_observation_dates": 0,
+      "formal_latest_count": 498,
+      "identity_ok": true,
+      "newest_vintage": {
+        "available_at": "2026-08-14 00:00:00",
+        "observation_date": "2026-07-01 00:00:00",
+        "value": 332.813,
+        "vintage_date": "2026-08-12 00:00:00"
+      },
+      "no_silent_fallback": true,
+      "provider_series_id": "CPIAUCSL"
+    },
+    "US_GOV_10Y": {
+      "approved_distinct_identities": [
+        [
+          "fred/alfred",
+          "DGS10"
+        ]
+      ],
+      "approved_observation_count": 10424,
+      "duplicate_observation_dates": 0,
+      "formal_latest_count": 10424,
+      "identity_ok": true,
+      "newest_vintage": {
+        "available_at": "2026-09-10 00:00:00",
+        "observation_date": "2026-09-04 00:00:00",
+        "value": 4.78,
+        "vintage_date": "2026-09-08 00:00:00"
+      },
+      "no_silent_fallback": true,
+      "provider_series_id": "DGS10"
+    },
+    "US_INDUSTRIAL_PRODUCTION": {
+      "approved_distinct_identities": [
+        [
+          "fred/alfred",
+          "INDPRO"
+        ]
+      ],
+      "approved_observation_count": 499,
+      "duplicate_observation_dates": 0,
+      "formal_latest_count": 499,
+      "identity_ok": true,
+      "newest_vintage": {
+        "available_at": "2026-08-20 00:00:00",
+        "observation_date": "2026-07-01 00:00:00",
+        "value": 102.9939,
+        "vintage_date": "2026-08-18 00:00:00"
+      },
+      "no_silent_fallback": true,
+      "provider_series_id": "INDPRO"
+    },
+    "US_INITIAL_CLAIMS": {
+      "approved_distinct_identities": [
+        [
+          "fred/alfred",
+          "ICSA"
+        ]
+      ],
+      "approved_observation_count": 2174,
+      "duplicate_observation_dates": 0,
+      "formal_latest_count": 2174,
+      "identity_ok": true,
+      "newest_vintage": {
+        "available_at": "2026-09-05 00:00:00",
+        "observation_date": "2026-08-29 00:00:00",
+        "value": 206000.0,
+        "vintage_date": "2026-09-03 00:00:00"
+      },
+      "no_silent_fallback": true,
+      "provider_series_id": "ICSA"
+    },
+    "US_REAL_10Y": {
+      "approved_distinct_identities": [
+        [
+          "fred/alfred",
+          "DFII10"
+        ]
+      ],
+      "approved_observation_count": 5924,
+      "duplicate_observation_dates": 0,
+      "formal_latest_count": 5924,
+      "identity_ok": true,
+      "newest_vintage": {
+        "available_at": "2026-09-10 00:00:00",
+        "observation_date": "2026-09-04 00:00:00",
+        "value": 2.43,
+        "vintage_date": "2026-09-08 00:00:00"
+      },
+      "no_silent_fallback": true,
+      "provider_series_id": "DFII10"
+    },
+    "US_UNEMPLOYMENT": {
+      "approved_distinct_identities": [
+        [
+          "fred/alfred",
+          "UNRATE"
+        ]
+      ],
+      "approved_observation_count": 499,
+      "duplicate_observation_dates": 0,
+      "formal_latest_count": 499,
+      "identity_ok": true,
+      "newest_vintage": {
+        "available_at": "2026-09-06 00:00:00",
+        "observation_date": "2026-08-01 00:00:00",
+        "value": 4.1,
+        "vintage_date": "2026-09-04 00:00:00"
+      },
+      "no_silent_fallback": true,
+      "provider_series_id": "UNRATE"
+    }
+  }
+}

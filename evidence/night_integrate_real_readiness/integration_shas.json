@@ -1,0 +1,10 @@
+{
+  "expected_main_sha": "481e7fde015dbddaa3615e397b2c2f258b68ee95",
+  "generated_at": "2026-09-10T12:29:42.483529+00:00",
+  "integration_branch_head": "71c959521e84638447696d6767ba0c44dd056bfd",
+  "local_a_branch_sha": "24051042c4ce31488f3ee668feafd1e14164690a",
+  "local_a_evidence_worktree": "D:\\跨资产监控项目\\worktrees\\local-a-night-wind",
+  "local_b_candidate_label": "PRE_MERGE_INTEGRATION_EVIDENCE (PR #90; not merged to main)",
+  "local_b_candidate_sha": "71c9595",
+  "main_sha": "481e7fde015dbddaa3615e397b2c2f258b68ee95"
+}

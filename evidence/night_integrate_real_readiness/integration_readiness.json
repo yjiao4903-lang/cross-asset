@@ -1,0 +1,1028 @@
+{
+  "cli": {
+    "blockers": [
+      "CN_BOND_10Y:formal_observations_missing",
+      "CN_BOND_10Y:pit_coverage_below_threshold",
+      "CN_BOND_10Y:registry_pass_research_admissible_required",
+      "CN_CPI:formal_observations_missing",
+      "CN_CPI:pit_coverage_below_threshold",
+      "CN_CPI:registry_pass_research_admissible_required",
+      "CN_DR007:formal_observations_missing",
+      "CN_DR007:pit_coverage_below_threshold",
+      "CN_DR007:registry_pass_research_admissible_required",
+      "CN_EQ_LARGE:formal_observations_missing",
+      "CN_EQ_LARGE:pit_coverage_below_threshold",
+      "CN_EQ_LARGE:registry_pass_research_admissible_required",
+      "CN_M1:formal_observations_missing",
+      "CN_M1:pit_coverage_below_threshold",
+      "CN_M1:registry_pass_research_admissible_required",
+      "CN_M2:formal_observations_missing",
+      "CN_M2:pit_coverage_below_threshold",
+      "CN_M2:registry_pass_research_admissible_required",
+      "CN_PMI:formal_observations_missing",
+      "CN_PMI:pit_coverage_below_threshold",
+      "CN_PMI:registry_pass_research_admissible_required",
+      "CN_PPI:formal_observations_missing",
+      "CN_PPI:pit_coverage_below_threshold",
+      "CN_PPI:registry_pass_research_admissible_required",
+      "COPPER:formal_observations_missing",
+      "COPPER:pit_coverage_below_threshold",
+      "COPPER:registry_pass_research_admissible_required",
+      "DXY:formal_observations_missing",
+      "DXY:pit_coverage_below_threshold",
+      "DXY:registry_pass_research_admissible_required",
+      "GOLD:formal_observations_missing",
+      "GOLD:pit_coverage_below_threshold",
+      "GOLD:registry_pass_research_admissible_required",
+      "HK_EQ:formal_observations_missing",
+      "HK_EQ:pit_coverage_below_threshold",
+      "HK_EQ:registry_pass_research_admissible_required",
+      "US_CORE_PCE:pit_coverage_below_threshold",
+      "US_CPI:pit_coverage_below_threshold",
+      "US_EQ:formal_observations_missing",
+      "US_EQ:pit_coverage_below_threshold",
+      "US_EQ:registry_pass_research_admissible_required",
+      "US_GOV_10Y:pit_coverage_below_threshold",
+      "US_INDUSTRIAL_PRODUCTION:pit_coverage_below_threshold",
+      "US_INITIAL_CLAIMS:pit_coverage_below_threshold",
+      "US_REAL_10Y:pit_coverage_below_threshold",
+      "US_UNEMPLOYMENT:pit_coverage_below_threshold",
+      "not_all_critical_series_ready",
+      "protocol_owner_reviewer_approval_required",
+      "protocol_status_requires_frozen"
+    ],
+    "coverage_series_ready_fraction": 0.0,
+    "coverage_threshold": 0.95,
+    "critical_ready_fraction": 0.0,
+    "critical_series_count": 20,
+    "critical_series_ready": 0,
+    "decision_time_count": 452,
+    "formal_observation_count": 20517,
+    "generated_at": "2026-09-10T12:31:06.607613+00:00",
+    "project_status": "REAL_DATA_ADMISSION",
+    "protocol_hash": "e075f9ab3c70b25741151c90bd7f9a312573b9dc9270b475cb95aeae0568ef5f",
+    "protocol_status": "PLANNING_ONLY",
+    "series": [
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_BOND_10Y",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_CPI",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_DR007",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_EQ_LARGE",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_M1",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_M2",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_PMI",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_PPI",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "COPPER",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "DXY",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "GOLD",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "HK_EQ",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-07-01 00:00:00",
+        "history_start": "1985-01-01 00:00:00",
+        "history_years": 41.49486652977413,
+        "max_available_at": "2026-08-28 00:00:00",
+        "observation_count": 499,
+        "pit_coverage": {
+          "coverage": 0.0022123893805309734,
+          "covered_decisions": 1,
+          "eligible_decisions": 452,
+          "stale_after_hours": 1080.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_CORE_PCE",
+        "source_series_id": "PCEPILFE"
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-07-01 00:00:00",
+        "history_start": "1985-01-01 00:00:00",
+        "history_years": 41.49486652977413,
+        "max_available_at": "2026-08-14 00:00:00",
+        "observation_count": 498,
+        "pit_coverage": {
+          "coverage": 0.00663716814159292,
+          "covered_decisions": 3,
+          "eligible_decisions": 452,
+          "stale_after_hours": 1080.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_CPI",
+        "source_series_id": "CPIAUCSL"
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "US_EQ",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-09-04 00:00:00",
+        "history_start": "1985-01-02 00:00:00",
+        "history_years": 41.67008898015058,
+        "max_available_at": "2026-09-10 00:00:00",
+        "observation_count": 10424,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": 96.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_GOV_10Y",
+        "source_series_id": "DGS10"
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-07-01 00:00:00",
+        "history_start": "1985-01-01 00:00:00",
+        "history_years": 41.49486652977413,
+        "max_available_at": "2026-08-20 00:00:00",
+        "observation_count": 499,
+        "pit_coverage": {
+          "coverage": 0.004424778761061947,
+          "covered_decisions": 2,
+          "eligible_decisions": 452,
+          "stale_after_hours": 1080.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_INDUSTRIAL_PRODUCTION",
+        "source_series_id": "INDPRO"
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-08-29 00:00:00",
+        "history_start": "1985-01-05 00:00:00",
+        "history_years": 41.64544832306639,
+        "max_available_at": "2026-09-05 00:00:00",
+        "observation_count": 2174,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": 336.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_INITIAL_CLAIMS",
+        "source_series_id": "ICSA"
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-09-04 00:00:00",
+        "history_start": "2003-01-02 00:00:00",
+        "history_years": 23.67145790554415,
+        "max_available_at": "2026-09-10 00:00:00",
+        "observation_count": 5924,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": 96.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_REAL_10Y",
+        "source_series_id": "DFII10"
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-08-01 00:00:00",
+        "history_start": "1985-01-01 00:00:00",
+        "history_years": 41.57973990417522,
+        "max_available_at": "2026-09-06 00:00:00",
+        "observation_count": 499,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": 1080.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_UNEMPLOYMENT",
+        "source_series_id": "UNRATE"
+      }
+    ],
+    "status": "BLOCKED"
+  },
+  "full_tuple": {
+    "blockers": [
+      "CN_BOND_10Y:formal_observations_missing",
+      "CN_BOND_10Y:pit_coverage_below_threshold",
+      "CN_BOND_10Y:registry_pass_research_admissible_required",
+      "CN_CPI:formal_observations_missing",
+      "CN_CPI:pit_coverage_below_threshold",
+      "CN_CPI:registry_pass_research_admissible_required",
+      "CN_DR007:formal_observations_missing",
+      "CN_DR007:pit_coverage_below_threshold",
+      "CN_DR007:registry_pass_research_admissible_required",
+      "CN_EQ_LARGE:formal_observations_missing",
+      "CN_EQ_LARGE:pit_coverage_below_threshold",
+      "CN_EQ_LARGE:registry_pass_research_admissible_required",
+      "CN_M1:formal_observations_missing",
+      "CN_M1:pit_coverage_below_threshold",
+      "CN_M1:registry_pass_research_admissible_required",
+      "CN_M2:formal_observations_missing",
+      "CN_M2:pit_coverage_below_threshold",
+      "CN_M2:registry_pass_research_admissible_required",
+      "CN_PMI:formal_observations_missing",
+      "CN_PMI:pit_coverage_below_threshold",
+      "CN_PMI:registry_pass_research_admissible_required",
+      "CN_PPI:formal_observations_missing",
+      "CN_PPI:pit_coverage_below_threshold",
+      "CN_PPI:registry_pass_research_admissible_required",
+      "COPPER:formal_observations_missing",
+      "COPPER:pit_coverage_below_threshold",
+      "COPPER:registry_pass_research_admissible_required",
+      "DXY:formal_observations_missing",
+      "DXY:pit_coverage_below_threshold",
+      "DXY:registry_pass_research_admissible_required",
+      "GOLD:formal_observations_missing",
+      "GOLD:pit_coverage_below_threshold",
+      "GOLD:registry_pass_research_admissible_required",
+      "HK_EQ:formal_observations_missing",
+      "HK_EQ:pit_coverage_below_threshold",
+      "HK_EQ:registry_pass_research_admissible_required",
+      "US_CORE_PCE:pit_coverage_below_threshold",
+      "US_CPI:pit_coverage_below_threshold",
+      "US_EQ:formal_observations_missing",
+      "US_EQ:pit_coverage_below_threshold",
+      "US_EQ:registry_pass_research_admissible_required",
+      "US_GOV_10Y:pit_coverage_below_threshold",
+      "US_INDUSTRIAL_PRODUCTION:pit_coverage_below_threshold",
+      "US_INITIAL_CLAIMS:pit_coverage_below_threshold",
+      "US_REAL_10Y:pit_coverage_below_threshold",
+      "US_UNEMPLOYMENT:pit_coverage_below_threshold",
+      "not_all_critical_series_ready",
+      "protocol_owner_reviewer_approval_required",
+      "protocol_status_requires_frozen"
+    ],
+    "coverage_series_ready_fraction": 0.0,
+    "coverage_threshold": 0.95,
+    "critical_ready_fraction": 0.0,
+    "critical_series_count": 20,
+    "critical_series_ready": 0,
+    "decision_time_count": 452,
+    "formal_observation_count": 20517,
+    "generated_at": "2026-09-10T12:32:25.599215+00:00",
+    "project_status": "REAL_DATA_ADMISSION",
+    "protocol_hash": "e075f9ab3c70b25741151c90bd7f9a312573b9dc9270b475cb95aeae0568ef5f",
+    "protocol_status": "PLANNING_ONLY",
+    "series": [
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_BOND_10Y",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_CPI",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_DR007",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_EQ_LARGE",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_M1",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_M2",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_PMI",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "CN_PPI",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "COPPER",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "DXY",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "GOLD",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "HK_EQ",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-07-01 00:00:00",
+        "history_start": "1985-01-01 00:00:00",
+        "history_years": 41.49486652977413,
+        "max_available_at": "2026-08-28 00:00:00",
+        "observation_count": 499,
+        "pit_coverage": {
+          "coverage": 0.0022123893805309734,
+          "covered_decisions": 1,
+          "eligible_decisions": 452,
+          "stale_after_hours": 1080.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_CORE_PCE",
+        "source_series_id": "PCEPILFE"
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-07-01 00:00:00",
+        "history_start": "1985-01-01 00:00:00",
+        "history_years": 41.49486652977413,
+        "max_available_at": "2026-08-14 00:00:00",
+        "observation_count": 498,
+        "pit_coverage": {
+          "coverage": 0.00663716814159292,
+          "covered_decisions": 3,
+          "eligible_decisions": 452,
+          "stale_after_hours": 1080.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_CPI",
+        "source_series_id": "CPIAUCSL"
+      },
+      {
+        "blockers": [
+          "registry_pass_research_admissible_required",
+          "formal_observations_missing",
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": null,
+        "history_start": null,
+        "history_years": 0.0,
+        "max_available_at": null,
+        "observation_count": 0,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": null
+        },
+        "pit_grade": null,
+        "provider": null,
+        "registry_ready": false,
+        "series_id": "US_EQ",
+        "source_series_id": null
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-09-04 00:00:00",
+        "history_start": "1985-01-02 00:00:00",
+        "history_years": 41.67008898015058,
+        "max_available_at": "2026-09-10 00:00:00",
+        "observation_count": 10424,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": 96.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_GOV_10Y",
+        "source_series_id": "DGS10"
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-07-01 00:00:00",
+        "history_start": "1985-01-01 00:00:00",
+        "history_years": 41.49486652977413,
+        "max_available_at": "2026-08-20 00:00:00",
+        "observation_count": 499,
+        "pit_coverage": {
+          "coverage": 0.004424778761061947,
+          "covered_decisions": 2,
+          "eligible_decisions": 452,
+          "stale_after_hours": 1080.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_INDUSTRIAL_PRODUCTION",
+        "source_series_id": "INDPRO"
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-08-29 00:00:00",
+        "history_start": "1985-01-05 00:00:00",
+        "history_years": 41.64544832306639,
+        "max_available_at": "2026-09-05 00:00:00",
+        "observation_count": 2174,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": 336.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_INITIAL_CLAIMS",
+        "source_series_id": "ICSA"
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-09-04 00:00:00",
+        "history_start": "2003-01-02 00:00:00",
+        "history_years": 23.67145790554415,
+        "max_available_at": "2026-09-10 00:00:00",
+        "observation_count": 5924,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": 96.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_REAL_10Y",
+        "source_series_id": "DFII10"
+      },
+      {
+        "blockers": [
+          "pit_coverage_below_threshold"
+        ],
+        "history_end": "2026-08-01 00:00:00",
+        "history_start": "1985-01-01 00:00:00",
+        "history_years": 41.57973990417522,
+        "max_available_at": "2026-09-06 00:00:00",
+        "observation_count": 499,
+        "pit_coverage": {
+          "coverage": 0.0,
+          "covered_decisions": 0,
+          "eligible_decisions": 452,
+          "stale_after_hours": 1080.0
+        },
+        "pit_grade": "B",
+        "provider": "fred/alfred",
+        "registry_ready": true,
+        "series_id": "US_UNEMPLOYMENT",
+        "source_series_id": "UNRATE"
+      }
+    ],
+    "status": "BLOCKED"
+  }
+}

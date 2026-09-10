@@ -1,0 +1,53 @@
+{
+  "accounting_series": [],
+  "macro_series": [
+    "CN_CPI",
+    "CN_DR007",
+    "CN_M1",
+    "CN_M2",
+    "CN_PMI",
+    "CN_PPI",
+    "COPPER",
+    "DXY",
+    "GOLD",
+    "US_CORE_PCE",
+    "US_CPI",
+    "US_GOV_10Y",
+    "US_INDUSTRIAL_PRODUCTION",
+    "US_INITIAL_CLAIMS",
+    "US_REAL_10Y",
+    "US_UNEMPLOYMENT"
+  ],
+  "main_sha": "481e7fde015dbddaa3615e397b2c2f258b68ee95",
+  "required_series": [
+    "CN_BOND_10Y",
+    "CN_CPI",
+    "CN_DR007",
+    "CN_EQ_LARGE",
+    "CN_M1",
+    "CN_M2",
+    "CN_PMI",
+    "CN_PPI",
+    "COPPER",
+    "DXY",
+    "GOLD",
+    "HK_EQ",
+    "US_CORE_PCE",
+    "US_CPI",
+    "US_EQ",
+    "US_GOV_10Y",
+    "US_INDUSTRIAL_PRODUCTION",
+    "US_INITIAL_CLAIMS",
+    "US_REAL_10Y",
+    "US_UNEMPLOYMENT"
+  ],
+  "required_series_count": 20,
+  "return_series": [
+    "CN_BOND_10Y",
+    "CN_EQ_LARGE",
+    "COPPER",
+    "GOLD",
+    "HK_EQ",
+    "US_EQ"
+  ]
+}

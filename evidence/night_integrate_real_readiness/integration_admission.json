@@ -1,0 +1,72 @@
+{
+  "US_CORE_PCE": {
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "parsed_row_count": 499,
+    "provider_series_id": "PCEPILFE",
+    "raw_archive_path": "D:\\跨资产监控项目\\worktrees\\local-b-night-integration\\data\\raw\\fred_alfred_local_b\\fred_alfred\\ec9d18957087cd1b28734c4da401f50cae242792c29194eee5d27af662824d1b\\2026\\09\\20260910T111214Z_23cf1c684c4b8808.json",
+    "raw_sha256_verified": true,
+    "released_row_count": 499,
+    "written": 499
+  },
+  "US_CPI": {
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "parsed_row_count": 499,
+    "provider_series_id": "CPIAUCSL",
+    "raw_archive_path": "D:\\跨资产监控项目\\worktrees\\local-b-night-integration\\data\\raw\\fred_alfred_local_b\\fred_alfred\\e877ed5874296c196cc7830b7bc52772a1e3b0c0b21365a0f077f89b445f6bfc\\2026\\09\\20260910T111213Z_9c57b2534a88e1ba.json",
+    "raw_sha256_verified": true,
+    "released_row_count": 498,
+    "written": 498
+  },
+  "US_GOV_10Y": {
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "parsed_row_count": 10874,
+    "provider_series_id": "DGS10",
+    "raw_archive_path": "D:\\跨资产监控项目\\worktrees\\local-b-night-integration\\data\\raw\\fred_alfred_local_b\\fred_alfred\\47f8ef303e9c6beb2f993f6a642ef84e00d912de658304317bd8f83129b83a0d\\2026\\09\\20260910T111223Z_d1a8bc4e09da82af.json",
+    "raw_sha256_verified": true,
+    "released_row_count": 10424,
+    "written": 10424
+  },
+  "US_INDUSTRIAL_PRODUCTION": {
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "parsed_row_count": 499,
+    "provider_series_id": "INDPRO",
+    "raw_archive_path": "D:\\跨资产监控项目\\worktrees\\local-b-night-integration\\data\\raw\\fred_alfred_local_b\\fred_alfred\\518ccac2d9437b44c2df72f3cccdddbcd1ecadf7a4edc4278cd2b460a1107237\\2026\\09\\20260910T111220Z_7e66d10e57cd1372.json",
+    "raw_sha256_verified": true,
+    "released_row_count": 499,
+    "written": 499
+  },
+  "US_INITIAL_CLAIMS": {
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "parsed_row_count": 2174,
+    "provider_series_id": "ICSA",
+    "raw_archive_path": "D:\\跨资产监控项目\\worktrees\\local-b-night-integration\\data\\raw\\fred_alfred_local_b\\fred_alfred\\2d61e8b4bff7e0d0dd8fde85b2020d9e4c9df63dc26ec401ebe429c1412ec32f\\2026\\09\\20260910T111218Z_c9a59204b4849942.json",
+    "raw_sha256_verified": true,
+    "released_row_count": 2174,
+    "written": 2174
+  },
+  "US_REAL_10Y": {
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "parsed_row_count": 6177,
+    "provider_series_id": "DFII10",
+    "raw_archive_path": "D:\\跨资产监控项目\\worktrees\\local-b-night-integration\\data\\raw\\fred_alfred_local_b\\fred_alfred\\fdfa58c5ecd4ab410650cb6ca66ac4c7bf28e7fa4a80127f8ed268c81ba00cde\\2026\\09\\20260910T111222Z_6e71a03c584e4f82.json",
+    "raw_sha256_verified": true,
+    "released_row_count": 5924,
+    "written": 5924
+  },
+  "US_UNEMPLOYMENT": {
+    "errors": {},
+    "ingest_status": "ADMITTED",
+    "parsed_row_count": 500,
+    "provider_series_id": "UNRATE",
+    "raw_archive_path": "D:\\跨资产监控项目\\worktrees\\local-b-night-integration\\data\\raw\\fred_alfred_local_b\\fred_alfred\\39a6b6696c67ce9aa0bcf6725ee0641139aa370e08ad356d1945e5acefb9a14f\\2026\\09\\20260910T111217Z_4c511db91e2315cf.json",
+    "raw_sha256_verified": true,
+    "released_row_count": 499,
+    "written": 499
+  }
+}
