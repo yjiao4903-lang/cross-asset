@@ -38,6 +38,8 @@ class DatasetSpec:
     official_page: str | None
     official_keyid: str | None
     catalog_endpoint: str | None
+    historical_endpoint: str | None
+    operation_type_filter: str | None
     notes: str | None
     raw: dict[str, Any]
 
@@ -119,6 +121,8 @@ def load_registry(path: str | Path | None = None) -> TreasuryNYFedRegistry:
                 official_page=raw.get("official_page"),
                 official_keyid=raw.get("official_keyid"),
                 catalog_endpoint=raw.get("catalog_endpoint"),
+                historical_endpoint=raw.get("historical_endpoint"),
+                operation_type_filter=raw.get("operation_type_filter"),
                 notes=raw.get("notes"),
                 raw=raw,
             )
