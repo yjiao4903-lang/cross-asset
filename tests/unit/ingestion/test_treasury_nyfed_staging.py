@@ -80,7 +80,7 @@ def test_unresolved_dataset_does_not_collect_live_rows():
 
 def test_recent_window_requested_range_is_incomplete():
     spec = load_registry().get("NYFED_ONRRP_RESULTS")
-    rows, manifest = collect_dataset(
+    _rows, manifest = collect_dataset(
         spec,
         start="2020-01-01",
         end="2020-01-31",
@@ -128,7 +128,7 @@ def test_official_search_marks_range_query_coverage():
         def fetch_repo_results(self, endpoint):
             raise AssertionError("recent_window must not be used for a requested range")
 
-    rows, manifest = collect_dataset(
+    _rows, manifest = collect_dataset(
         spec,
         start="2020-01-01",
         end="2020-01-31",
