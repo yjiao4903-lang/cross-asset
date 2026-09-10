@@ -1,62 +1,46 @@
 ---
 name: Implementation task
 title: "[TASK] "
-about: Dispatch a bounded implementation/research/review task to one project role
+about: Dispatch one bounded task to a project execution role
 labels: ""
 assignees: ""
 ---
 
-## Dispatch contract
+## One-shot dispatch
 
-- WORKSTREAM_ID:
-- Owner role: <!-- GPT-DEV | GROK-DEV | LOCAL-DEV -->
-- Routing mode: <!-- ONLINE_DEFAULT | ONLINE_PARALLEL | LOCAL_REQUIRED | PRIMARY_EXECUTOR | RESEARCH_ONLY | REVIEW_ONLY | LOCAL_EVIDENCE -->
-- Source REQ / parent Issue:
-- Task baseline SHA:
-- Current main SHA:
-- Branch prefix / planned branch:
+- Task / workstream:
+- Owner: <!-- GPT-DEV | GROK-DEV | LOCAL-DEV -->
+- Goal:
+- Scope:
+- Business boundaries / must-not-change:
 
-## Allowed scope
+## Validate
 
-### Files / surfaces
+<!-- List only the tests/regression/smoke actually needed to prove this task works. -->
 
 - 
 
-### Logical responsibilities
+## Risk / dependencies
 
-- 
+- High-risk operation: <!-- NONE unless explicit destructive DB write/restore, Schema migration, unknown-process concern, credential/funds/public exposure, etc. -->
+- Material dependency/overlap: <!-- NONE or pointer -->
+- Data/PIT/source constraint: <!-- N/A or explicit -->
 
-## Explicit out-of-scope
+## Return
 
-- 
+Complete the assigned scope end-to-end where possible and post one compact final handoff:
 
-## Dependencies / unlock conditions
+```text
+HANDOFF_COMPLETE: <task/workstream>
+role: <role>
+PR: <# or N/A>
+head: <sha or N/A>
+completed: <short summary>
+validation:
+  - <evidence>
+blockers: NONE | <blocker>
+residual_risk: NONE | <short note>
+next: READY_FOR_CONTROL
+```
 
-- 
-
-## Acceptance criteria
-
-- [ ] WG0 explicit dispatch recorded
-- [ ] WG1 baseline + overlap check recorded
-- [ ] WG2 scope/non-scope confirmed
-- [ ] Required implementation/evidence complete
-- [ ] Required tests/lint complete at exact head
-- [ ] Required CI state recorded truthfully
-- [ ] Data/PIT/schema/contract safety checked where applicable
-- [ ] PR + handoff posted
-
-## Coordination
-
-- Active PR overlap check:
-- Integration owner:
-- Known blockers:
-
-## Authorization state
-
-- Production writes: NOT_AUTHORIZED
-- Schema migration: NOT_AUTHORIZED
-- Release: NOT_AUTHORIZED
-- Cutover: NOT_AUTHORIZED
-- Irreversible operations: NOT_AUTHORIZED
-
-Only WEB-CONTROL may change the authorization state or publish `MERGE_APPROVED`.
+Do not split ordinary work into separate analysis/test/review/smoke Gates. Escalate only a genuine scope, architecture, coordination or high-risk decision.
