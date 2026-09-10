@@ -1,0 +1,283 @@
+workstream: C67-TREASURY-NYFED-LIQUIDITY-C0
+domain_gate: C0
+usage: RESEARCH_STAGING_ONLY
+production_admission: false
+allocation_signal: false
+timezone: America/New_York
+revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
+notes: >-
+  Isolated official-source Treasury FiscalData + NY Fed Markets C0 registry.
+  Field and endpoint identities were read from official HTTP 200 metadata.
+  NYFED_OMO_TRANSACTION_HISTORY remains UNRESOLVED.
+
+providers:
+  TREASURY_FISCALDATA:
+    official_page: https://fiscaldata.treasury.gov/api-documentation/
+    base_url: https://api.fiscaldata.treasury.gov/services/api/fiscal_service
+    catalog_endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service
+  NYFED_MARKETS:
+    official_page: https://markets.newyorkfed.org/markets-reference
+    base_url: https://markets.newyorkfed.org/api
+    catalog_endpoint: https://markets.newyorkfed.org/api
+
+datasets:
+  - dataset_id: TREASURY_DTS_OPERATING_CASH
+    canonical_series_id: US_TGA_OPERATING_CASH
+    provider: TREASURY_FISCALDATA
+    official_page: https://fiscaldata.treasury.gov/datasets/daily-treasury-statement/operating-cash-balance
+    endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/dts/operating_cash_balance
+    catalog_endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/dts/operating_cash_balance
+    observation_field: record_date
+    identity_fields: [record_date, account_type]
+    value_fields: [close_today_bal, open_today_bal, open_month_bal, open_fiscal_year_bal]
+    confirmed_fields:
+      - record_date
+      - account_type
+      - close_today_bal
+      - open_today_bal
+      - open_month_bal
+      - open_fiscal_year_bal
+    units: millions_usd_currency0
+    frequency: daily
+    timezone: America/New_York
+    observation_semantics: Daily Treasury Statement operating cash balance by account type
+    available_at_policy: FOLLOWING_US_FEDERAL_BUSINESS_DAY_1600_ET
+    available_at_policy_note: >-
+      Treasury states DTS is available by 4:00 p.m. the following business day.
+      C0 uses 16:00 America/New_York on the next U.S. federal business day,
+      skipping weekends and nationwide federal holidays (OPM observance).
+    revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
+    status: RESOLVED
+
+  - dataset_id: TREASURY_DTS_DEPOSITS_WITHDRAWALS
+    canonical_series_id: US_DTS_DEPOSITS_WITHDRAWALS
+    provider: TREASURY_FISCALDATA
+    official_page: https://fiscaldata.treasury.gov/datasets/daily-treasury-statement/deposits-and-withdrawals-of-operating-cash
+    endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/dts/deposits_withdrawals_operating_cash
+    catalog_endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/dts/deposits_withdrawals_operating_cash
+    observation_field: record_date
+    identity_fields: [record_date, transaction_type, transaction_catg]
+    value_fields: [transaction_today_amt, transaction_mtd_amt, transaction_fytd_amt]
+    confirmed_fields:
+      - record_date
+      - transaction_type
+      - transaction_catg
+      - transaction_today_amt
+    units: millions_usd
+    frequency: daily
+    timezone: America/New_York
+    observation_semantics: DTS deposits and withdrawals of operating cash
+    available_at_policy: FOLLOWING_US_FEDERAL_BUSINESS_DAY_1600_ET
+    available_at_policy_note: Same following-federal-business-day 16:00 ET policy as DTS cash.
+    revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
+    status: RESOLVED
+
+  - dataset_id: TREASURY_DEBT_TO_PENNY
+    canonical_series_id: US_DEBT_TO_PENNY
+    provider: TREASURY_FISCALDATA
+    official_page: https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/debt-to-the-penny
+    endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny
+    catalog_endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny
+    observation_field: record_date
+    identity_fields: [record_date]
+    value_fields: [debt_held_public_amt, intragov_hold_amt, tot_pub_debt_out_amt]
+    confirmed_fields:
+      - record_date
+      - debt_held_public_amt
+      - intragov_hold_amt
+      - tot_pub_debt_out_amt
+    units: usd
+    frequency: daily
+    timezone: America/New_York
+    observation_semantics: Debt to the Penny outstanding amounts
+    available_at_policy: FOLLOWING_US_FEDERAL_BUSINESS_DAY_1600_ET
+    available_at_policy_note: >-
+      Debt to the Penny is date-granular in the public API. C0 uses the same
+      following U.S. federal business day 16:00 ET bound as DTS.
+    revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
+    status: RESOLVED
+
+  - dataset_id: TREASURY_AUCTIONS
+    canonical_series_id: US_TREASURY_AUCTIONS
+    provider: TREASURY_FISCALDATA
+    official_page: https://fiscaldata.treasury.gov/datasets/treasury-securities-auctions-data/treasury-securities-auctions-data
+    endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query
+    catalog_endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query
+    observation_field: auction_date
+    identity_fields: [cusip, auction_date, security_type, security_term]
+    value_fields:
+      - offering_amt
+      - total_accepted
+      - total_tendered
+      - bid_to_cover_ratio
+      - high_yield
+      - avg_med_yield
+    confirmed_fields:
+      - auction_date
+      - issue_date
+      - maturity_date
+      - security_type
+      - security_term
+      - offering_amt
+      - total_accepted
+      - total_tendered
+      - bid_to_cover_ratio
+      - high_yield
+    units: mixed_auction_fields
+    frequency: event
+    timezone: America/New_York
+    observation_semantics: Official Treasury auction results
+    available_at_policy: AUCTION_DATE_EOD_ET
+    available_at_policy_note: Auction results are treated as available at 23:59:59 ET on auction_date.
+    revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
+    status: RESOLVED
+
+  - dataset_id: TREASURY_MSPD_TABLE_1
+    canonical_series_id: US_MSPD_TABLE_1
+    provider: TREASURY_FISCALDATA
+    official_page: https://fiscaldata.treasury.gov/datasets/monthly-statement-public-debt/summary-of-treasury-securities-outstanding
+    endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/debt/mspd/mspd_table_1
+    catalog_endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/debt/mspd/mspd_table_1
+    observation_field: record_date
+    identity_fields: [record_date, security_type_desc, security_class_desc]
+    value_fields: [debt_held_public_mil_amt, intragov_hold_mil_amt, total_mil_amt]
+    confirmed_fields:
+      - record_date
+      - security_type_desc
+      - security_class_desc
+      - debt_held_public_mil_amt
+      - total_mil_amt
+    units: millions_usd
+    frequency: monthly
+    timezone: America/New_York
+    observation_semantics: MSPD Table 1 outstanding composition
+    available_at_policy: FOURTH_BUSINESS_DAY_NEXT_MONTH_EOD_ET
+    available_at_policy_note: >-
+      Treasury states MSPD is published on the fourth business day of each month.
+      C0 timestamps a month-end record_date at 23:59:59 ET on the fourth U.S.
+      federal business day of the following month, excluding weekends and
+      nationwide federal holidays.
+    revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
+    status: RESOLVED
+
+  - dataset_id: NYFED_ONRRP_RESULTS
+    canonical_series_id: US_NYFED_ONRRP
+    provider: NYFED_MARKETS
+    official_page: https://markets.newyorkfed.org/markets/rrp_on
+    endpoint: https://markets.newyorkfed.org/api/rp/reverserepo/all/results/last/10.json
+    catalog_endpoint: https://markets.newyorkfed.org/api/rp/reverserepo/all/results/last/10.json
+    historical_endpoint: https://markets.newyorkfed.org/api/rp/results/search.json
+    operation_type_filter: Reverse Repo
+    observation_field: operationDate
+    identity_fields: [operationId]
+    value_fields: [totalAmtAccepted, totalAmtSubmitted]
+    confirmed_fields:
+      - operationId
+      - operationDate
+      - settlementDate
+      - operationType
+      - term
+      - lastUpdated
+      - totalAmtAccepted
+    units: millions_usd
+    frequency: daily_when_offered
+    timezone: America/New_York
+    observation_semantics: NY Fed overnight reverse repo operation results
+    available_at_policy: LAST_UPDATED_OR_OPERATION_DATE_EOD_ET
+    available_at_policy_note: Prefer official lastUpdated; otherwise operationDate EOD ET.
+    revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
+    status: RESOLVED
+
+  - dataset_id: NYFED_REPO_RESULTS
+    canonical_series_id: US_NYFED_REPO
+    provider: NYFED_MARKETS
+    official_page: https://markets.newyorkfed.org/markets/repo
+    endpoint: https://markets.newyorkfed.org/api/rp/repo/all/results/last/10.json
+    catalog_endpoint: https://markets.newyorkfed.org/api/rp/repo/all/results/last/10.json
+    historical_endpoint: https://markets.newyorkfed.org/api/rp/results/search.json
+    operation_type_filter: Repo
+    observation_field: operationDate
+    identity_fields: [operationId]
+    value_fields: [totalAmtAccepted, totalAmtSubmitted]
+    confirmed_fields:
+      - operationId
+      - operationDate
+      - operationType
+      - lastUpdated
+      - totalAmtAccepted
+    units: millions_usd
+    frequency: event
+    timezone: America/New_York
+    observation_semantics: NY Fed repo operation results
+    available_at_policy: LAST_UPDATED_OR_OPERATION_DATE_EOD_ET
+    available_at_policy_note: Prefer official lastUpdated; otherwise operationDate EOD ET.
+    revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
+    status: RESOLVED
+
+  - dataset_id: NYFED_SOMA_SUMMARY
+    canonical_series_id: US_NYFED_SOMA_SUMMARY
+    provider: NYFED_MARKETS
+    official_page: https://markets.newyorkfed.org/markets/soma_holdings
+    endpoint: https://markets.newyorkfed.org/api/soma/summary.json
+    catalog_endpoint: https://markets.newyorkfed.org/api/soma/summary.json
+    observation_field: asOfDate
+    identity_fields: [asOfDate]
+    value_fields: [total, bills, notesbonds, tips, frn, mbs, agencies]
+    confirmed_fields:
+      - asOfDate
+      - total
+      - bills
+      - notesbonds
+      - tips
+      - frn
+      - mbs
+    units: millions_usd
+    frequency: weekly
+    timezone: America/New_York
+    observation_semantics: SOMA holdings summary by instrument family
+    available_at_policy: ASOF_PLUS_ONE_WEEKDAY_EOD_ET
+    available_at_policy_note: Official summary payload is date-granular; C0 adds one weekday EOD ET.
+    revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
+    status: RESOLVED
+
+  - dataset_id: NYFED_PD_TREASURY_POSITIONS
+    canonical_series_id: US_NYFED_PD_TREASURY_POSITIONS
+    provider: NYFED_MARKETS
+    official_page: https://markets.newyorkfed.org/markets/pds
+    official_keyid: PDPOSGST-TOT
+    endpoint: https://markets.newyorkfed.org/api/pd/get/PDPOSGST-TOT.json
+    catalog_endpoint: https://markets.newyorkfed.org/api/pd/list/timeseries.json
+    observation_field: asofdate
+    identity_fields: [asofdate, keyid]
+    value_fields: [value]
+    confirmed_fields: [asofdate, keyid, value]
+    units: millions_usd
+    frequency: weekly
+    timezone: America/New_York
+    observation_semantics: Primary dealer Treasury securities net positions, official keyid PDPOSGST-TOT
+    available_at_policy: ASOF_PLUS_TWO_CALENDAR_DAYS_EOD_ET
+    available_at_policy_note: PD statistics are weekly and date-granular; C0 uses as-of plus two calendar days EOD ET.
+    revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
+    status: RESOLVED
+
+  - dataset_id: NYFED_OMO_TRANSACTION_HISTORY
+    canonical_series_id: US_NYFED_OMO_TRANSACTION_HISTORY
+    provider: NYFED_MARKETS
+    official_page: https://www.newyorkfed.org/markets/omo_transaction_data
+    endpoint: null
+    catalog_endpoint: null
+    observation_field: null
+    identity_fields: []
+    value_fields: []
+    confirmed_fields: []
+    units: null
+    frequency: unresolved
+    timezone: America/New_York
+    observation_semantics: Open Market Trading Desk transaction history
+    available_at_policy: null
+    available_at_policy_note: No stable official machine-readable historical API was verified.
+    revision_policy: UNRESOLVED
+    status: UNRESOLVED
+    notes: >-
+      Official page currently points at quarterly Excel workbooks. C0 keeps this
+      dataset UNRESOLVED. No third-party mirror is used.
