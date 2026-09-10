@@ -1,8 +1,8 @@
 version: "0.3"
-status: PLANNING_ONLY
-owner: TBD
-reviewer: TBD
-approved_at: TBD
+status: FROZEN
+owner: yjiao4903-lang
+reviewer: WEB-CONTROL
+approved_at: "2026-09-10T18:54:50+08:00"
 windows:
   builder: calendar_explicit_dates
   default_mode: expanding
