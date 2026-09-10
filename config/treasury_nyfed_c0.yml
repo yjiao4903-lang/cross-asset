@@ -41,10 +41,11 @@ datasets:
     frequency: daily
     timezone: America/New_York
     observation_semantics: Daily Treasury Statement operating cash balance by account type
-    available_at_policy: NEXT_CALENDAR_DAY_EOD_ET
+    available_at_policy: FOLLOWING_US_FEDERAL_BUSINESS_DAY_1600_ET
     available_at_policy_note: >-
-      DTS publication timestamp is date-granular in the public API. C0 treats a
-      record_date as available no earlier than 23:59:59 ET the next calendar day.
+      Treasury states DTS is available by 4:00 p.m. the following business day.
+      C0 uses 16:00 America/New_York on the next U.S. federal business day,
+      skipping weekends and nationwide federal holidays (OPM observance).
     revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
     status: RESOLVED
 
@@ -66,8 +67,8 @@ datasets:
     frequency: daily
     timezone: America/New_York
     observation_semantics: DTS deposits and withdrawals of operating cash
-    available_at_policy: NEXT_CALENDAR_DAY_EOD_ET
-    available_at_policy_note: Same conservative next-calendar-day EOD ET policy as DTS cash.
+    available_at_policy: FOLLOWING_US_FEDERAL_BUSINESS_DAY_1600_ET
+    available_at_policy_note: Same following-federal-business-day 16:00 ET policy as DTS cash.
     revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
     status: RESOLVED
 
@@ -89,8 +90,10 @@ datasets:
     frequency: daily
     timezone: America/New_York
     observation_semantics: Debt to the Penny outstanding amounts
-    available_at_policy: NEXT_CALENDAR_DAY_EOD_ET
-    available_at_policy_note: Public API is date-granular; C0 uses next-calendar-day EOD ET.
+    available_at_policy: FOLLOWING_US_FEDERAL_BUSINESS_DAY_1600_ET
+    available_at_policy_note: >-
+      Debt to the Penny is date-granular in the public API. C0 uses the same
+      following U.S. federal business day 16:00 ET bound as DTS.
     revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
     status: RESOLVED
 
@@ -150,8 +153,10 @@ datasets:
     observation_semantics: MSPD Table 1 outstanding composition
     available_at_policy: FOURTH_BUSINESS_DAY_NEXT_MONTH_EOD_ET
     available_at_policy_note: >-
-      MSPD is monthly. C0 uses a conservative fourth-business-day-of-next-month
-      EOD ET bound because the public API does not supply a publication timestamp.
+      Treasury states MSPD is published on the fourth business day of each month.
+      C0 timestamps a month-end record_date at 23:59:59 ET on the fourth U.S.
+      federal business day of the following month, excluding weekends and
+      nationwide federal holidays.
     revision_policy: APPEND_ONLY_RAW_SNAPSHOTS
     status: RESOLVED
 
@@ -161,6 +166,8 @@ datasets:
     official_page: https://markets.newyorkfed.org/markets/rrp_on
     endpoint: https://markets.newyorkfed.org/api/rp/reverserepo/all/results/last/10.json
     catalog_endpoint: https://markets.newyorkfed.org/api/rp/reverserepo/all/results/last/10.json
+    historical_endpoint: https://markets.newyorkfed.org/api/rp/results/search.json
+    operation_type_filter: Reverse Repo
     observation_field: operationDate
     identity_fields: [operationId]
     value_fields: [totalAmtAccepted, totalAmtSubmitted]
@@ -187,6 +194,8 @@ datasets:
     official_page: https://markets.newyorkfed.org/markets/repo
     endpoint: https://markets.newyorkfed.org/api/rp/repo/all/results/last/10.json
     catalog_endpoint: https://markets.newyorkfed.org/api/rp/repo/all/results/last/10.json
+    historical_endpoint: https://markets.newyorkfed.org/api/rp/results/search.json
+    operation_type_filter: Repo
     observation_field: operationDate
     identity_fields: [operationId]
     value_fields: [totalAmtAccepted, totalAmtSubmitted]
