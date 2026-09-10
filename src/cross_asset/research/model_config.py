@@ -11,8 +11,11 @@ from cross_asset.backtest.returns import AssetReturnSpec
 
 from .executor import ResearchModelConfig
 
+_DEFAULT_PROTOCOL_PATH = Path("config/research.yml")
 _DEFAULT_UNIVERSE_PATH = Path("config/research_universe.yml")
-_DEFAULT_ACCOUNTING_PATH = "config/return_accounting.yml"
+_DEFAULT_ALLOCATION_PATH = Path("config/allocation.yml")
+_DEFAULT_MACRO_PATH = Path("config/macro.yml")
+_DEFAULT_ACCOUNTING_PATH = Path("config/return_accounting.yml")
 
 
 def _mapping(path):
@@ -20,6 +23,32 @@ def _mapping(path):
     if not isinstance(value, dict):
         raise TypeError(f"config_must_be_mapping:{path}")
     return value
+
+
+def research_effective_config_paths(
+    protocol_path: str | Path = _DEFAULT_PROTOCOL_PATH,
+    *,
+    universe_path: str | Path = _DEFAULT_UNIVERSE_PATH,
+    allocation_path: str | Path = _DEFAULT_ALLOCATION_PATH,
+    macro_path: str | Path = _DEFAULT_MACRO_PATH,
+    accounting_path: str | Path = _DEFAULT_ACCOUNTING_PATH,
+) -> tuple[str, ...]:
+    """Return the config files consumed by the formal research run identity.
+
+    Keep this list next to ``load_research_model_config`` so the CLI cannot silently
+    omit a model input from config/snapshot/run provenance when loaders evolve.
+    """
+
+    return tuple(
+        str(Path(path))
+        for path in (
+            protocol_path,
+            universe_path,
+            allocation_path,
+            macro_path,
+            accounting_path,
+        )
+    )
 
 
 def load_research_asset_market_map(
@@ -113,4 +142,8 @@ def load_research_model_config(
     )
 
 
-__all__ = ["load_research_asset_market_map", "load_research_model_config"]
+__all__ = [
+    "load_research_asset_market_map",
+    "load_research_model_config",
+    "research_effective_config_paths",
+]
