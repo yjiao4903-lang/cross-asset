@@ -149,7 +149,7 @@ def _collect_live(
                 raise NYFedMarketsError("UNRESOLVED", "historical_endpoint_missing")
             payload = nyfed.fetch_repo_search(
                 start=start or "2000-01-01",
-                end=end or date.today().isoformat(),
+                end=end or utcnow().date().isoformat(),
                 operation_type=spec.operation_type_filter,
                 endpoint=spec.historical_endpoint,
             )
