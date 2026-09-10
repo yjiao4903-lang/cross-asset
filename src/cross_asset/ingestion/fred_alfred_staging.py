@@ -75,8 +75,10 @@ class CoverageManifest:
     duplicate_count: int
     latest_observation: str | None
     latest_vintage: str | None
+    title: str
     units: str
     frequency: str
+    seasonal_adjustment: str
     raw_sha256: str | None
     request_fingerprint: str | None
     raw_archive_path: str | None
@@ -85,16 +87,58 @@ class CoverageManifest:
     blockers: tuple[str, ...]
     warnings: tuple[str, ...]
     metadata_last_updated: str | None
+    metadata_realtime_start: str | None
+    metadata_realtime_end: str | None
+    metadata_as_of_safe: bool | None
+    metadata_raw_sha256: str | None
+    metadata_request_fingerprint: str | None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
-def _metadata(payload: FredPayload) -> dict[str, Any]:
+def _metadata(
+    payload: FredPayload,
+    *,
+    requested_as_of: str | None = None,
+) -> dict[str, Any]:
     rows = payload.payload.get("seriess")
     if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
         raise FredAlfredError("metadata_empty", "FRED series metadata payload is empty")
-    return dict(rows[0])
+    metadata = dict(rows[0])
+    if requested_as_of is None:
+        return metadata
+
+    if (
+        str(payload.params.get("realtime_start")) != requested_as_of
+        or str(payload.params.get("realtime_end")) != requested_as_of
+    ):
+        raise FredAlfredError(
+            "metadata_vintage_unresolved",
+            "Historical FRED metadata request was not pinned to the requested as-of date",
+        )
+    raw_start = metadata.get("realtime_start")
+    raw_end = metadata.get("realtime_end")
+    if not raw_start or not raw_end:
+        raise FredAlfredError(
+            "metadata_vintage_unresolved",
+            "Historical FRED metadata response lacks real-time period evidence",
+        )
+    try:
+        as_of_date = date.fromisoformat(requested_as_of)
+        realtime_start = date.fromisoformat(str(raw_start))
+        realtime_end = date.fromisoformat(str(raw_end))
+    except ValueError as exc:
+        raise FredAlfredError(
+            "metadata_vintage_unresolved",
+            "Historical FRED metadata real-time period is malformed",
+        ) from exc
+    if not realtime_start <= as_of_date <= realtime_end:
+        raise FredAlfredError(
+            "metadata_vintage_unresolved",
+            "Historical FRED metadata real-time period does not cover requested as-of date",
+        )
+    return metadata
 
 
 def _gap_limit_days(frequency: str) -> int:
@@ -124,6 +168,7 @@ def audit_quality(
     *,
     spec: FredSeriesSpec,
     metadata: dict[str, Any],
+    metadata_as_of: str | None = None,
     now: datetime | None = None,
 ) -> QualityReport:
     rows = list(records)
@@ -176,7 +221,8 @@ def audit_quality(
         blockers.append("impossible_future_available_at")
 
     unique_dates = sorted({row.observation_date for row in rows})
-    gap_limit = _gap_limit_days(spec.frequency)
+    observed_frequency = str(metadata.get("frequency") or spec.frequency)
+    gap_limit = _gap_limit_days(observed_frequency)
     long_gaps: list[tuple[str, str, int]] = []
     for left, right in pairwise(unique_dates):
         delta = (right - left).days
@@ -186,6 +232,7 @@ def audit_quality(
         warnings.append("long_gaps")
 
     drift: list[str] = []
+    missing_metadata_fields: list[str] = []
     expected = {
         "id": spec.provider_series_id,
         "title": spec.title,
@@ -197,10 +244,15 @@ def audit_quality(
         actual = metadata.get(field)
         if actual is None:
             drift.append(f"{field}:missing")
+            missing_metadata_fields.append(field)
         elif str(actual) != expected_value:
             drift.append(f"{field}:{actual!s}!={expected_value}")
     if drift:
-        blockers.append("metadata_drift")
+        identity_drift = any(item.startswith("id:") for item in drift)
+        if metadata_as_of is None or identity_drift or missing_metadata_fields:
+            blockers.append("metadata_drift")
+        else:
+            warnings.append("metadata_revision_vs_current_registry")
 
     stale_metadata = False
     last_updated = metadata.get("last_updated")
@@ -208,11 +260,17 @@ def audit_quality(
         parsed = pd.to_datetime(last_updated, utc=True, errors="coerce")
         if pd.isna(parsed):
             warnings.append("metadata_last_updated_unparseable")
-        elif parsed.to_pydatetime() > now:
-            blockers.append("metadata_last_updated_future")
-        elif unique_dates and parsed.date() < unique_dates[-1]:
-            stale_metadata = True
-            warnings.append("stale_metadata")
+        else:
+            parsed_dt = parsed.to_pydatetime()
+            if parsed_dt > now:
+                blockers.append("metadata_last_updated_future")
+            if metadata_as_of is not None:
+                as_of_date = date.fromisoformat(metadata_as_of)
+                if parsed_dt.date() > as_of_date:
+                    blockers.append("metadata_last_updated_after_as_of")
+            if unique_dates and parsed_dt.date() < unique_dates[-1]:
+                stale_metadata = True
+                warnings.append("stale_metadata")
     else:
         stale_metadata = True
         warnings.append("stale_metadata")
@@ -244,7 +302,9 @@ def build_manifest(
     records: Iterable[VintageObservation],
     quality: QualityReport,
     observation_payload: FredPayload,
+    metadata_payload: FredPayload,
     metadata: dict[str, Any],
+    metadata_as_of_safe: bool | None,
 ) -> CoverageManifest:
     rows = list(records)
     observation_dates = [row.observation_date for row in rows]
@@ -263,8 +323,10 @@ def build_manifest(
         duplicate_count=quality.duplicate_count,
         latest_observation=max(observation_dates).isoformat() if observation_dates else None,
         latest_vintage=max(vintage_dates).isoformat() if vintage_dates else None,
-        units=spec.units,
-        frequency=spec.frequency,
+        title=str(metadata.get("title") or "UNRESOLVED"),
+        units=str(metadata.get("units") or "UNRESOLVED"),
+        frequency=str(metadata.get("frequency") or "UNRESOLVED"),
+        seasonal_adjustment=str(metadata.get("seasonal_adjustment") or "UNRESOLVED"),
         raw_sha256=observation_payload.raw_sha256,
         request_fingerprint=observation_payload.request_fingerprint,
         raw_archive_path=observation_payload.raw_archive_path,
@@ -275,6 +337,15 @@ def build_manifest(
         metadata_last_updated=(
             str(metadata.get("last_updated")) if metadata.get("last_updated") else None
         ),
+        metadata_realtime_start=(
+            str(metadata.get("realtime_start")) if metadata.get("realtime_start") else None
+        ),
+        metadata_realtime_end=(
+            str(metadata.get("realtime_end")) if metadata.get("realtime_end") else None
+        ),
+        metadata_as_of_safe=metadata_as_of_safe,
+        metadata_raw_sha256=metadata_payload.raw_sha256,
+        metadata_request_fingerprint=metadata_payload.request_fingerprint,
     )
 
 
@@ -291,6 +362,29 @@ class FredHistoricalCollector:
         self.client = client
         self.output_dir = Path(output_dir)
         self.registry = load_fred_registry(registry_path)
+
+    def _fetch_metadata(
+        self,
+        spec: FredSeriesSpec,
+        *,
+        mode: str,
+        as_of: str | None,
+        resume: bool,
+    ) -> tuple[FredPayload, str | None]:
+        if mode != MODE_HISTORICAL_ASOF:
+            return self.client.fetch_metadata(spec.provider_series_id, use_cache=resume), None
+        if not as_of:
+            raise ValueError("historical_asof_requires_as_of")
+        payload = self.client.request_json(
+            "series",
+            {
+                "series_id": spec.provider_series_id,
+                "realtime_start": as_of,
+                "realtime_end": as_of,
+            },
+            use_cache=resume,
+        )
+        return payload, as_of
 
     def _fetch_observations(
         self,
@@ -359,8 +453,13 @@ class FredHistoricalCollector:
         spec = self.registry.series[canonical_series_id]
         if spec.status != "CANDIDATE":
             raise ValueError(f"fred_series_not_collectible:{canonical_series_id}:{spec.status}")
-        metadata_payload = self.client.fetch_metadata(spec.provider_series_id, use_cache=resume)
-        metadata = _metadata(metadata_payload)
+        metadata_payload, metadata_as_of = self._fetch_metadata(
+            spec,
+            mode=mode,
+            as_of=as_of,
+            resume=resume,
+        )
+        metadata = _metadata(metadata_payload, requested_as_of=metadata_as_of)
         observation_payload, request_vintage = self._fetch_observations(
             spec,
             start=start,
@@ -376,7 +475,12 @@ class FredHistoricalCollector:
             mode=mode,
             request_vintage=request_vintage,
         )
-        quality = audit_quality(records, spec=spec, metadata=metadata)
+        quality = audit_quality(
+            records,
+            spec=spec,
+            metadata=metadata,
+            metadata_as_of=metadata_as_of,
+        )
         manifest = build_manifest(
             spec=spec,
             mode=mode,
@@ -386,7 +490,9 @@ class FredHistoricalCollector:
             records=records,
             quality=quality,
             observation_payload=observation_payload,
+            metadata_payload=metadata_payload,
             metadata=metadata,
+            metadata_as_of_safe=True if metadata_as_of is not None else None,
         )
         series_dir = self.output_dir / canonical_series_id
         series_dir.mkdir(parents=True, exist_ok=True)
