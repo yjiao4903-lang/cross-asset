@@ -1,91 +1,110 @@
-version: "2026-09-09-v1"
+version: "2026-09-10-v2-lightweight"
 status: ACTIVE
 canonical_control_issue: 35
+project_profile: PERSONAL_INTERNAL_WORKBENCH
+objective_order:
+  - FUNCTIONAL_CORRECTNESS
+  - STABLE_USABILITY
+  - SIMPLE_MAINTENANCE
+  - USER_AND_MODEL_COST
+
+default_workflow: ONE_SHOT_CLOSED_LOOP
 identity_model: logical_role_identity
 note: >-
-  These roles are logical execution identities. They are enforced by GitHub records,
-  branch prefixes, Issue/PR contracts and WEB-CONTROL decisions. They are not
-  cryptographically distinct unless separate GitHub accounts/tokens are used.
+  Roles are logical execution identities recorded in GitHub. They coordinate work;
+  they are not an approval chain and are not cryptographic identities unless
+  separate accounts/tokens are used.
 
 roles:
   WEB-CONTROL:
     window: online
-    description: ChatGPT main control window
+    description: sole project controller; not the default implementation executor
     branch_prefixes: ["control/", "governance/"]
+    owns:
+      - roadmap_priority
+      - task_dispatch_and_scope
+      - business_boundaries
+      - architecture_schema_contract_decisions
+      - cross_task_coordination
+      - final_acceptance_and_merge
+      - explicit_high_risk_authorization
     may_merge: true
     may_change_scope: true
     may_change_architecture: true
-    may_authorize_release: true
+    rule: MINIMUM_SUFFICIENT_CONTROL
+
   GPT-DEV:
     window: online
-    description: GPT online development window
+    description: default online end-to-end implementation executor
     branch_prefixes: ["gpt/"]
     default_routing: ONLINE_DEFAULT
+    expected_loop: IMPLEMENT_TEST_SMOKE_HANDOFF
     may_merge: false
     may_change_scope: false
     may_change_architecture: false
-    may_authorize_release: false
+
   GROK-DEV:
     window: online
-    description: Grok online development window
+    description: auxiliary online executor used only for clear parallel or independent value
     branch_prefixes: ["grok/"]
-    default_routing: ONLINE_PARALLEL
+    default_routing: ONLINE_AUX_ON_DEMAND
     may_merge: false
     may_change_scope: false
     may_change_architecture: false
-    may_authorize_release: false
+
   LOCAL-DEV:
     window: local
-    description: Local PC development window
+    description: executor for tasks that genuinely require local workstation/runtime/data/native tools
     branch_prefixes: ["local/"]
-    default_routing: LOCAL_REQUIRED
+    default_routing: LOCAL_REQUIRED_ONLY
     may_merge: false
     may_change_scope: false
     may_change_architecture: false
-    may_authorize_release: false
 
 routing_modes:
   - ONLINE_DEFAULT
-  - ONLINE_PARALLEL
-  - LOCAL_REQUIRED
-  - PRIMARY_EXECUTOR
+  - ONLINE_AUX_ON_DEMAND
+  - LOCAL_REQUIRED_ONLY
   - RESEARCH_ONLY
   - REVIEW_ONLY
   - LOCAL_EVIDENCE
 
 workflow_states:
-  - PROPOSED
-  - READY
+  - DISPATCHED
   - IN_PROGRESS
-  - PR_OPEN
-  - REVIEW
-  - MERGE_APPROVED
-  - MERGED
-  - VERIFIED
+  - READY_FOR_CONTROL
   - BLOCKED
-  - DATA_BLOCKED
   - COORDINATION_BLOCKED
-  - GOVERNANCE_DRIFT
-  - DEFERRED
-  - REJECTED
-
-gate_statuses:
-  - PASS
-  - FAIL
-  - NOT_RUN
-  - CI_INFRA_BLOCKED
-  - DATA_GAP
-  - BLOCKED
+  - DATA_BLOCKED
+  - ACCEPTED
+  - MERGED
 
 rules:
-  no_dispatch_no_work: true
-  branch_per_task: true
-  pr_per_task: true
-  exact_head_evidence_required: true
-  ci_pass_is_not_merge_approval: true
-  merge_requires_web_control: true
-  production_default_deny: true
-  schema_default_deny: true
-  release_default_deny: true
-  research_to_production_requires_explicit_req: true
-  concurrent_same_surface_default_deny: true
+  github_is_ssot: true
+  no_dispatch_no_work_for_dev_roles: true
+  user_is_message_bus: false
+  startup_full_history_scan_required: false
+  branch_per_task_required: false
+  pr_per_task_required: false
+  exact_head_evidence_gate_required: false
+  collaboration_wg0_wg9_required: false
+  full_ci_required_for_normal_task: false
+  repeat_unchanged_verified_fact: false
+  online_execution_preferred: true
+  local_execution_only_when_environment_requires_it: true
+  aux_role_requires_clear_cost_or_parallel_value: true
+  ordinary_task_target_user_relays_max: 2
+
+normal_acceptance:
+  - target_function_works
+  - directly_related_regression_passes
+  - business_semantics_correct
+  - no_obvious_core_flow_breakage
+
+risk_controls:
+  UNKNOWN_PROCESS_KILL: FORBIDDEN
+  DESTRUCTIVE_DB_WRITE: EXPLICIT_ONLY
+  DB_RESTORE: EXPLICIT_ONLY
+  SCHEMA_MIGRATION: EXPLICIT_SCOPE_ONLY
+  UNKNOWN_IS_ZERO: false
+  MISSING_IS_ZERO: false
