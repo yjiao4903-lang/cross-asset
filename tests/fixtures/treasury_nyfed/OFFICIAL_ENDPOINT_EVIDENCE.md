@@ -31,7 +31,9 @@ Discovery (2026-09-09):
 - `/pd/list/timeseries.json` HTTP 200; keyid `PDPOSGST-TOT`
 - `/pd/get/PDPOSGST-TOT.json` HTTP 200
 - OMO transaction history: UNRESOLVED (quarterly Excel only)
-- `/rp/.../search.json` date filter: HTTP 400 on 2026-09-09
+- `/rp/results/search.json?startDate=&endDate=` official date-range search (WG7)
+- `/rp/.../results/last/N.json` is a recent-window helper only; it cannot satisfy a requested historical range
+- `/rp/.../search.json` path variants under `/rp/{type}/.../search.json` returned HTTP 400 on 2026-09-09
 
 Short-window live collection (2026-09-10):
 - NYFED_ONRRP_RESULTS 2026-09-01..2026-09-08 rows=5
@@ -39,3 +41,4 @@ Short-window live collection (2026-09-10):
 - NYFED_SOMA_SUMMARY 2026-08-01..2026-09-08 HEALTHY rows=5 last=2026-09-02
 - NYFED_PD_TREASURY_POSITIONS 2026-08-01..2026-09-08 HEALTHY rows=4 last=2026-08-26 keyid=PDPOSGST-TOT
 - NYFED_OMO_TRANSACTION_HISTORY remains UNRESOLVED / BLOCKED
+- Official `/api/rp/results/search.json?startDate=2026-09-01&endDate=2026-09-08` HTTP 200 on 2026-09-10

@@ -38,6 +38,12 @@ def test_registry_covers_issue_67_first_batch():
     assert registry.production_admission is False
     assert registry.get("NYFED_OMO_TRANSACTION_HISTORY").status == "UNRESOLVED"
     assert registry.get("NYFED_PD_TREASURY_POSITIONS").official_keyid == "PDPOSGST-TOT"
+    onrrp = registry.get("NYFED_ONRRP_RESULTS")
+    assert onrrp.historical_endpoint.endswith("/rp/results/search.json")
+    assert onrrp.operation_type_filter == "Reverse Repo"
+    assert registry.get("TREASURY_DTS_OPERATING_CASH").available_at_policy == (
+        "FOLLOWING_US_FEDERAL_BUSINESS_DAY_1600_ET"
+    )
 
 
 def test_registry_rejects_production_admission(tmp_path: Path):
