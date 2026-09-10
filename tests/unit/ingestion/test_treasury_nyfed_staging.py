@@ -5,7 +5,11 @@ from zoneinfo import ZoneInfo
 
 from cross_asset.ingestion.treasury_nyfed_quality import attach_available_at, audit_quality
 from cross_asset.ingestion.treasury_nyfed_registry import load_registry
-from cross_asset.ingestion.treasury_nyfed_staging import collect_all, collect_dataset, research_transforms
+from cross_asset.ingestion.treasury_nyfed_staging import (
+    collect_all,
+    collect_dataset,
+    research_transforms,
+)
 
 
 def test_fixture_collect_covers_two_treasury_and_two_nyfed_families():
