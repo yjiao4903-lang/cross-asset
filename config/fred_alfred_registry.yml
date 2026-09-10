@@ -1,0 +1,241 @@
+version: "2026-09-09-c0"
+provider: "FRED/ALFRED"
+domain_gate: "C0"
+usage: "RESEARCH_STAGING_ONLY"
+metadata_audited_at: "2026-09-09"
+api_identity:
+  metadata: "https://api.stlouisfed.org/fred/series"
+  observations: "https://api.stlouisfed.org/fred/series/observations"
+  vintages: "https://api.stlouisfed.org/fred/series/vintagedates"
+availability_contract:
+  policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+  note: >-
+    FRED/ALFRED vintage dates are date-granular release/change dates, not exact
+    publication timestamps. C0 historical research therefore treats a vintage
+    as available no earlier than 00:00 UTC two calendar days after the vintage date;
+    exact release-time evidence can later supersede this C0 guard.
+series:
+  US_EFFR:
+    provider_series_id: DFF
+    title: "Federal Funds Effective Rate"
+    units: "Percent"
+    frequency: "Daily, 7-Day"
+    seasonal_adjustment: "Not Seasonally Adjusted"
+    observation_semantics: "Daily effective federal funds rate"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/DFF"
+    status: CANDIDATE
+  US_TSY_3M:
+    provider_series_id: DGS3MO
+    title: "Market Yield on U.S. Treasury Securities at 3-Month Constant Maturity, Quoted on an Investment Basis"
+    units: "Percent"
+    frequency: "Daily"
+    seasonal_adjustment: "Not Seasonally Adjusted"
+    observation_semantics: "Treasury constant-maturity market yield"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/DGS3MO"
+    status: CANDIDATE
+  US_TSY_2Y:
+    provider_series_id: DGS2
+    title: "Market Yield on U.S. Treasury Securities at 2-Year Constant Maturity, Quoted on an Investment Basis"
+    units: "Percent"
+    frequency: "Daily"
+    seasonal_adjustment: "Not Seasonally Adjusted"
+    observation_semantics: "Treasury constant-maturity market yield"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/DGS2"
+    status: CANDIDATE
+  US_TSY_10Y:
+    provider_series_id: DGS10
+    title: "Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted on an Investment Basis"
+    units: "Percent"
+    frequency: "Daily"
+    seasonal_adjustment: "Not Seasonally Adjusted"
+    observation_semantics: "Treasury constant-maturity market yield"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/DGS10"
+    status: CANDIDATE
+  US_TSY_30Y:
+    provider_series_id: DGS30
+    title: "Market Yield on U.S. Treasury Securities at 30-Year Constant Maturity, Quoted on an Investment Basis"
+    units: "Percent"
+    frequency: "Daily"
+    seasonal_adjustment: "Not Seasonally Adjusted"
+    observation_semantics: "Treasury constant-maturity market yield"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/DGS30"
+    known_long_gaps:
+      - ["2002-02-19", "2006-02-08"]
+    status: CANDIDATE
+  US_CPI_HEADLINE:
+    provider_series_id: CPIAUCSL
+    title: "Consumer Price Index for All Urban Consumers: All Items in U.S. City Average"
+    units: "Index 1982-1984=100"
+    frequency: "Monthly"
+    seasonal_adjustment: "Seasonally Adjusted"
+    observation_semantics: "Monthly headline CPI index"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/CPIAUCSL"
+    status: CANDIDATE
+  US_CPI_CORE:
+    provider_series_id: CPILFESL
+    title: "Consumer Price Index for All Urban Consumers: All Items Less Food and Energy in U.S. City Average"
+    units: "Index 1982-1984=100"
+    frequency: "Monthly"
+    seasonal_adjustment: "Seasonally Adjusted"
+    observation_semantics: "Monthly CPI less food and energy index"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/CPILFESL"
+    status: CANDIDATE
+  US_PCE_HEADLINE:
+    provider_series_id: PCEPI
+    title: "Personal Consumption Expenditures: Chain-type Price Index"
+    units: "Index 2017=100"
+    frequency: "Monthly"
+    seasonal_adjustment: "Seasonally Adjusted"
+    observation_semantics: "Monthly PCE chain-type price index"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/PCEPI"
+    status: CANDIDATE
+  US_PCE_CORE:
+    provider_series_id: PCEPILFE
+    title: "Personal Consumption Expenditures Excluding Food and Energy (Chain-Type Price Index)"
+    units: "Index 2017=100"
+    frequency: "Monthly"
+    seasonal_adjustment: "Seasonally Adjusted"
+    observation_semantics: "Monthly core PCE chain-type price index"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/PCEPILFE"
+    status: CANDIDATE
+  US_UNEMPLOYMENT:
+    provider_series_id: UNRATE
+    title: "Unemployment Rate"
+    units: "Percent"
+    frequency: "Monthly"
+    seasonal_adjustment: "Seasonally Adjusted"
+    observation_semantics: "Civilian unemployment rate"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/UNRATE"
+    status: CANDIDATE
+  US_NONFARM_PAYROLLS:
+    provider_series_id: PAYEMS
+    title: "All Employees, Total Nonfarm"
+    units: "Thousands of Persons"
+    frequency: "Monthly"
+    seasonal_adjustment: "Seasonally Adjusted"
+    observation_semantics: "Total nonfarm payroll employment level"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/PAYEMS"
+    status: CANDIDATE
+  US_INITIAL_CLAIMS:
+    provider_series_id: ICSA
+    title: "Initial Claims"
+    units: "Number"
+    frequency: "Weekly, Ending Saturday"
+    seasonal_adjustment: "Seasonally Adjusted"
+    observation_semantics: "Weekly initial unemployment insurance claims"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/ICSA"
+    status: CANDIDATE
+  US_INDUSTRIAL_PRODUCTION:
+    provider_series_id: INDPRO
+    title: "Industrial Production: Total Index"
+    units: "Index 2017=100"
+    frequency: "Monthly"
+    seasonal_adjustment: "Seasonally Adjusted"
+    observation_semantics: "Monthly total industrial production index"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/INDPRO"
+    status: CANDIDATE
+  US_RETAIL_SALES:
+    provider_series_id: RSAFS
+    title: "Advance Retail Sales: Retail Trade and Food Services"
+    units: "Millions of Dollars"
+    frequency: "Monthly"
+    seasonal_adjustment: "Seasonally Adjusted"
+    observation_semantics: "Monthly advance retail and food services sales"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/RSAFS"
+    status: CANDIDATE
+  US_HOUSING_STARTS:
+    provider_series_id: HOUST
+    title: "New Privately-Owned Housing Units Started: Total Units"
+    units: "Thousands of Units"
+    frequency: "Monthly"
+    seasonal_adjustment: "Seasonally Adjusted Annual Rate"
+    observation_semantics: "Monthly privately-owned housing starts, SAAR"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/HOUST"
+    status: CANDIDATE
+  US_BUILDING_PERMITS:
+    provider_series_id: PERMIT
+    title: "New Privately-Owned Housing Units Authorized in Permit-Issuing Places: Total Units"
+    units: "Thousands of Units"
+    frequency: "Monthly"
+    seasonal_adjustment: "Seasonally Adjusted Annual Rate"
+    observation_semantics: "Monthly privately-owned housing permits, SAAR"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/PERMIT"
+    metadata_notes:
+      - "Permit universe changed in February 2005; treat as metadata/definition boundary."
+    status: CANDIDATE
+  US_M2:
+    provider_series_id: M2SL
+    title: "M2"
+    units: "Billions of Dollars"
+    frequency: "Monthly"
+    seasonal_adjustment: "Seasonally Adjusted"
+    observation_semantics: "Monthly M2 money stock"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/M2SL"
+    status: CANDIDATE
+  US_FED_TOTAL_ASSETS:
+    provider_series_id: WALCL
+    title: "Assets: Total Assets: Total Assets (Less Eliminations from Consolidation): Wednesday Level"
+    units: "Millions of U.S. Dollars"
+    frequency: "Weekly, As of Wednesday"
+    seasonal_adjustment: "Not Seasonally Adjusted"
+    observation_semantics: "Federal Reserve total assets, Wednesday level"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/WALCL"
+    status: CANDIDATE
+  US_NFCI:
+    provider_series_id: NFCI
+    title: "Chicago Fed National Financial Conditions Index"
+    units: "Index"
+    frequency: "Weekly, Ending Friday"
+    seasonal_adjustment: "Not Seasonally Adjusted"
+    observation_semantics: "Weekly Chicago Fed national financial conditions index"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/NFCI"
+    status: CANDIDATE
+  USD_BROAD_INDEX:
+    provider_series_id: DTWEXBGS
+    title: "Nominal Broad U.S. Dollar Index"
+    units: "Index Jan 2006=100"
+    frequency: "Daily"
+    seasonal_adjustment: "Not Seasonally Adjusted"
+    observation_semantics: "Nominal broad trade-weighted U.S. dollar index"
+    revision_vintage_policy: "ALFRED_VINTAGE_REQUIRED_FOR_HISTORICAL_ASOF"
+    release_availability_policy: "VINTAGE_DATE_PLUS_2D_UTC_CONSERVATIVE"
+    source_url: "https://fred.stlouisfed.org/series/DTWEXBGS"
+    status: CANDIDATE
