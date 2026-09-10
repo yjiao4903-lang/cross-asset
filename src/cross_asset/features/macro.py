@@ -15,6 +15,50 @@ class TransformResult:
     reason: str | None = None
 
 
+@dataclass(frozen=True)
+class TransformUnitSemantics:
+    """Explicit raw and pre-normalization units for one macro transform."""
+
+    transform_type: str
+    raw_unit: str | None
+    derived_unit: str | None
+    resolved: bool
+    reason: str | None = None
+
+
+def transform_unit_semantics(definition: dict | None) -> TransformUnitSemantics:
+    """Read explicit unit metadata without inferring unresolved source truth."""
+
+    cfg = definition or {}
+    transform = cfg.get("transform", {}) or {}
+    transform_type = str(transform.get("type", "level"))
+    raw_unit = cfg.get("raw_unit")
+    derived_unit = cfg.get("derived_unit")
+    unresolved = {None, "", "TBD", "UNRESOLVED"}
+    if transform_type == "ambiguous_raw_semantics":
+        return TransformUnitSemantics(
+            transform_type,
+            raw_unit,
+            derived_unit,
+            False,
+            "ambiguous_raw_semantics",
+        )
+    if raw_unit in unresolved or derived_unit in unresolved:
+        return TransformUnitSemantics(
+            transform_type,
+            raw_unit,
+            derived_unit,
+            False,
+            "unit_semantics_unresolved",
+        )
+    return TransformUnitSemantics(
+        transform_type,
+        str(raw_unit),
+        str(derived_unit),
+        True,
+    )
+
+
 def _get(row, key):
     return row.get(key) if isinstance(row, dict) else getattr(row, key)
 
@@ -57,6 +101,7 @@ def _dated_value_map(rows, period="date"):
         if period == "quarter":
             return stamp.year * 4 + (stamp.quarter - 1)
         return stamp
+
     return {
         key(_get(row, "observation_date")): _get(row, "value")
         for row in rows
@@ -78,6 +123,8 @@ def _period_lag(rows, months, period="date"):
     if period == "month":
         target = current_date.year * 12 + current_date.month - months
     elif period == "quarter":
+        if months % 3:
+            raise ValueError("quarter lag_months must be divisible by three")
         target = current_date.year * 4 + (current_date.quarter - 1) - months // 3
     else:
         target = current_date - pd.DateOffset(months=months)
@@ -121,7 +168,9 @@ def transform_series(series, transform=None):
             return TransformResult(None, False, "insufficient_history")
         avg = sum(valid) / len(valid)
         sd = (sum((x - avg) ** 2 for x in valid) / len(valid)) ** 0.5
-        out = (valid[-1] - avg) / sd if sd else 0.0
+        if not sd:
+            return TransformResult(None, False, "zero_variance_continuation")
+        out = (valid[-1] - avg) / sd
     else:
         raise ValueError(f"unsupported macro transform: {typ}")
     if isnan(out):
@@ -148,4 +197,11 @@ def macro_transform(series, transform=None):
     return transform_series(series, transform)
 
 
-__all__ = ["TransformResult", "macro_transform", "transform_history", "transform_series"]
+__all__ = [
+    "TransformResult",
+    "TransformUnitSemantics",
+    "macro_transform",
+    "transform_history",
+    "transform_series",
+    "transform_unit_semantics",
+]
