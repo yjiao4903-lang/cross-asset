@@ -112,8 +112,6 @@ def _dated_value_map(rows, period="date"):
 def _period_lag(rows, months, period="date"):
     """Find an exact date/month/quarter lag; never substitute by row position."""
     ordered = _ordered_rows(rows)
-    # The last observation period is the decision point. Do not walk backward
-    # over a missing current value, otherwise a stale period is silently used.
     current = ordered[-1] if ordered else None
     if current is None:
         return None, None
@@ -141,15 +139,16 @@ def transform_series(series, transform=None):
         return TransformResult(None, False, "ambiguous_raw_semantics")
     rows = _ordered_rows(series)
     vals = [_get(row, "value") for row in rows]
-    vals = [None if v is None else float(v) for v in vals]
+    vals = [None if v is None or pd.isna(v) else float(v) for v in vals]
     valid = [v for v in vals if v is not None]
     if not valid:
         return TransformResult(None, False, "missing")
     if typ == "level":
-        out = valid[-1] - float(cfg.get("baseline", 0))
+        current = vals[-1]
+        if current is None:
+            return TransformResult(None, False, "missing")
+        out = current - float(cfg.get("baseline", 0))
     elif typ in ("diff", "mom"):
-        # Adjacent observations are intentional for daily/weekly series. A
-        # missing adjacent value remains unavailable; it is never filtered out.
         current = vals[-1]
         previous = vals[-2] if len(vals) >= 2 else None
         out = current - previous if current is not None and previous is not None else float("nan")
@@ -157,7 +156,7 @@ def transform_series(series, transform=None):
         months = int(cfg.get("lag_months", 12))
         current_row, previous = _period_lag(rows, months, cfg.get("period", "date"))
         current = _get(current_row, "value") if current_row is not None else None
-        if current is None or previous is None:
+        if current is None or pd.isna(current) or previous is None or pd.isna(previous):
             return TransformResult(None, False, "missing_lag_period")
         if typ == "pct_change_12m" or typ == "yoy":
             out = (float(current) / float(previous) - 1.0) * 100.0 if previous else float("nan")
