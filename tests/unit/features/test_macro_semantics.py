@@ -64,6 +64,17 @@ def test_month_end_and_missing_current_period_fail_closed():
     assert not current_missing.available and current_missing.reason == "missing_lag_period"
 
 
+def test_level_current_missing_does_not_fall_back_to_prior_value():
+    rows = [
+        {"observation_date": date(2025, 1, 1), "value": 4.0},
+        {"observation_date": date(2025, 2, 1), "value": None},
+    ]
+    result = transform_series(rows, {"type": "level"})
+    assert not result.available
+    assert result.value is None
+    assert result.reason == "missing"
+
+
 def test_quarter_lag_uses_exact_calendar_quarter_not_row_position():
     rows = [
         {"observation_date": date(2024, 3, 31), "value": 100.0},
