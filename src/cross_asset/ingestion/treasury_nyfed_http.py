@@ -52,6 +52,11 @@ def schema_hash(fields: list[str] | tuple[str, ...]) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+def aggregate_raw_hash(hashes: list[str] | tuple[str, ...]) -> str:
+    joined = json.dumps(list(hashes), separators=(",", ":"))
+    return hashlib.sha256(joined.encode("utf-8")).hexdigest()
+
+
 def utcnow() -> datetime:
     return datetime.now(UTC)
 
@@ -72,6 +77,10 @@ def default_transport(url: str, timeout: float) -> tuple[int, bytes, dict[str, s
         raise TreasuryNYFedHTTPError("TIMEOUT", str(exc)) from exc
 
 
+def _safe_token(value: str) -> str:
+    return "".join(char if char.isalnum() or char in "-+_." else "_" for char in value)
+
+
 @dataclass
 class CachedResponse:
     status: int
@@ -80,11 +89,15 @@ class CachedResponse:
     fetched_at: str
     fingerprint: str
     raw_hash: str
+    cache_hit: bool = False
+    ingested_at: str = ""
 
 
 class ResponseCache:
+    """Latest-pointer request cache. Not the immutable raw archive."""
+
     def __init__(self, root: str | Path | None) -> None:
-        self.root = Path(root) if root else None
+        self.root = Path(root) / "cache" if root else None
         if self.root is not None:
             self.root.mkdir(parents=True, exist_ok=True)
 
@@ -102,6 +115,8 @@ class ResponseCache:
             fetched_at=str(payload["fetched_at"]),
             fingerprint=fingerprint,
             raw_hash=str(payload["raw_hash"]),
+            cache_hit=True,
+            ingested_at=str(payload.get("ingested_at") or payload["fetched_at"]),
         )
 
     def put(self, record: CachedResponse) -> None:
@@ -115,6 +130,7 @@ class ResponseCache:
                     "payload_hex": record.payload.hex(),
                     "headers": record.headers,
                     "fetched_at": record.fetched_at,
+                    "ingested_at": record.ingested_at,
                     "fingerprint": record.fingerprint,
                     "raw_hash": record.raw_hash,
                 },
@@ -125,6 +141,63 @@ class ResponseCache:
         )
 
 
+class RawSnapshotArchive:
+    """Append-only raw evidence. Same fingerprint + different payload keeps both files."""
+
+    def __init__(self, root: str | Path | None) -> None:
+        self.root = Path(root) / "raw" if root else None
+        if self.root is not None:
+            self.root.mkdir(parents=True, exist_ok=True)
+
+    def snapshot_path(self, record: CachedResponse) -> Path | None:
+        if self.root is None:
+            return None
+        folder = self.root / record.fingerprint
+        name = f"{_safe_token(record.fetched_at)}__{record.raw_hash}.json"
+        return folder / name
+
+    def put(self, record: CachedResponse) -> Path | None:
+        path = self.snapshot_path(record)
+        if path is None:
+            return None
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.is_file():
+            return path
+        path.write_text(
+            json.dumps(
+                {
+                    "status": record.status,
+                    "payload_hex": record.payload.hex(),
+                    "headers": record.headers,
+                    "fetched_at": record.fetched_at,
+                    "ingested_at": record.ingested_at,
+                    "fingerprint": record.fingerprint,
+                    "raw_hash": record.raw_hash,
+                    "revision_policy": "APPEND_ONLY_RAW_SNAPSHOTS",
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return path
+
+    def list_snapshots(self, fingerprint: str) -> list[Path]:
+        if self.root is None:
+            return []
+        folder = self.root / fingerprint
+        if not folder.is_dir():
+            return []
+        return sorted(folder.glob("*.json"))
+
+
+class EvidenceStore:
+    def __init__(self, root: str | Path | None) -> None:
+        self.root = Path(root) if root else None
+        self.cache = ResponseCache(self.root)
+        self.archive = RawSnapshotArchive(self.root)
+
+
 def request_with_retry(
     url: str,
     *,
@@ -132,16 +205,22 @@ def request_with_retry(
     timeout: float = 20.0,
     retries: int = 2,
     backoff_seconds: float = 0.25,
-    cache: ResponseCache | None = None,
+    cache: ResponseCache | EvidenceStore | None = None,
+    archive: RawSnapshotArchive | None = None,
     transport: Transport | None = None,
     resume: bool = True,
 ) -> CachedResponse:
     query = canonical_query(params)
     full_url = f"{url}?{query}" if query else url
     fingerprint = request_fingerprint("GET", url, params)
-    if resume and cache is not None:
-        cached = cache.get(fingerprint)
+    request_cache = cache.cache if isinstance(cache, EvidenceStore) else cache
+    raw_archive = archive
+    if raw_archive is None and isinstance(cache, EvidenceStore):
+        raw_archive = cache.archive
+    if resume and request_cache is not None:
+        cached = request_cache.get(fingerprint)
         if cached is not None:
+            cached.cache_hit = True
             return cached
 
     last_error: TreasuryNYFedHTTPError | None = None
@@ -164,16 +243,21 @@ def request_with_retry(
             continue
         if status >= 400:
             raise TreasuryNYFedHTTPError("HTTP_CLIENT_ERROR", f"status={status}", status=status)
+        fetched = utcnow().isoformat()
         record = CachedResponse(
             status=status,
             payload=payload,
             headers=headers,
-            fetched_at=utcnow().isoformat(),
+            fetched_at=fetched,
             fingerprint=fingerprint,
             raw_hash=raw_payload_hash(payload),
+            cache_hit=False,
+            ingested_at=fetched,
         )
-        if cache is not None:
-            cache.put(record)
+        if request_cache is not None:
+            request_cache.put(record)
+        if raw_archive is not None:
+            raw_archive.put(record)
         return record
     assert last_error is not None
     raise last_error
