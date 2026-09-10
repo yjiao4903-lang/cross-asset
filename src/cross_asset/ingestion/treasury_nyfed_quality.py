@@ -60,6 +60,15 @@ class CoverageManifest:
     warnings: tuple[str, ...]
     live: bool
     official_endpoint: str | None
+    fetched_at: str | None
+    ingested_at: str | None
+    request_fingerprint: str | None
+    raw_sha256: str | None
+    page_fingerprints: tuple[str, ...]
+    page_raw_hashes: tuple[str, ...]
+    cache_hit: bool
+    retrieval_mode: str | None
+    historical_coverage: str | None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -121,10 +130,12 @@ def audit_quality(
     spec: DatasetSpec,
     truncated: bool = False,
     fetched_at: datetime | None = None,
+    extra_blockers: tuple[str, ...] = (),
 ) -> QualityReport:
     records = list(rows)
     blockers: list[str] = []
     warnings: list[str] = []
+    extra = tuple(dict.fromkeys(extra_blockers))
     if spec.status in {"UNRESOLVED", "BLOCKED"}:
         return QualityReport(
             source_health="BLOCKED",
@@ -137,7 +148,7 @@ def audit_quality(
             schema_drift=(),
             pagination_truncated=False,
             empty_payload=True,
-            blockers=(f"dataset_{spec.status.lower()}",),
+            blockers=(f"dataset_{spec.status.lower()}",) + extra,
             warnings=(),
         )
     if not records:
@@ -152,7 +163,7 @@ def audit_quality(
             schema_drift=(),
             pagination_truncated=truncated,
             empty_payload=True,
-            blockers=("empty_payload",),
+            blockers=("empty_payload",) + extra,
             warnings=(),
         )
 
@@ -209,6 +220,7 @@ def audit_quality(
     if truncated:
         blockers.append("pagination_truncated")
 
+    blockers.extend(extra)
     health = "BLOCKED" if blockers else ("DEGRADED" if warnings else "HEALTHY")
     return QualityReport(
         source_health=health,
@@ -235,6 +247,14 @@ def build_manifest(
     requested_end: str | None,
     raw_hash: str | None,
     live: bool,
+    fetched_at: str | None = None,
+    ingested_at: str | None = None,
+    request_fingerprint: str | None = None,
+    page_fingerprints: tuple[str, ...] = (),
+    page_raw_hashes: tuple[str, ...] = (),
+    cache_hit: bool = False,
+    retrieval_mode: str | None = None,
+    historical_coverage: str | None = None,
 ) -> CoverageManifest:
     dates = [str(row.get("observation_date")) for row in rows if row.get("observation_date")]
     available = [str(row.get("available_at")) for row in rows if row.get("available_at")]
@@ -260,5 +280,14 @@ def build_manifest(
         blockers=quality.blockers,
         warnings=quality.warnings,
         live=live,
-        official_endpoint=spec.endpoint,
+        official_endpoint=spec.historical_endpoint or spec.endpoint,
+        fetched_at=fetched_at,
+        ingested_at=ingested_at,
+        request_fingerprint=request_fingerprint,
+        raw_sha256=raw_hash,
+        page_fingerprints=page_fingerprints,
+        page_raw_hashes=page_raw_hashes,
+        cache_hit=cache_hit,
+        retrieval_mode=retrieval_mode,
+        historical_coverage=historical_coverage,
     )
