@@ -12,6 +12,8 @@ from cross_asset.research.weekly_core import (
     BEIJING,
     DEFAULT_HOLD,
     Observation,
+    _as_date,
+    _review_time,
     build_fact_table,
     default_review_cutoff,
     latest_on_or_before,
@@ -19,8 +21,6 @@ from cross_asset.research.weekly_core import (
     parse_observations,
     to_beijing,
     week_end,
-    _as_date,
-    _review_time,
 )
 
 
