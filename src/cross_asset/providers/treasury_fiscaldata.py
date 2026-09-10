@@ -10,8 +10,10 @@ from cross_asset.ingestion.treasury_nyfed_http import (
     CachedResponse,
     ResponseCache,
     TreasuryNYFedHTTPError,
+    aggregate_raw_hash,
     request_with_retry,
     schema_hash,
+    utcnow,
 )
 
 FISCALDATA_BASE = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
@@ -39,10 +41,14 @@ class FiscalDataPayload:
     raw_hash: str
     fingerprint: str
     fetched_at: str
+    ingested_at: str
     total_count: int | None
     page_count: int
     truncated: bool
     cache_hit: bool
+    page_fingerprints: tuple[str, ...]
+    page_raw_hashes: tuple[str, ...]
+    page_fetched_at: tuple[str, ...]
 
 
 def _decode(response: CachedResponse) -> dict[str, Any]:
@@ -82,7 +88,6 @@ class TreasuryFiscalDataClient:
         pages: list[FiscalDataPage] = []
         page_number = 1
         total_count: int | None = None
-        cache_hit = True
         while True:
             params: dict[str, Any] = {
                 "page[number]": page_number,
@@ -105,7 +110,6 @@ class TreasuryFiscalDataClient:
                 transport=self.transport,
                 resume=resume,
             )
-            cache_hit = cache_hit and bool(self.cache and self.cache.get(raw.fingerprint))
             payload = _decode(raw)
             rows = payload.get("data") or []
             if not isinstance(rows, list):
@@ -138,17 +142,24 @@ class TreasuryFiscalDataClient:
         fields = tuple(sorted({key for row in combined for key in row}))
         collected = len(combined)
         truncated = bool(total_count is not None and collected < total_count)
-        last = pages[-1].raw if pages else None
+        page_hashes = tuple(page.raw.raw_hash for page in pages)
+        page_fps = tuple(page.raw.fingerprint for page in pages)
+        page_fetched = tuple(page.raw.fetched_at for page in pages)
+        ingested = utcnow().isoformat()
         return FiscalDataPayload(
             endpoint=endpoint,
             rows=combined,
             fields=fields,
             schema_hash=schema_hash(fields),
-            raw_hash=last.raw_hash if last else "",
-            fingerprint=last.fingerprint if last else "",
-            fetched_at=last.fetched_at if last else "",
+            raw_hash=aggregate_raw_hash(page_hashes) if page_hashes else "",
+            fingerprint=aggregate_raw_hash(page_fps) if page_fps else "",
+            fetched_at=max(page_fetched) if page_fetched else ingested,
+            ingested_at=ingested,
             total_count=total_count,
             page_count=len(pages),
             truncated=truncated,
-            cache_hit=cache_hit and bool(pages),
+            cache_hit=bool(pages) and all(page.raw.cache_hit for page in pages),
+            page_fingerprints=page_fps,
+            page_raw_hashes=page_hashes,
+            page_fetched_at=page_fetched,
         )
