@@ -246,19 +246,44 @@ def execute_walk_forward(
         | accounting_series
         | set(model_config.macro_config.get("series", {}))
     )
-    observations = latest_formal_observations_asof(
+
+    # Realized-return inputs keep the existing formal selection behavior, but
+    # they never need data beyond the development sample. Decision information
+    # is resolved separately below at each historical decision time so a later
+    # revision cannot erase the earlier vintage that was actually visible then.
+    return_observations = latest_formal_observations_asof(
         connection,
-        dates.max().to_pydatetime(),
+        development.max().to_pydatetime(),
         required_usage_status=protocol.required_usage_status,
         series_ids=series_ids,
     )
-    if observations.empty:
+    if return_observations.empty:
         raise ValueError("formal_observations_empty")
-    observations["_available"] = pd.to_datetime(observations["available_at"], utc=True)
-    observations["_observation_date"] = pd.to_datetime(
-        observations["observation_date"],
+    return_observations["_observation_date"] = pd.to_datetime(
+        return_observations["observation_date"],
         utc=True,
     )
+
+    decision_info_cache: dict[pd.Timestamp, pd.DataFrame] = {}
+
+    def decision_info_asof(decision: pd.Timestamp) -> pd.DataFrame:
+        key = pd.Timestamp(decision)
+        cached = decision_info_cache.get(key)
+        if cached is None:
+            cached = latest_formal_observations_asof(
+                connection,
+                key.to_pydatetime(),
+                required_usage_status=protocol.required_usage_status,
+                series_ids=series_ids,
+            )
+            if not cached.empty:
+                cached["_observation_date"] = pd.to_datetime(
+                    cached["observation_date"],
+                    utc=True,
+                )
+            decision_info_cache[key] = cached
+        return cached
+
     accounting_disclosure = embedded_accounting_disclosure(model_config.return_specs)
 
     rows = []
@@ -271,18 +296,19 @@ def execute_walk_forward(
         train_start = pd.Timestamp(fold["train_start"])
         for benchmark in protocol.benchmarks:
             strategy = _strategy(benchmark, model_config)
-            fold_observations = observations
+            fold_return_observations = return_observations
             if fold.get("window_type") == "rolling":
-                fold_observations = observations[
-                    observations["_observation_date"] >= train_start
+                fold_return_observations = return_observations[
+                    return_observations["_observation_date"] >= train_start
                 ]
-            clean_fold_observations = fold_observations.drop(
-                columns=["_available", "_observation_date"]
+            clean_fold_observations = fold_return_observations.drop(
+                columns=["_observation_date"]
             )
             for index, decision in enumerate(test_dates):
-                info = fold_observations[
-                    fold_observations["_available"] <= decision
-                ].drop(columns=["_available", "_observation_date"])
+                info = decision_info_asof(decision)
+                if fold.get("window_type") == "rolling" and not info.empty:
+                    info = info[info["_observation_date"] >= train_start]
+                info = info.drop(columns=["_observation_date"], errors="ignore")
                 weights = dict(strategy(info, decision))
                 next_decision = (
                     test_dates[index + 1]
