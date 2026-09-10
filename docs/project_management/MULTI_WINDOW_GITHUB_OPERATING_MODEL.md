@@ -1,197 +1,264 @@
 # Multi-Window GitHub Operating Model
 
-Date: 2026-09-09
+Date: 2026-09-10
 Status: ACTIVE
+Profile: PERSONAL / INTERNAL WORKBENCH
 Canonical control issue: `#35`
 Machine-readable role registry: `docs/project_management/ROLE_REGISTRY.yml`
 
-## 1. Operating principle
+## 1. Operating objective
 
-GitHub is the single source of truth. Chat windows are temporary execution units.
+This project is optimized for:
 
-When chat, local notes, old prompts or cached task state conflict with GitHub, GitHub wins. The agent must report `GOVERNANCE_DRIFT` rather than silently choosing one version.
+1. working functionality;
+2. stable day-to-day use;
+3. simple maintenance;
+4. minimum user coordination cost;
+5. minimum model/process cost consistent with correctness.
 
-Authority is centralized; execution is distributed.
+GitHub is the collaboration source of truth, but GitHub process is a coordination mechanism, not an enterprise approval system.
+
+Every extra role, Gate, test, document or workflow must clearly improve correctness, reduce real risk or reduce total development cost. Otherwise it should not be added.
 
 ## 2. Persistent roles
 
 ### WEB-CONTROL
 
-The ChatGPT main-control window. Sole project controller.
+WEB-CONTROL is the sole project controller. Its purpose is to reduce coordination cost and protect the few decisions that truly require central authority.
 
-Owns:
-- project roadmap and task decomposition;
-- REQ/Issue activation and owner assignment;
-- architecture and contract decisions;
-- workflow/Gate definitions;
-- cross-window coordination;
-- final PR review;
-- exact-head `MERGE_APPROVED` decisions;
-- release, cutover, production writes and irreversible operations.
+WEB-CONTROL owns:
 
-WEB-CONTROL may make low-risk GitHub governance/documentation changes directly, preferably through a PR. It is not the default production-code executor.
+- roadmap and priority;
+- deciding whether work should be done at all;
+- compact task decomposition and dispatch;
+- business scope and out-of-scope boundaries;
+- architecture / Schema / Contract decisions;
+- allocation / strategic-weight decision authority;
+- cross-window overlap/conflict resolution;
+- final acceptance and merge decisions;
+- explicit authorization for destructive or irreversible operations.
+
+WEB-CONTROL is not the default implementation window. It should not turn normal development into a sequence of approvals, reviews or reporting steps. For ordinary work, its expected involvement is one dispatch and one final acceptance decision.
+
+If a normal task requires the user to relay context/status between windows more than about two times, WEB-CONTROL should treat that as a workflow-design failure and consolidate the remaining steps.
 
 ### GPT-DEV
 
-Online GPT development window. Default online implementation executor.
+GPT-DEV is the default online implementation executor.
 
-Default routing: `ONLINE_DEFAULT`.
-
-May implement approved scope, test, open PRs, respond to review and provide exact-head evidence. It may not self-expand scope, change architecture/contracts, merge, release or perform production writes without explicit WEB-CONTROL authorization.
+For normal online-capable work it should receive one complete task packet and continue through implementation, directly relevant tests, smoke/validation where useful, PR creation where useful, review fixes and final handoff without asking WEB-CONTROL for intermediate permission unless a genuine scope/architecture/risk decision appears.
 
 ### GROK-DEV
 
-Online Grok development window. Peer online executor used for parallel isolated work, independent implementation, red-team/review-only assignments or research-only assignments.
+GROK-DEV is an auxiliary online executor, not a second controller and not a mandatory reviewer.
 
-Default routing: `ONLINE_PARALLEL`.
+Use it only when at least one of these is true:
 
-GROK-DEV is not a second controller. A review from GROK-DEV is advisory and never equals `MERGE_APPROVED`.
+- isolated parallel work materially shortens delivery;
+- an independent implementation/review has real technical value;
+- it can handle a task more cheaply or efficiently than the default executor.
+
+Do not duplicate ordinary implementation or review merely to exercise another role.
 
 ### LOCAL-DEV
 
-Local PC development window. Peer coding executor for work that genuinely requires the local workstation, local datasets, Wind/iFind/native tools, local filesystem state or workstation-specific validation.
+LOCAL-DEV is reserved for tasks that genuinely depend on the local workstation or local environment, including:
 
-Default routing: `LOCAL_REQUIRED`.
+- local database state;
+- local files unavailable online;
+- Windows-specific runtime behavior;
+- Wind/iFind/native desktop tools;
+- process inspection/control;
+- real machine credentials or environment;
+- true local E2E validation.
 
-LOCAL-DEV may also be designated `PRIMARY_EXECUTOR` by WEB-CONTROL for a task. That designation changes execution priority, not decision authority.
+Ordinary code, documentation, PR work and tests should remain online whenever possible.
 
-## 3. Logical identity versus GitHub account identity
+## 3. Startup protocol: minimum necessary reads
 
-The four roles above are logical project identities. If several windows use the same GitHub account/token, GitHub cannot cryptographically prove which model/window authored a commit.
+A new execution window should read only what is needed to safely start the assigned task:
 
-Therefore identity is recorded through four independent signals:
-1. Control Issue dispatch owner;
-2. branch prefix;
-3. Issue/PR `Role` field;
-4. PR governance check.
+1. actual `main`;
+2. root `AGENTS.md`;
+3. Control Issue `#35` current state;
+4. its active task/dispatch;
+5. directly relevant PR/diff/test/CI/business contract.
 
-Canonical branch prefixes:
+Read `docs/CURRENT_STATE.md`, this document, the role registry, task index, old Issues/PRs or research roadmaps only when the current task actually needs them.
+
+Do not repeat full-history scans. Do not re-verify stable facts whose state has not changed.
+
+A compact startup response is sufficient:
+
+```text
+ROLE_READY
+role: <role>
+main: <sha>
+task: <issue/workstream>
+status: READY | BLOCKED
+material_overlap: NONE | <pointer>
+```
+
+No separate startup Gate is created by this block.
+
+## 4. Default routing
+
+WEB-CONTROL should route work in this order:
+
+1. GPT-DEV for work that can be completed online;
+2. GROK-DEV only when auxiliary/parallel value is clear;
+3. LOCAL-DEV only when local environment is materially required.
+
+LOCAL-DEV is not a generic second-choice coding window. GROK-DEV is not a generic second reviewer.
+
+## 5. Default task loop
+
+The normal closed loop is:
+
+```text
+WEB-CONTROL one-shot dispatch
+    -> executor implements
+    -> executor runs necessary tests/regression/smoke
+    -> executor opens/updates PR if useful
+    -> executor posts one final handoff
+    -> WEB-CONTROL accepts / requests concrete fixes / merges
+```
+
+Do not split the same ordinary task into separate analysis, implementation, unit-test, review, smoke and release-prep assignments when one executor can carry them through.
+
+A second handoff/review cycle is justified only by a real defect, missing evidence or changed scope.
+
+## 6. Compact dispatch contract
+
+For ordinary implementation work, one dispatch should contain:
+
+```text
+TASK: <stable id or issue>
+OWNER: <GPT-DEV | GROK-DEV | LOCAL-DEV>
+GOAL: <business outcome>
+SCOPE: <allowed files/logical surface or behavior>
+BOUNDARIES: <must-not-change items>
+VALIDATE: <necessary targeted tests/regression/smoke>
+RISK: <NONE or explicit high-risk authorization state>
+RETURN: HANDOFF_COMPLETE
+```
+
+Add dependencies, baseline SHA, overlap details, research/data Gates or integration sequencing only when they materially affect correctness.
+
+An Issue/comment is sufficient dispatch evidence. No large task form is required.
+
+`No GitHub dispatch = NO WORK` remains useful for preventing accidental self-assignment by development windows.
+
+## 7. Branch and PR policy
+
+Branch + PR are useful for implementation changes because they provide reviewable diff, isolation and rollback. They are not an approval chain.
+
+Default guidance:
+
+- normal code change: one task -> one branch -> one PR when practical;
+- small low-risk docs/governance edits: WEB-CONTROL may update directly when overlap and rollback risk are trivial;
+- do not create extra PRs solely to represent internal phases;
+- an old/open PR does not automatically assign ownership to a window.
+
+Branch prefixes remain useful logical identity hints:
+
 - `control/` or `governance/` — WEB-CONTROL
 - `gpt/` — GPT-DEV
 - `grok/` — GROK-DEV
 - `local/` — LOCAL-DEV
 
-If cryptographic separation is later required, use separate GitHub accounts or scoped tokens for each executor. Do not pretend logical tags provide authentication that they do not provide.
+They are coordination metadata, not security authentication.
 
-## 4. Startup protocol
+## 8. Testing and acceptance: minimum sufficient evidence
 
-Every new window must read, in order:
-1. actual `main`;
-2. root `AGENTS.md`;
-3. `docs/CURRENT_STATE.md`;
-4. `docs/project_management/ROLE_REGISTRY.yml`;
-5. this operating model;
-6. `docs/tasks/INDEX.md`;
-7. Control Issue `#35`;
-8. its own active dispatch;
-9. relevant REQ/Issue/PR/CI/Gate evidence.
+Ordinary functionality is accepted when there is sufficient evidence that:
 
-Then it must return a `ROLE_READY` block containing:
+- the target behavior works;
+- directly related regressions pass;
+- key business semantics are correct;
+- core flow is not obviously broken.
 
-```text
-ROLE_READY
-role:
-actual_main:
-control_issue:
-active_workstream:
-routing_mode:
-assigned_scope:
-branch_or_planned_branch:
-active_pr_overlap:
-known_blockers:
-governance_drift:
-```
+Use the smallest test set that provides this evidence. Broader/full-suite/platform validation is appropriate when the change is cross-cutting, platform-sensitive, economically material, hard to roll back or otherwise high risk.
 
-No GitHub dispatch means `NO WORK`.
+CI is useful automated evidence, not a collaboration Gate. CI failure must be understood when it is relevant. CI unavailability does not automatically block progress if local/runtime evidence is sufficient; record the residual risk instead.
 
-## 5. Dispatch contract
+For PR merges, WEB-CONTROL should verify it is reviewing the current head/diff. This is a basic stale-review check, not a standalone exact-head evidence workflow.
 
-Every implementation task must state:
-- `WORKSTREAM_ID`;
-- owner role;
-- routing mode;
-- source REQ/Issue;
-- baseline and current main;
-- allowed file/logical surfaces;
-- explicit out-of-scope;
-- dependency gates;
-- acceptance criteria;
-- integration owner if needed;
-- production/schema/release authorization state.
+## 9. Domain/research Gates are not collaboration Gates
 
-Default authorization for production writes, schema migration, release, cutover and irreversible operations is `NOT_AUTHORIZED`.
+Existing research/data controls such as `G0-G5` and `C0-C3` may still apply where the business problem requires them—for example PIT safety, source admission, factor admission, research validity or production allocation semantics.
 
-## 6. Non-overlap rule
+They must not be reused as generic multi-window approval steps.
 
-Before coding, every executor checks open PRs, active dispatches, target files and logical surfaces.
-
-Material overlap with another active executor is `COORDINATION_BLOCKED` unless WEB-CONTROL explicitly defines a safe split.
-
-Default: one owner + one task + one branch + one PR.
-
-## 7. Workflow Gates
-
-To avoid collision with domain/research G0-G5 gates, collaboration governance uses `WG0-WG9`.
-
-- `WG0 DISPATCH` — explicit GitHub dispatch exists.
-- `WG1 BASELINE` — current main, task baseline, branch and overlap check recorded.
-- `WG2 SCOPE` — allowed/non-scope and dependencies confirmed.
-- `WG3 LOCAL_EVIDENCE` — required local tests/lint/evidence pass at exact head.
-- `WG4 CI_EXACT_HEAD` — required CI is tied to exact head.
-- `WG5 DOMAIN_SAFETY` — applicable data/PIT/schema/contract/production boundaries checked.
-- `WG6 HANDOFF` — complete handoff packet posted.
-- `WG7 CONTROL_REVIEW` — WEB-CONTROL reviews diff/evidence.
-- `WG8 MERGE_APPROVED` — WEB-CONTROL explicitly approves one exact head.
-- `WG9 POST_MERGE` — merged main stability/integration verification.
-
-Allowed status vocabulary includes `PASS`, `FAIL`, `NOT_RUN`, `CI_INFRA_BLOCKED`, `DATA_GAP`, `BLOCKED`, `DATA_BLOCKED`, and `COORDINATION_BLOCKED`.
-
-CI success is evidence for a Gate; it is never merge approval.
-
-## 8. Exact-head rule
-
-Every implementation handoff must state branch, head SHA, tests and CI tied to that head. Any new commit invalidates older exact-head evidence unless the relevant check is explicitly content-independent.
-
-`MERGE_APPROVED` must name or otherwise unambiguously bind to the approved PR head. A moved head requires re-review.
-
-## 9. Research and reference separation
-
-Research may be assigned as a task mode (`RESEARCH_ONLY`) to GPT-DEV, GROK-DEV or LOCAL-DEV. It does not create another control authority.
-
-External evidence, experiments and candidate factors remain reference/research material until a formal REQ and applicable admission Gates authorize implementation/production use.
+The old mandatory collaboration sequence `WG0-WG9` is retired for ordinary work. Historical Issues/PRs may continue to contain WG labels as historical evidence; no migration is required.
 
 ## 10. Handoff contract
 
+A normal final return should be compact:
+
 ```text
-HANDOFF_COMPLETE: <WORKSTREAM_ID>
-role: <WEB-CONTROL | GPT-DEV | GROK-DEV | LOCAL-DEV>
-routing_mode:
-branch:
-head:
-PR:
-WG_highest:
-scope_completed:
-tests:
-CI:
-data/PIT/source_health:
-coordination_status:
-known_limitations:
-production_impact:
-out_of_scope:
-integration_touchpoints:
-next: <READY_FOR_REVIEW | BLOCKED | CHANGES_REQUIRED>
+HANDOFF_COMPLETE: <task/workstream>
+role: <role>
+PR: <# or N/A>
+head: <sha if PR/code change; otherwise N/A>
+completed: <short summary>
+validation:
+  - <targeted test / regression / smoke result>
+blockers: NONE | <truthful blocker>
+residual_risk: NONE | <short note>
+next: READY_FOR_CONTROL
 ```
 
-Development is complete at PR + evidence + handoff. Merge/release remain separate decisions.
+Do not repeat unchanged background, old SHAs, full historical evidence or already-linked information.
 
-## 11. Authority summary
+## 11. User is not the message bus
 
-- Parallel execution: allowed when scopes do not overlap.
-- Architecture authority: WEB-CONTROL only.
-- Scope activation/change: WEB-CONTROL only.
-- Merge approval: WEB-CONTROL only.
-- Production write/release/cutover: explicit WEB-CONTROL authorization only.
-- Developer self-merge: prohibited.
-- Research conclusion -> production fact: prohibited without explicit admission.
+Agents should hand off through GitHub Issue/PR comments or compact repository records whenever possible.
 
-This document supersedes older role naming where it conflicts with the current four-window configuration.
+WEB-CONTROL should write the next executor's task so the user does not need to copy/paste the same context, SHA, tests or status between windows.
+
+A fresh executor should retrieve only the incremental GitHub context needed for its assignment.
+
+## 12. Minimum safety floor
+
+The following rules are retained because they prevent real local/data damage:
+
+```text
+UNKNOWN_PROCESS_KILL = FORBIDDEN
+DESTRUCTIVE_DB_WRITE = EXPLICIT_ONLY
+DB_RESTORE = EXPLICIT_ONLY
+SCHEMA_MIGRATION = EXPLICIT_SCOPE_ONLY
+UNKNOWN != ZERO
+MISSING != ZERO
+```
+
+These rules do not imply enterprise IAM, zero-trust, SIEM/SOC, SAST/DAST, HA, service mesh, complex release systems or mandatory branch-protection programs.
+
+Credentials must not be committed or leaked. Real-data/PIT/source uncertainty must remain explicit rather than being converted into success by defaults, zero-fill or fixtures.
+
+## 13. When extra control is justified
+
+WEB-CONTROL may add a targeted extra check only when the task contains a real direct risk, such as:
+
+- destructive database mutation or restore;
+- Schema migration;
+- irreversible external/production write;
+- credential/funds handling;
+- unknown process termination;
+- clear public-network exposure;
+- materially overlapping concurrent changes;
+- economically material allocation/contract changes;
+- evidence where a false success would materially mislead research conclusions.
+
+The control should be the smallest one that mitigates that risk and should disappear from unrelated tasks.
+
+## 14. Authority summary
+
+- Project/architecture/scope authority: WEB-CONTROL only.
+- Default implementation: GPT-DEV online.
+- Auxiliary parallel execution: GROK-DEV only when useful.
+- Local execution: LOCAL-DEV only when genuinely local.
+- Normal task process: one dispatch, end-to-end execution, one final handoff, one control acceptance.
+- Developer self-merge: not allowed unless WEB-CONTROL explicitly changes project policy.
+- Destructive DB write / restore / Schema migration: only under the minimum safety rules above.
+- Enterprise-grade governance: not a default project objective.

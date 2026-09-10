@@ -1,57 +1,67 @@
 # CURRENT_STATE
 
 Status: ACTIVE BOOTSTRAP POINTER
+Project profile: PERSONAL / INTERNAL WORKBENCH
 Canonical dynamic control: GitHub Issue `#35`
 Canonical role registry: `docs/project_management/ROLE_REGISTRY.yml`
 Canonical operating model: `docs/project_management/MULTI_WINDOW_GITHUB_OPERATING_MODEL.md`
 
 ## Purpose
 
-This file is deliberately low-churn. It tells a fresh window how to recover current state without copying mutable PR/CI/dispatch facts into another stale document.
+This file is deliberately low-churn. It points a fresh window to current GitHub state without copying mutable task/PR/CI facts into another document.
 
 ## Runtime authority order
 
-For mutable state, read in this order:
-1. actual repository `main` and GitHub object state;
-2. Control Issue `#35` current body/comments;
-3. active task Issue/REQ and explicit dispatch;
-4. current PR head/diff/reviews/CI;
-5. repository governance documents.
+For mutable state, prefer:
 
-Chat history, old handoff text and superseded prompt files are non-authoritative.
+1. actual repository `main` and current GitHub object state;
+2. Control Issue `#35`;
+3. the active task dispatch / Issue;
+4. the current PR/diff/tests/CI when directly relevant;
+5. canonical governance documents when a rule needs clarification.
 
-## Required startup read
+Chat history and old handoff text are non-authoritative when they conflict with current GitHub state.
+
+## Minimum startup read
+
+For ordinary assigned work, read only:
 
 ```text
 actual main
 AGENTS.md
-docs/CURRENT_STATE.md
-docs/project_management/ROLE_REGISTRY.yml
-docs/project_management/MULTI_WINDOW_GITHUB_OPERATING_MODEL.md
-docs/tasks/INDEX.md
 Control Issue #35
-own active dispatch
-relevant REQ / Issue / PR / CI / Gate evidence
+own active dispatch / Task Issue
+directly relevant PR / test / business-contract evidence
 ```
 
-## Drift rule
+Read the role registry, operating model, task index, historical Issues/PRs or research roadmaps only when the current task materially depends on them.
 
-If any canonical governance document, Control Issue dispatch, branch identity or PR role conflicts with another current GitHub source, do not guess. Report `GOVERNANCE_DRIFT`, identify the conflicting pointers and wait for WEB-CONTROL to resolve or update the canonical GitHub record.
+Do not repeat full-history scans or re-check unchanged facts.
+
+## Default workflow
+
+```text
+one complete dispatch
+-> implementation + necessary tests/regression/smoke
+-> one final handoff
+-> WEB-CONTROL acceptance / concrete fixes / merge
+```
+
+The historical `WG0-WG9` collaboration pipeline is not required for ordinary new work. Domain/research Gates remain applicable only where their underlying business/data risk is relevant.
 
 ## Dispatch rule
 
-`No GitHub dispatch = NO WORK`.
+`No GitHub dispatch = NO WORK` applies to development windows. A compact Issue/comment is enough; an open PR alone does not self-assign a window.
 
-An open PR does not by itself assign ownership to a newly opened window. Legacy/open PRs must be explicitly adopted or reviewed by WEB-CONTROL before a new executor modifies them.
-
-## Production rule
-
-Unless the active dispatch explicitly says otherwise:
+## Minimum safety floor
 
 ```text
-production writes: NOT_AUTHORIZED
-schema migration: NOT_AUTHORIZED
-release: NOT_AUTHORIZED
-cutover: NOT_AUTHORIZED
-irreversible operation: NOT_AUTHORIZED
+UNKNOWN_PROCESS_KILL = FORBIDDEN
+DESTRUCTIVE_DB_WRITE = EXPLICIT_ONLY
+DB_RESTORE = EXPLICIT_ONLY
+SCHEMA_MIGRATION = EXPLICIT_SCOPE_ONLY
+UNKNOWN != ZERO
+MISSING != ZERO
 ```
+
+These controls are intentionally narrow and must not be expanded into enterprise-style governance without a concrete project risk.
