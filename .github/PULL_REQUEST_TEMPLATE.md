@@ -1,47 +1,35 @@
-## Governance identity
+## Task
 
 - Role: <!-- WEB-CONTROL | GPT-DEV | GROK-DEV | LOCAL-DEV -->
-- Workstream: <!-- stable WORKSTREAM_ID -->
-- Task/Issue: <!-- #number or linked REQ -->
-- Routing mode: <!-- ONLINE_DEFAULT | ONLINE_PARALLEL | LOCAL_REQUIRED | PRIMARY_EXECUTOR | RESEARCH_ONLY | REVIEW_ONLY | LOCAL_EVIDENCE -->
-- Task baseline: <!-- SHA -->
-- Current main at start: <!-- SHA -->
-- Active-PR overlap check: <!-- PASS / COORDINATION_BLOCKED + details -->
+- Task / Issue: <!-- #number or compact workstream id -->
+- Goal: <!-- business outcome this PR delivers -->
 
-## Purpose
+## Completed
 
-<!-- Why this PR exists. -->
+<!-- What changed. Keep this concise and outcome-oriented. -->
 
-## Scope completed
+## Boundaries
 
-<!-- Exact implementation/doc/evidence delivered. -->
+- Out of scope: <!-- material items intentionally not changed -->
+- Architecture / Schema / Contract / allocation impact: <!-- NONE or explicit -->
+- High-risk operation: <!-- NONE, or reference explicit WEB-CONTROL authorization -->
+- Coordination/overlap: <!-- NONE, or only material active overlap -->
 
-## Explicit out-of-scope
+## Validation
 
-<!-- What this PR intentionally does not change. -->
+- Targeted tests / regression: <!-- command + result, or N/A -->
+- Smoke / runtime validation: <!-- result when useful, or N/A -->
+- CI: <!-- optional supporting evidence; CI is not a separate Gate -->
+- Data/PIT/source status: <!-- N/A or truthful PARTIAL / DATA_BLOCKED / etc. -->
 
-## Files / logical surfaces
+## Handoff
 
-<!-- Key files and semantic surfaces changed. -->
+```text
+HANDOFF_COMPLETE: <task/workstream>
+head: <current PR head>
+blockers: NONE | <blocker>
+residual_risk: NONE | <short note>
+next: READY_FOR_CONTROL
+```
 
-## Evidence
-
-- Tests: <!-- exact command + result -->
-- CI: <!-- PASS / FAIL / NOT_RUN / CI_INFRA_BLOCKED + run link/id when available -->
-- Exact-head evidence: <!-- PR head SHA + evidence tied to it -->
-- Data/PIT/source health: <!-- N/A or explicit state -->
-- Domain/research Gate: <!-- N/A or named gate -->
-- Workflow Gate reached: <!-- WG0..WG9 -->
-
-## Safety / compatibility
-
-- Schema/contract impact: <!-- NONE / explicit -->
-- Production impact: <!-- NONE / explicit -->
-- Release/cutover impact: <!-- NONE / explicit -->
-- Known limitations/blockers: <!-- explicit -->
-- Integration touchpoints: <!-- explicit -->
-
-## Authority acknowledgement
-
-- WEB-CONTROL merge authorization: **NOT_YET_GRANTED**
-- I acknowledge that CI PASS != MERGE_APPROVED and that any MERGE_APPROVED decision must bind to the exact current PR head.
+WEB-CONTROL reviews the current diff/head and decides acceptance/merge. No WG0-WG9 or separate exact-head evidence packet is required for ordinary work.
