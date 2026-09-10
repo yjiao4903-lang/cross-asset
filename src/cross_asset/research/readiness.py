@@ -122,12 +122,14 @@ def evaluate_research_readiness(
     required_series: list[str] | tuple[str, ...] | None = None,
     decision_times=None,
 ) -> dict:
-    """Evaluate protocol, registry, formal observations, history and PIT coverage."""
+    """Evaluate protocol, registry, formal observations, history and PIT coverage.
 
-    catalog_critical = _required_series(connection)
+    An explicit ``required_series`` set is authoritative for a formal research
+    model. Legacy callers that omit it retain the catalog-critical fallback.
+    """
+
     required = sorted(
-        set(catalog_critical)
-        | set(required_series or ())
+        set(_required_series(connection) if required_series is None else required_series)
     )
     research_decisions = _decision_times(decision_times)
     blockers = list(protocol.execution_blockers)
