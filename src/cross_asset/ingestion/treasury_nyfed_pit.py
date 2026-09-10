@@ -96,7 +96,10 @@ def us_federal_holidays(year: int) -> frozenset[date]:
 def is_us_federal_business_day(value: date) -> bool:
     if value.weekday() >= 5:
         return False
-    return value not in us_federal_holidays(value.year)
+    nominal_years = [value.year]
+    if value.year < date.max.year:
+        nominal_years.append(value.year + 1)
+    return all(value not in us_federal_holidays(year) for year in nominal_years)
 
 
 def add_us_federal_business_days(start: date, days: int) -> date:
