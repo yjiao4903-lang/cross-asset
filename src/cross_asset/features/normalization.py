@@ -16,7 +16,16 @@ def causal_zscore(
     window: int | None = None,
     clip: float | None = 2.0,
 ) -> pd.Series:
-    """Normalize each value against only its previously observed history."""
+    """Normalize each value against only its previously observed history.
+
+    A zero-variance prior history is not a valid neutral z-score. If the current
+    value exactly continues the flat history, the 0/0 result remains unavailable
+    (NaN). If the current value jumps away from that flat history, its standardized
+    deviation is directionally unbounded and is therefore represented as +/-inf
+    before applying the caller's existing clip policy. This distinguishes a flat
+    continuation from a genuine zero-variance anomaly without inventing a new
+    tuning threshold.
+    """
 
     if min_history < 2:
         raise ValueError("min_history must be at least two")
@@ -36,7 +45,12 @@ def causal_zscore(
 
     score = (values - mean) / std
     flat = std.eq(0) & values.notna() & mean.notna()
-    score = score.mask(flat, 0.0)
+    flat_continuation = flat & values.eq(mean)
+    flat_jump_up = flat & values.gt(mean)
+    flat_jump_down = flat & values.lt(mean)
+    score = score.mask(flat_continuation)
+    score = score.mask(flat_jump_up, float("inf"))
+    score = score.mask(flat_jump_down, float("-inf"))
     if clip is not None:
         score = score.clip(-float(clip), float(clip))
     return score
@@ -49,7 +63,7 @@ def latest_causal_zscore(
     window: int | None = None,
     clip: float | None = 2.0,
 ) -> float | None:
-    """Return the latest available causal z-score, or None when history is insufficient."""
+    """Return the latest available causal z-score, or None when unavailable."""
 
     scores = causal_zscore(
         series,

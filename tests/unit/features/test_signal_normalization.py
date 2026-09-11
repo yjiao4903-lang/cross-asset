@@ -29,9 +29,25 @@ def test_causal_zscore_is_invariant_to_future_append():
     )
 
 
-def test_flat_history_normalizes_to_zero_after_minimum_history():
+def test_zero_variance_continuation_is_unavailable_not_neutral():
     series = pd.Series([5.0] * 30)
-    assert latest_causal_zscore(series, min_history=10) == 0.0
+    assert latest_causal_zscore(series, min_history=10) is None
+    assert pd.isna(causal_zscore(series, min_history=10).iloc[-1])
+
+
+def test_zero_variance_jump_is_directional_anomaly_not_neutral():
+    up = pd.Series([5.0] * 10 + [7.0])
+    down = pd.Series([5.0] * 10 + [3.0])
+    assert latest_causal_zscore(up, min_history=10, clip=2.0) == 2.0
+    assert latest_causal_zscore(down, min_history=10, clip=2.0) == -2.0
+    assert np.isposinf(causal_zscore(up, min_history=10, clip=None).iloc[-1])
+    assert np.isneginf(causal_zscore(down, min_history=10, clip=None).iloc[-1])
+
+
+def test_zero_variance_missing_current_value_remains_missing():
+    series = pd.Series([5.0] * 10 + [np.nan])
+    assert latest_causal_zscore(series, min_history=10) is None
+    assert pd.isna(causal_zscore(series, min_history=10).iloc[-1])
 
 
 def test_multi_horizon_trend_is_dimensionless_and_missing_aware():

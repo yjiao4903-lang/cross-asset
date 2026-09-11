@@ -2,12 +2,16 @@ version: 0.2
 parameter_status: DEVELOPMENT_PRIOR
 # Each series is transformed first, then causally normalized against prior
 # history only. Monthly releases use a longer freshness horizon than daily data.
+# raw_unit describes the stored observation value. derived_unit describes the
+# transform output before causal normalization. `unit` remains the compatibility
+# alias for derived_unit. Unknown source semantics stay explicitly unresolved.
 series:
   US_CPI:
     display_name: US CPI
     frequency: monthly
     raw_unit: index
-    unit: percent
+    derived_unit: percent_yoy
+    unit: percent_yoy
     critical: false
     stale_after_hours: 1080
     transform: {type: pct_change_12m, direction: negative, period: month}
@@ -16,7 +20,8 @@ series:
     display_name: US Core PCE
     frequency: monthly
     raw_unit: index
-    unit: percent
+    derived_unit: percent_yoy
+    unit: percent_yoy
     critical: false
     stale_after_hours: 1080
     transform: {type: pct_change_12m, direction: negative, period: month}
@@ -24,6 +29,8 @@ series:
   US_UNEMPLOYMENT:
     display_name: US unemployment
     frequency: monthly
+    raw_unit: percent
+    derived_unit: percent
     unit: percent
     critical: false
     stale_after_hours: 1080
@@ -32,6 +39,8 @@ series:
   US_INITIAL_CLAIMS:
     display_name: US initial claims
     frequency: weekly
+    raw_unit: persons
+    derived_unit: persons
     unit: persons
     critical: false
     stale_after_hours: 336
@@ -41,7 +50,8 @@ series:
     display_name: US industrial production
     frequency: monthly
     raw_unit: index
-    unit: percent
+    derived_unit: percent_yoy
+    unit: percent_yoy
     critical: false
     stale_after_hours: 1080
     transform: {type: pct_change_12m, direction: positive, period: month}
@@ -49,6 +59,8 @@ series:
   US_REAL_10Y:
     display_name: US 10Y real yield
     frequency: daily
+    raw_unit: yield_percent
+    derived_unit: yield_percent
     unit: yield_percent
     critical: false
     stale_after_hours: 96
@@ -57,6 +69,8 @@ series:
   US_GOV_10Y:
     display_name: US 10Y Treasury yield
     frequency: daily
+    raw_unit: yield_percent
+    derived_unit: yield_percent
     unit: yield_percent
     critical: false
     stale_after_hours: 96
@@ -65,7 +79,9 @@ series:
   CN_PMI:
     display_name: China PMI
     frequency: monthly
-    unit: index
+    raw_unit: index
+    derived_unit: index_points_from_50
+    unit: index_points_from_50
     critical: false
     stale_after_hours: 1080
     transform: {type: level, direction: positive, baseline: 50}
@@ -73,7 +89,9 @@ series:
   CN_CPI:
     display_name: China CPI
     frequency: monthly
-    unit: percent
+    raw_unit: UNRESOLVED
+    derived_unit: UNRESOLVED
+    unit: UNRESOLVED
     critical: false
     stale_after_hours: 1080
     # Wind code semantics are not frozen in the current evidence snapshot.
@@ -82,7 +100,9 @@ series:
   CN_PPI:
     display_name: China PPI
     frequency: monthly
-    unit: percent
+    raw_unit: UNRESOLVED
+    derived_unit: UNRESOLVED
+    unit: UNRESOLVED
     critical: false
     stale_after_hours: 1080
     transform: {type: ambiguous_raw_semantics, direction: negative}
@@ -90,7 +110,9 @@ series:
   CN_M1:
     display_name: China M1
     frequency: monthly
-    unit: percent
+    raw_unit: UNRESOLVED
+    derived_unit: UNRESOLVED
+    unit: UNRESOLVED
     critical: false
     stale_after_hours: 1080
     transform: {type: ambiguous_raw_semantics, direction: positive}
@@ -98,7 +120,9 @@ series:
   CN_M2:
     display_name: China M2
     frequency: monthly
-    unit: percent
+    raw_unit: UNRESOLVED
+    derived_unit: UNRESOLVED
+    unit: UNRESOLVED
     critical: false
     stale_after_hours: 1080
     transform: {type: ambiguous_raw_semantics, direction: positive}
@@ -106,6 +130,8 @@ series:
   CN_DR007:
     display_name: China DR007
     frequency: daily
+    raw_unit: yield_percent
+    derived_unit: yield_percent
     unit: yield_percent
     critical: false
     stale_after_hours: 96
@@ -114,6 +140,8 @@ series:
   DXY:
     display_name: US dollar index proxy
     frequency: daily
+    raw_unit: index_points
+    derived_unit: index_points
     unit: index_points
     critical: false
     stale_after_hours: 96
@@ -122,6 +150,8 @@ series:
   COPPER:
     display_name: Copper price proxy
     frequency: daily
+    raw_unit: price
+    derived_unit: price
     unit: price
     critical: false
     stale_after_hours: 96
@@ -130,6 +160,8 @@ series:
   GOLD:
     display_name: Gold price proxy
     frequency: daily
+    raw_unit: price
+    derived_unit: price
     unit: price
     critical: false
     stale_after_hours: 96
