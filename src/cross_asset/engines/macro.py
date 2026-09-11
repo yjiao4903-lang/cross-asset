@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from cross_asset.features.macro import transform_history, transform_series
+from cross_asset.features.macro import (
+    transform_history,
+    transform_series,
+    transform_unit_semantics,
+)
 from cross_asset.features.normalization import latest_causal_zscore
 
 
@@ -52,6 +56,20 @@ def _latest_revision_snapshot(rows):
         if current is None or available > _utc(_get(current, "available_at")):
             selected[key] = row
     return sorted(selected.values(), key=lambda row: _get(row, "observation_date"))
+
+
+def _validated_definition(series_id, definition):
+    """Fail closed when an active macro input has unresolved unit semantics."""
+
+    semantics = transform_unit_semantics(definition)
+    if not semantics.resolved:
+        raise ValueError(
+            "macro_unit_semantics_unresolved: "
+            f"series_id={series_id}; reason={semantics.reason}; "
+            f"transform={semantics.transform_type}; raw_unit={semantics.raw_unit}; "
+            f"derived_unit={semantics.derived_unit}"
+        )
+    return definition
 
 
 def _normalized_value(rows, definition):
@@ -107,7 +125,7 @@ def build_macro_state(
     raw_contributions = {}
     freshness_by_series = {}
     for series_id, rows in by_series.items():
-        definition = definitions.get(series_id, {}) or {}
+        definition = _validated_definition(series_id, definitions.get(series_id, {}) or {})
         raw_value, score = _normalized_value(rows, definition)
         raw_contributions[series_id] = raw_value
         contributions[series_id] = score
