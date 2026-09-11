@@ -7,9 +7,12 @@
 # enabled policy.
 #
 # All fields are REQUIRED per series; no inference is performed for a missing
-# field - intake is fail-closed. The top-level `provider` MUST equal every
-# per-series `provider`; a conflict BLOCKS.
-provider: "YOUR_PROFESSIONAL_SOURCE_OR_TOOL"   # e.g. cmac-terminal / sse-export / not "manual"
+# field - intake is fail-closed. The file/top-level `provider` is REQUIRED
+# (never inferred, never falls back to "manual") and MUST equal every per-series
+# `provider`; a conflict BLOCKS.
+# Phase-1 scope: ONE file carries EXACTLY ONE formal series. A multi-series pack
+# BLOCKS (`MULTI_SERIES_MANUAL_PACK_UNSUPPORTED`); split into one file per series.
+provider: "YOUR_PROFESSIONAL_SOURCE_OR_TOOL"   # REQUIRED - e.g. cmac-terminal / sse-export / not "manual"
 dataset: "manual_export"
 series:
   - series_id: "FORMAL_SERIES_ID"              # must match the research series registry
@@ -35,7 +38,7 @@ series:
     # FX (instrument_type=fx/fx_spot/fx_forward):
     base_currency: "USD|CNY|..."              # FX only; missing -> FX_QUOTE_DIRECTION_UNRESOLVED
     quote_currency: "CNY|JPY|..."             # FX only; missing -> FX_QUOTE_DIRECTION_UNRESOLVED
-    quote_direction: "base_quote|quote_base"  # FX only; missing -> FX_QUOTE_DIRECTION_UNRESOLVED
+    quote_direction: "QUOTE_PER_BASE|BASE_PER_QUOTE"  # FX only; canonical enum. Missing/sentinel/non-canonical -> FX_QUOTE_DIRECTION_UNRESOLVED
     # Continuous futures (instrument_type=futures_continuous/continuous_futures):
     continuous_contract_identity: "e.g. front-continuous CL"  # missing -> FUTURES_ROLL_SEMANTICS_UNRESOLVED
     roll_method: "fixed_roll_date|volume_based|open_interest"  # missing -> FUTURES_ROLL_SEMANTICS_UNRESOLVED

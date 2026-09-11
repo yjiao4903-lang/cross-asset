@@ -61,6 +61,24 @@ _REQUIRED_SERIES_FIELDS = {
 }
 
 _MISSING_SENTINELS = (None, "", "TBD", "UNKNOWN", "UNAVAILABLE")
+# Canonical FX quote-direction contracts. Anything else (or an unresolved
+# sentinel) is treated as unresolved fail-closed; arbitrary non-empty strings
+# are never accepted as "resolved".
+_FX_QUOTE_DIRECTION_CANONICAL = ("QUOTE_PER_BASE", "BASE_PER_QUOTE")
+
+
+def _resolved(value) -> bool:
+    """True only when a declared value is a non-empty, non-sentinel string.
+
+    ``None``/``""``/``TBD``/``UNKNOWN``/``UNAVAILABLE`` are unresolved. A numeric
+    zero (e.g. a genuine 0) is NOT a missing sentinel, so it remains usable.
+    """
+    if value is None:
+        return False
+    if not isinstance(value, str):
+        value = str(value)
+    text = value.strip()
+    return bool(text) and text not in _MISSING_SENTINELS
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -379,7 +397,8 @@ def _conditional_semantics_errors(entry: dict[str, Any]) -> list[dict[str, str]]
 
     These never guess from ``source_series_id``, filename or column names. If a
     series declares a semantic that needs a disambiguating contract and that
-    contract is unresolved, the manifest is rejected fail-closed.
+    contract is unresolved (missing or an unresolved sentinel) or - for FX quote
+    direction - not a canonical value, the manifest is rejected fail-closed.
     """
     errors: list[dict[str, str]] = []
     series_id = str(entry.get("series_id") or "unknown")
@@ -387,36 +406,35 @@ def _conditional_semantics_errors(entry: dict[str, Any]) -> list[dict[str, str]]
     field = str(entry.get("field") or "").strip().lower()
     price_type = str(entry.get("price_type") or "").strip().lower()
 
-    # FX: explicit base/quote currency AND quote direction are required.
-    if (
-        instrument_type in {"fx", "fx_spot", "fx_forward"}
-        and not (
-            str(entry.get("base_currency") or "").strip()
-            and str(entry.get("quote_currency") or "").strip()
-            and str(entry.get("quote_direction") or "").strip()
-        )
-    ):
-        errors.append({"code": "FX_QUOTE_DIRECTION_UNRESOLVED", "message": series_id})
+    # FX: explicit base/quote currency AND a canonical quote direction are
+    # required. Unresolved sentinels and non-canonical direction values BLOCK.
+    if instrument_type in {"fx", "fx_spot", "fx_forward"}:
+        base_ok = _resolved(entry.get("base_currency"))
+        quote_ok = _resolved(entry.get("quote_currency"))
+        qd = entry.get("quote_direction")
+        qd_ok = _resolved(qd) and str(qd).strip().upper() in _FX_QUOTE_DIRECTION_CANONICAL
+        if not (base_ok and quote_ok and qd_ok):
+            errors.append({"code": "FX_QUOTE_DIRECTION_UNRESOLVED", "message": series_id})
 
-    # Continuous futures: roll/adjustment semantics must be explicit.
-    if (
-        instrument_type in {"futures_continuous", "continuous_futures"}
-        and not (
-            str(entry.get("continuous_contract_identity") or "").strip()
-            and str(entry.get("roll_method") or "").strip()
-            and str(entry.get("roll_semantics") or "").strip()
-            and str(entry.get("adjustment_semantics") or "").strip()
+    # Continuous futures: roll/adjustment semantics must be explicitly resolved
+    # (never TBD/UNKNOWN/UNAVAILABLE).
+    if instrument_type in {"futures_continuous", "continuous_futures"}:
+        required = (
+            "continuous_contract_identity",
+            "roll_method",
+            "roll_semantics",
+            "adjustment_semantics",
         )
-    ):
-        errors.append({"code": "FUTURES_ROLL_SEMANTICS_UNRESOLVED", "message": series_id})
+        if not all(_resolved(entry.get(f)) for f in required):
+            errors.append({"code": "FUTURES_ROLL_SEMANTICS_UNRESOLVED", "message": series_id})
 
-    # Returns/index: a series declared as a return must state its return type.
+    # Returns/index: a series declared as a return must state a resolved return type.
     is_return = (
         "return" in field
         or "return" in price_type
         or price_type in {"total_return_index", "excess_return_index", "net_return_index"}
     )
-    if is_return and not str(entry.get("return_type") or "").strip():
+    if is_return and not _resolved(entry.get("return_type")):
         errors.append({"code": "RETURN_TYPE_UNRESOLVED", "message": series_id})
     return errors
 
@@ -439,6 +457,10 @@ def validate_semantic_manifest(manifest: dict[str, Any]) -> list[dict[str, str]]
     if not isinstance(series, list) or not series:
         return [{"code": "semantic_series_required", "message": "manifest declares no series"}]
     top_level_provider = str(manifest.get("provider") or "").strip()
+    # The file/top-level provider is REQUIRED - it is never inferred, and there
+    # is no fallback to "manual". This is the authoritative provenance provider.
+    if not _resolved(manifest.get("provider")):
+        errors.append({"code": "provider_unresolved", "message": "file/top-level provider required"})
     for entry in series:
         if not isinstance(entry, dict):
             errors.append({"code": "semantic_series_invalid", "message": "series entry must be a mapping"})
@@ -623,17 +645,25 @@ def run_data_acceptance_gate(
     parsed_ok_rows: list[dict[str, Any]],
     semantic_manifest: dict[str, Any],
     raw_sha256: str,
+    contract_hash: str,
     first_obs_date: str | None,
     last_obs_date: str | None,
     reviewer: str | None,
     approved_at: str | None,
 ) -> dict[str, Any]:
-    """Project accepted rows + a DATA_ACCEPTANCE_GATE-compatible manifest and
-    run the existing ``validate_data_file`` read-only gate.
+    """Run the existing ``validate_data_file`` gate for the staged pack.
 
     The authoritative acceptance checker is reused; PARTIAL (e.g. MANUAL
     three-batch STABILITY) and FAIL are surfaced faithfully. This does not
-    create a parallel admission gate. Returns the gate result summary.
+    create a parallel admission gate.
+
+    The returned result carries ``sha256`` = the combined approval contract hash
+    (raw-data identity + semantic-contract identity). Feeding this result through
+    the existing ``register-data-acceptance -> candidate_registry_record ->
+    upsert_data_acceptance`` boundary therefore persists that exact combined
+    contract hash as the registry ``manifest_hash``, so a later ``--write`` lookup
+    matches only the identical contract (no schema migration, backward
+    compatible: ``candidate_registry_record`` keeps reading ``result["sha256"]``).
     """
     from .acceptance import validate_data_file
 
@@ -692,14 +722,56 @@ def run_data_acceptance_gate(
         manifest_path = tmp_dir / "projection.manifest.json"
         manifest_path.write_text(json.dumps(acceptance_manifest, sort_keys=True), encoding="utf-8")
         result = validate_data_file(csv_path, manifest_path)
-    return {
-        "status": result.get("status"),
-        "sha256": result.get("sha256"),
-        "gates": result.get("gates"),
-        "counts": result.get("counts"),
-        "warnings": result.get("warnings", []),
-        "errors": result.get("errors", []),
-    }
+    result = dict(result)
+    # The contract identity for manual intake is the combined raw+semantic hash,
+    # not the ephemeral projection file hash. Registering this result persists
+    # the combined contract hash as the registry manifest_hash.
+    result["sha256"] = contract_hash
+    return result
+
+
+def build_manual_registration_result(
+    *,
+    gate_result: dict[str, Any],
+    contract_hash: str,
+    series_id: str,
+    provider: str,
+    source_series_id: str,
+    reviewer: str,
+    approved_at: datetime | str,
+) -> dict[str, Any]:
+    """Assemble an explicit-registrar PASS payload for the combined contract.
+
+    This is the *registration boundary* representation: an external reviewer
+    explicitly authorizes PASS for an exact combined contract hash. Durability
+    still goes through the existing ``register-data-acceptance ->
+    candidate_registry_record -> upsert_data_acceptance`` path (this only builds
+    the payload, with ``sha256`` carrying the combined contract hash so the real
+    ``candidate_registry_record`` records it as ``manifest_hash``). It is never
+    invoked inside the manual-intake write path, so there is no self-approval.
+    """
+    result = dict(gate_result)
+    result["sha256"] = contract_hash
+    result["status"] = "PASS"
+    gates = dict(result.get("gates") or {})
+    for name in ("TECH", "LEGAL", "PIT", "STABILITY"):
+        gates[name] = "PASS"
+    result["gates"] = gates
+    candidate = dict(result.get("registry_candidate") or {})
+    candidate.update(
+        {
+            "series_id": series_id,
+            "provider": provider,
+            "source_series_id": source_series_id,
+            "usage_status": "RESEARCH_ADMISSIBLE",
+            "pit_grade": candidate.get("pit_grade") or "B",
+            "origin": candidate.get("origin") or "MANUAL",
+            "reviewer": reviewer,
+            "approved_at": approved_at,
+        }
+    )
+    result["registry_candidate"] = candidate
+    return result
 
 
 def _worksheet_identity(semantic_manifest: dict[str, Any], worksheet_param: str | None) -> tuple[str | None, list[dict[str, str]]]:
@@ -777,7 +849,10 @@ def ingest_manual_pack(
     # Raw file archived/hashed BEFORE parsing (byte-preserving).
     staged = stage_manual_raw(
         source_path,
-        source_provider=str(semantic.get("provider", "manual")),
+        # No fallback to "manual": the top-level provider is authoritative and
+        # required (validated separately); if absent the pack is BLOCKED and never
+        # enters formal provenance under a fabricated provider.
+        source_provider=str(semantic.get("provider") or "UNRESOLVED_PROVIDER"),
         dataset=str(semantic.get("dataset", "manual")),
         archive=raw_archive,
     )
@@ -836,6 +911,17 @@ def ingest_manual_pack(
         if rec.get("source_series_id") in (None, "", "UNKNOWN", "TBD"):
             blockers.append({"code": "source_series_id_unverified", "message": rec.get("series_id")})
 
+    # Phase-1 scope is one file / one formal series. The Data-acceptance
+    # projection is single-series; a multi-series pack fails closed rather than
+    # having the gate use only the first manifest entry for all series.
+    if len(_manifest_entries(semantic)) > 1:
+        blockers.append(
+            {
+                "code": "MULTI_SERIES_MANUAL_PACK_UNSUPPORTED",
+                "message": "one file must carry exactly one formal series",
+            }
+        )
+
     # Surface the authoritative DATA_ACCEPTANCE_GATE for the staged pack.
     ok_rows = [
         obs
@@ -846,11 +932,13 @@ def ingest_manual_pack(
     first_obs = min(obs_dates) if obs_dates else None
     last_obs = max(obs_dates) if obs_dates else None
     acceptance_gate: dict[str, Any] | None = None
-    if parsed is not None and not blockers:
+    gate_contract_hash = candidates[0]["contract_hash"] if len(candidates) == 1 else None
+    if parsed is not None and not blockers and gate_contract_hash is not None:
         acceptance_gate = run_data_acceptance_gate(
             parsed_ok_rows=ok_rows,
             semantic_manifest=semantic,
             raw_sha256=raw_sha256,
+            contract_hash=gate_contract_hash,
             first_obs_date=first_obs,
             last_obs_date=last_obs,
             reviewer=None,
@@ -870,7 +958,7 @@ def ingest_manual_pack(
         "row_validation": row_report,
         "data_acceptance_gate": acceptance_gate,
         "candidate_series": [
-            {"series_id": rec["series_id"], "provider": rec["provider"], "source_series_id": rec["source_series_id"], "observations": len(rec["observations"])}
+            {"series_id": rec["series_id"], "provider": rec["provider"], "source_series_id": rec["source_series_id"], "contract_hash": rec["contract_hash"], "observations": len(rec["observations"])}
             for rec in candidates
         ],
         "blockers": blockers,
@@ -958,6 +1046,7 @@ def ingest_manual_pack(
 __all__ = [
     "approval_contract_sha256",
     "build_candidate_records_from_rows",
+    "build_manual_registration_result",
     "collect_sidecar_record",
     "compute_sha256",
     "evaluate_row",

@@ -17,6 +17,7 @@ import yaml
 
 from cross_asset.ingestion.manual_intake import (
     build_candidate_records_from_rows,
+    build_manual_registration_result,
     compute_sha256,
     ingest_manual_pack,
     read_manual_tabular,
@@ -618,12 +619,36 @@ def test_fx_quote_direction_unresolved_blocks(tmp_path):
     assert "FX_QUOTE_DIRECTION_UNRESOLVED" in codes
 
 
-def test_fx_resolved_when_explicit_contract(tmp_path):
+def test_fx_quote_direction_unknown_blocks(tmp_path):
     m = _mk_manifest(
         instrument_type="fx",
         base_currency="USD",
         quote_currency="CNY",
-        quote_direction="USD_PER_CNY",
+        quote_direction="UNKNOWN",  # unresolved sentinel -> BLOCK
+    )
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "FX_QUOTE_DIRECTION_UNRESOLVED" in codes
+
+
+def test_fx_quote_direction_invalid_value_blocks(tmp_path):
+    m = _mk_manifest(
+        instrument_type="fx",
+        base_currency="USD",
+        quote_currency="CNY",
+        quote_direction="USD_PER_CNY",  # NOT a canonical direction -> BLOCK
+    )
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "FX_QUOTE_DIRECTION_UNRESOLVED" in codes
+
+
+def test_fx_resolved_when_canonical_quote_direction(tmp_path):
+    m = _mk_manifest(
+        instrument_type="fx",
+        base_currency="USD",
+        quote_currency="CNY",
+        quote_direction="QUOTE_PER_BASE",  # canonical enum value -> resolved
     )
     errors = validate_semantic_manifest(m)
     codes = {e["code"] for e in errors}
@@ -633,6 +658,19 @@ def test_fx_resolved_when_explicit_contract(tmp_path):
 def test_futures_roll_semantics_unresolved_blocks(tmp_path):
     m = _mk_manifest(instrument_type="continuous_futures")
     # No continuous-contract identity / roll method / roll semantics / adjustment.
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "FUTURES_ROLL_SEMANTICS_UNRESOLVED" in codes
+
+
+def test_futures_roll_method_tbd_blocks(tmp_path):
+    m = _mk_manifest(
+        instrument_type="continuous_futures",
+        continuous_contract_identity="front-adjusted",
+        roll_method="TBD",  # unresolved sentinel -> BLOCK
+        roll_semantics="front_month",
+        adjustment_semantics="ratio_adjust",
+    )
     errors = validate_semantic_manifest(m)
     codes = {e["code"] for e in errors}
     assert "FUTURES_ROLL_SEMANTICS_UNRESOLVED" in codes
@@ -659,6 +697,17 @@ def test_return_type_unresolved_blocks(tmp_path):
     assert "RETURN_TYPE_UNRESOLVED" in codes
 
 
+def test_return_type_unknown_blocks(tmp_path):
+    m = _mk_manifest(
+        field="total_return",
+        price_type="total_return_index",
+        return_type="UNKNOWN",  # unresolved sentinel -> BLOCK
+    )
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "RETURN_TYPE_UNRESOLVED" in codes
+
+
 def test_return_resolved_when_explicit_return_type(tmp_path):
     m = _mk_manifest(
         field="total_return",
@@ -677,3 +726,126 @@ def test_plain_price_index_needs_no_return_type(tmp_path):
     errors = validate_semantic_manifest(m)
     codes = {e["code"] for e in errors}
     assert "RETURN_TYPE_UNRESOLVED" not in codes
+
+
+# --------------------------------------------------------------------------- #
+# 11. Provider identity: file/top-level provider is REQUIRED (no "manual"
+#     fallback). A missing provider blocks before any provenance is produced.
+# --------------------------------------------------------------------------- #
+def test_top_level_provider_unresolved_blocks(tmp_path):
+    data = _write_ok_csv(tmp_path, series_id="T")
+    m = _mk_manifest(provider="src-export")
+    m.pop("provider")  # top-level provider removed - never inferred to "manual"
+    manifest = _write_yaml(tmp_path, "manifest.yml", m)
+    result = ingest_manual_pack(
+        source_file=data,
+        manifest_path=manifest,
+        raw_archive=ImmutableRawArchive(tmp_path / "raw"),
+        sidecar_dir=tmp_path / "sidecar",
+    )
+    assert result["status"] == "BLOCKED"
+    codes = {e["code"] for e in result["blockers"]}
+    assert "provider_unresolved" in codes
+
+
+def test_top_level_provider_tbd_blocks(tmp_path):
+    m = _mk_manifest(provider="src-export")
+    m["provider"] = "TBD"  # unresolved sentinel provider must not fall back
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "provider_unresolved" in codes
+
+
+# --------------------------------------------------------------------------- #
+# 12. Multi-series packs fail closed (one file / one formal series).
+# --------------------------------------------------------------------------- #
+def test_multi_series_manual_pack_blocks(tmp_path):
+    data = _write_ok_csv(tmp_path, series_id="T")
+    m = _mk_manifest(provider="src-export")
+    second = dict(m["series"][0])
+    second["series_id"] = "T2"
+    m["series"].append(second)
+    manifest = _write_yaml(tmp_path, "manifest.yml", m)
+    result = ingest_manual_pack(
+        source_file=data,
+        manifest_path=manifest,
+        raw_archive=ImmutableRawArchive(tmp_path / "raw"),
+        sidecar_dir=tmp_path / "sidecar",
+    )
+    assert result["status"] == "BLOCKED"
+    codes = {e["code"] for e in result["blockers"]}
+    assert "MULTI_SERIES_MANUAL_PACK_UNSUPPORTED" in codes
+
+
+# --------------------------------------------------------------------------- #
+# 13. Combined contract hash persists through the REAL registration primitives
+#     (candidate_registry_record -> upsert_data_acceptance), not a direct
+#     registry insert. --write succeeds only for the exact combined contract;
+#     a materially changed semantic manifest makes the old PASS fail.
+# --------------------------------------------------------------------------- #
+def test_registration_primitive_persists_combined_hash_and_write_matches(tmp_path):
+    from cross_asset.storage.acceptance_registry import (
+        candidate_registry_record,
+        upsert_data_acceptance,
+    )
+
+    data = FIXTURES / "us_eq_market_price.csv"
+    m = _valid_manifest()
+    manifest = _write_yaml(tmp_path, "manifest.yml", m)
+    db_path = tmp_path / "db.duckdb"
+
+    # 1. manual validate/stage -> approval candidate carries the combined contract hash.
+    staged = ingest_manual_pack(
+        source_file=data,
+        manifest_path=manifest,
+        raw_archive=ImmutableRawArchive(tmp_path / "raw"),
+        sidecar_dir=tmp_path / "sidecar",
+    )
+    assert staged["status"] == "STAGED"
+    contract_hash = staged["candidate_series"][0]["contract_hash"]
+
+    # 2. Explicit review/registration boundary: build a PASS payload for this
+    #    exact combined contract, then cross the REAL registration primitives.
+    reg = build_manual_registration_result(
+        gate_result=staged["data_acceptance_gate"],
+        contract_hash=contract_hash,
+        series_id="US_EQ",
+        provider="cmac-export",
+        source_series_id="SPX",
+        reviewer="registrar-1",
+        approved_at=datetime(2026, 1, 1, tzinfo=UTC),
+    )
+    store = init_db(str(db_path))
+    try:
+        record = candidate_registry_record(reg)
+        row = upsert_data_acceptance(store, record)
+    finally:
+        store.close()
+    # 3. Registry PASS carries the EXACT combined contract hash.
+    assert row["manifest_hash"] == contract_hash
+
+    # 4. --write succeeds only for that exact contract.
+    res = ingest_manual_pack(
+        source_file=data,
+        manifest_path=manifest,
+        raw_archive=ImmutableRawArchive(tmp_path / "raw"),
+        policies_payload=_write_policy(tmp_path),
+        database=str(db_path),
+        write=True,
+    )
+    assert res["status"] == "ADMITTED"
+
+    # 5. Change material semantics (same raw bytes) -> old PASS must fail.
+    m2 = _valid_manifest(unit="tens_of_index_points")
+    manifest2 = _write_yaml(tmp_path, "manifest2.yml", m2)
+    res2 = ingest_manual_pack(
+        source_file=data,
+        manifest_path=manifest2,
+        raw_archive=ImmutableRawArchive(tmp_path / "raw"),
+        policies_payload=_write_policy(tmp_path),
+        database=str(db_path),
+        write=True,
+    )
+    assert res2["status"] == "BLOCKED"
+    codes = {e["code"] for e in res2["blockers"]}
+    assert "research_admission_not_satisfied" in codes
