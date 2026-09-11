@@ -970,9 +970,49 @@ def backtest(
     typer.echo(f"Backtest report (offline fixture; not real returns): {p}")
 
 
+@app.command("import-manual")
+def import_manual(
+    file: str = typer.Argument(...),
+    manifest: str = typer.Argument(..., help="Explicit semantic manifest (YAML/JSON). "),
+    database: str | None = typer.Option(None, "--database"),
+    archive_root: str = typer.Option("data/raw", "--archive-root"),
+    sidecar_dir: str | None = typer.Option(None, "--sidecar-dir"),
+    worksheet: str | None = typer.Option(None, "--worksheet"),
+    source_label: str = typer.Option("manual_export", "--source-label"),
+    export_timestamp: str | None = typer.Option(None, "--export-timestamp"),
+    policies: str | None = typer.Option(None, "--policies", help="JSON/YAML enabled-policy payload."),
+    write: bool = typer.Option(False, "--write", help="Single explicit opt-in for formal DB write; requires an existing acceptance-registry PASS matching the current data contract."),
+) -> None:
+    """Lane-B: provider-neutral manual file intake -> existing research admission.
+
+    Default (no flags) archives, hashes, validates and stages only - it never
+    writes to the DB. ``--write`` is the one unmistakable formal write opt-in:
+    without it nothing is persisted, and even with it the write succeeds only
+    when an existing acceptance-registry PASS (with matching manifest_hash) and
+    an enabled policy are satisfied. It never self-approves.
+    """
+    from .ingestion.manual_intake import ingest_manual_pack
+    from .ingestion.raw_archive import ImmutableRawArchive
+
+    result = ingest_manual_pack(
+        source_file=file,
+        manifest_path=manifest,
+        raw_archive=ImmutableRawArchive(archive_root),
+        sidecar_dir=sidecar_dir,
+        worksheet=worksheet,
+        source_label=source_label,
+        export_timestamp=export_timestamp,
+        policies_payload=policies,
+        database=database,
+        write=write,
+    )
+    typer.echo(json.dumps(result, ensure_ascii=False, default=str, sort_keys=True, indent=2))
+    if result.get("status") not in {"STAGED", "ADMITTED"}:
+        raise typer.Exit(1)
+
+
 for _name in (
     "ingest",
-    "import-manual",
     "quality-check",
     "score",
     "ui",
