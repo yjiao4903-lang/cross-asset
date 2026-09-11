@@ -715,8 +715,16 @@ def run_data_acceptance_gate(
             "template_version": "manual_export_v1",
             "file_sha256": projection_sha,
             "available_at": manifest_available_at,
-            "reviewer": reviewer,
-            "approved_at": approved_at,
+            # Forward the MANUAL admission evidence the authoritative gate
+            # actually requires (MANUAL three-batch STABILITY, LEGAL approval and
+            # PIT grade). These come from the semantic manifest entry ONLY when
+            # declared; explicit ``reviewer``/``approved_at`` params (if given)
+            # take precedence. Without this evidence the gate stays PARTIAL and
+            # can never mint a PASS - it is never upgraded downstream.
+            "reviewer": reviewer if reviewer is not None else entry.get("reviewer"),
+            "approved_at": approved_at if approved_at is not None else entry.get("approved_at"),
+            "repeatability_evidence": entry.get("repeatability_evidence"),
+            "pit_grade": entry.get("pit_grade"),
             "reconciliation_notes": "",
         }
         manifest_path = tmp_dir / "projection.manifest.json"
@@ -740,23 +748,34 @@ def build_manual_registration_result(
     reviewer: str,
     approved_at: datetime | str,
 ) -> dict[str, Any]:
-    """Assemble an explicit-registrar PASS payload for the combined contract.
+    """Assemble an explicit-registrar payload for the combined contract.
 
-    This is the *registration boundary* representation: an external reviewer
-    explicitly authorizes PASS for an exact combined contract hash. Durability
-    still goes through the existing ``register-data-acceptance ->
-    candidate_registry_record -> upsert_data_acceptance`` path (this only builds
-    the payload, with ``sha256`` carrying the combined contract hash so the real
-    ``candidate_registry_record`` records it as ``manifest_hash``). It is never
-    invoked inside the manual-intake write path, so there is no self-approval.
+    This helper NEVER upgrades the authoritative DATA_ACCEPTANCE_GATE. It leaves
+    ``status`` / ``TECH`` / ``LEGAL`` / ``PIT`` / ``STABILITY`` / ``pit_grade``
+    exactly as produced by ``validate_data_file`` - a genuine PARTIAL/UNKNOWN/FAIL
+    (e.g. missing MANUAL three-batch STABILITY) remains so. It only:
+
+      - binds the combined raw+semantic contract hash via ``sha256``;
+      - carries the explicit ``reviewer``/``approved_at`` metadata;
+      - when (and only when) the authoritative gate is a genuine PASS (all four
+        gates PASS) marks the record ``RESEARCH_ADMISSIBLE`` so the real
+        registration primitive may persist it.
+
+    If the gate is not a genuine PASS it fails closed by raising, so a formal
+    ``RESEARCH_ADMISSIBLE PASS`` can never be minted from insufficient evidence.
+    It is never invoked inside the manual-intake write path, so there is no
+    self-approval. Durability still goes through the existing
+    ``register-data-acceptance -> candidate_registry_record -> upsert_data_acceptance``
+    path (this only builds the payload).
     """
+    status = gate_result.get("status")
+    gates = gate_result.get("gates") or {}
+    if status != "PASS" or not all(
+        gates.get(name) == "PASS" for name in ("TECH", "LEGAL", "PIT", "STABILITY")
+    ):
+        raise ValueError("manual_registration_requires_authoritative_pass")
     result = dict(gate_result)
     result["sha256"] = contract_hash
-    result["status"] = "PASS"
-    gates = dict(result.get("gates") or {})
-    for name in ("TECH", "LEGAL", "PIT", "STABILITY"):
-        gates[name] = "PASS"
-    result["gates"] = gates
     candidate = dict(result.get("registry_candidate") or {})
     candidate.update(
         {
@@ -764,7 +783,6 @@ def build_manual_registration_result(
             "provider": provider,
             "source_series_id": source_series_id,
             "usage_status": "RESEARCH_ADMISSIBLE",
-            "pit_grade": candidate.get("pit_grade") or "B",
             "origin": candidate.get("origin") or "MANUAL",
             "reviewer": reviewer,
             "approved_at": approved_at,

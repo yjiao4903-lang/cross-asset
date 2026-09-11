@@ -13,6 +13,7 @@ import json
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+import pytest
 import yaml
 
 from cross_asset.ingestion.manual_intake import (
@@ -153,6 +154,51 @@ def _mk_manifest(provider="src-export", source_series_id="SPX", instrument_type=
     }
     entry.update(overrides)
     return {"provider": provider, "dataset": "manual_export", "series": [entry]}
+
+
+def _approved_manifest(unit="index_points"):
+    """A MANUAL pack that genuinely satisfies the existing admission gate.
+
+    Declares the MANUAL three-batch repeatability evidence, LEGAL approval
+    metadata and PIT grade so ``validate_data_file`` itself returns PASS (it is
+    never upgraded anywhere downstream).
+    """
+    m = _valid_manifest(unit=unit)
+    entry = m["series"][0]
+    entry.update(
+        {
+            "permission_scope": "research",
+            "reviewer": "reviewer-1",
+            "approved_at": "2026-01-02T00:00:00+00:00",  # timezone-aware ISO
+            "pit_grade": "B",
+            "available_at_rule": "release_timestamp",  # B-grade evidence keyword
+            "vintage_rule": "first_release",
+            "repeatability_evidence": [
+                {
+                    "batch_id": "b1",
+                    "file_sha256": "a" * 64,
+                    "exported_at": "2026-01-01T10:00:00+00:00",
+                    "reviewer": "reviewer-1",
+                    "approved_at": "2026-01-02T00:00:00+00:00",
+                },
+                {
+                    "batch_id": "b2",
+                    "file_sha256": "b" * 64,
+                    "exported_at": "2026-01-02T10:00:00+00:00",
+                    "reviewer": "reviewer-1",
+                    "approved_at": "2026-01-02T00:00:00+00:00",
+                },
+                {
+                    "batch_id": "b3",
+                    "file_sha256": "c" * 64,
+                    "exported_at": "2026-01-03T10:00:00+00:00",
+                    "reviewer": "reviewer-1",
+                    "approved_at": "2026-01-02T00:00:00+00:00",
+                },
+            ],
+        }
+    )
+    return m
 
 
 # --------------------------------------------------------------------------- #
@@ -779,22 +825,34 @@ def test_multi_series_manual_pack_blocks(tmp_path):
 
 # --------------------------------------------------------------------------- #
 # 13. Combined contract hash persists through the REAL registration primitives
-#     (candidate_registry_record -> upsert_data_acceptance), not a direct
-#     registry insert. --write succeeds only for the exact combined contract;
-#     a materially changed semantic manifest makes the old PASS fail.
+#     (candidate_registry_record -> upsert_data_acceptance) ONLY when the
+#     authoritative gate is a genuine PASS. The full success path (combined
+#     hash persisted -> --write succeeds only for that exact contract ->
+#     changed semantics make the old PASS fail) is covered in section 15 below.
 # --------------------------------------------------------------------------- #
-def test_registration_primitive_persists_combined_hash_and_write_matches(tmp_path):
-    from cross_asset.storage.acceptance_registry import (
-        candidate_registry_record,
-        upsert_data_acceptance,
-    )
+
+
+# --------------------------------------------------------------------------- #
+# 14. Helper fails closed when the authoritative gate is not a real PASS;
+#     incomplete MANUAL evidence (missing three-batch STABILITY) stays PARTIAL.
+# --------------------------------------------------------------------------- #
+def test_registration_fails_when_authoritative_gate_is_partial(tmp_path):
+    from cross_asset.ingestion.manual_intake import build_manual_registration_result
 
     data = FIXTURES / "us_eq_market_price.csv"
-    m = _valid_manifest()
-    manifest = _write_yaml(tmp_path, "manifest.yml", m)
-    db_path = tmp_path / "db.duckdb"
-
-    # 1. manual validate/stage -> approval candidate carries the combined contract hash.
+    # This manifest has NO three-batch repeatability evidence (just the
+    # standard test manifest without the required MANUAL admission evidence).
+    manifest_dict = _valid_manifest()
+    manifest_dict["series"][0].update(
+        {
+            "permission_scope": "research",
+            "reviewer": "reviewer-1",
+            "approved_at": "2026-01-02T00:00:00+00:00",
+        }
+    )
+    manifest = _write_yaml(tmp_path, "manifest.yml", manifest_dict)
+    # 1. Validate/stage as normal - the gate will be PARTIAL (STABILITY UNKNOWN)
+    # because MANUAL three-batch evidence is missing.
     staged = ingest_manual_pack(
         source_file=data,
         manifest_path=manifest,
@@ -802,13 +860,63 @@ def test_registration_primitive_persists_combined_hash_and_write_matches(tmp_pat
         sidecar_dir=tmp_path / "sidecar",
     )
     assert staged["status"] == "STAGED"
+    # validate_data_file gate will be PARTIAL (not PASS), not upgraded.
+    assert staged["data_acceptance_gate"]["status"] == "PARTIAL"
+    # 2. The helper must fail closed before even getting to the registration
+    # primitive - it cannot upgrade a PARTIAL to PASS.
     contract_hash = staged["candidate_series"][0]["contract_hash"]
+    with pytest.raises(ValueError, match="manual_registration_requires_authoritative_pass"):
+        build_manual_registration_result(
+            gate_result=staged["data_acceptance_gate"],
+            contract_hash=contract_hash,
+            series_id="US_EQ",
+            provider="cmac-export",
+            source_series_id="SPX",
+            reviewer="registrar-1",
+            approved_at=datetime(2026, 1, 1, tzinfo=UTC),
+        )
 
-    # 2. Explicit review/registration boundary: build a PASS payload for this
-    #    exact combined contract, then cross the REAL registration primitives.
+
+# --------------------------------------------------------------------------- #
+# 15. Genuine PASS from authoritative gate (full MANUAL three-batch
+#     repeatability/STABILITY evidence) -> registration persists exact
+#     combined contract hash -> --write succeeds for exact contract, fails
+#     with changed semantics. This is the success path verification.
+# --------------------------------------------------------------------------- #
+def test_registration_succeeds_when_authoritative_gate_is_pass(tmp_path):
+    from cross_asset.storage.acceptance_registry import (
+        candidate_registry_record,
+        upsert_data_acceptance,
+    )
+
+    data = FIXTURES / "us_eq_market_price.csv"
+    # m1 - genuinely satisfies all admission gates (three-batch MANUAL,
+    # LEGAL approval, PIT grade) -> validate_data_file returns PASS.
+    m1 = _approved_manifest(unit="index_points")
+    manifest1 = _write_yaml(tmp_path, "manifest1.yml", m1)
+    db_path = tmp_path / "db.duckdb"
+
+    # 1. manual validate/stage produces the combined contract hash.
+    staged = ingest_manual_pack(
+        source_file=data,
+        manifest_path=manifest1,
+        raw_archive=ImmutableRawArchive(tmp_path / "raw"),
+        sidecar_dir=tmp_path / "sidecar",
+    )
+    assert staged["status"] == "STAGED"
+    # authoritative gate (validate_data_file) itself returns PASS - all four
+    # gates are PASS, so registration is allowed. No upgrade anywhere.
+    assert staged["data_acceptance_gate"]["status"] == "PASS"
+    assert all(
+        v == "PASS" for v in staged["data_acceptance_gate"]["gates"].values()
+    )
+    contract_hash1 = staged["candidate_series"][0]["contract_hash"]
+
+    # 2. Build registration payload and cross real registration primitives.
+    # The helper is allowed because the gate is already PASS.
     reg = build_manual_registration_result(
         gate_result=staged["data_acceptance_gate"],
-        contract_hash=contract_hash,
+        contract_hash=contract_hash1,
         series_id="US_EQ",
         provider="cmac-export",
         source_series_id="SPX",
@@ -821,27 +929,30 @@ def test_registration_primitive_persists_combined_hash_and_write_matches(tmp_pat
         row = upsert_data_acceptance(store, record)
     finally:
         store.close()
-    # 3. Registry PASS carries the EXACT combined contract hash.
-    assert row["manifest_hash"] == contract_hash
+    # 3. Registry PASS holds the EXACT combined contract hash; pit_grade
+    # matches what was declared in the manifest (no B forced).
+    assert row["manifest_hash"] == contract_hash1
+    assert row["pit_grade"] == "B"
 
     # 4. --write succeeds only for that exact contract.
-    res = ingest_manual_pack(
+    res1 = ingest_manual_pack(
         source_file=data,
-        manifest_path=manifest,
-        raw_archive=ImmutableRawArchive(tmp_path / "raw"),
+        manifest_path=manifest1,
+        raw_archive=ImmutableRawArchive(tmp_path / "raw2"),
         policies_payload=_write_policy(tmp_path),
         database=str(db_path),
         write=True,
     )
-    assert res["status"] == "ADMITTED"
+    assert res1["status"] == "ADMITTED"
 
-    # 5. Change material semantics (same raw bytes) -> old PASS must fail.
-    m2 = _valid_manifest(unit="tens_of_index_points")
+    # 5. Same raw bytes, changed material semantics (unit changed) -> old PASS
+    #    (with different contract hash) cannot be reused, write BLOCKED.
+    m2 = _approved_manifest(unit="tens_of_index_points")
     manifest2 = _write_yaml(tmp_path, "manifest2.yml", m2)
     res2 = ingest_manual_pack(
         source_file=data,
         manifest_path=manifest2,
-        raw_archive=ImmutableRawArchive(tmp_path / "raw"),
+        raw_archive=ImmutableRawArchive(tmp_path / "raw2"),
         policies_payload=_write_policy(tmp_path),
         database=str(db_path),
         write=True,
