@@ -59,7 +59,7 @@ def _latest_revision_snapshot(rows):
 
 
 def _validated_definition(series_id, definition):
-    """Fail closed when an active macro input has unresolved unit semantics."""
+    """Fail closed when a formal active macro input has unresolved semantics."""
 
     semantics = transform_unit_semantics(definition)
     if not semantics.resolved:
@@ -106,11 +106,18 @@ def build_macro_state(
     cfg = config or {}
     definitions = cfg.get("series", cfg)
     dims = cfg.get("dimensions", {})
+    enforce_unit_semantics = bool(cfg.get("enforce_unit_semantics", False))
+    requested_series = {
+        str(series_id)
+        for ids in dims.values()
+        for series_id in ids
+    }
     decision_time = _utc(decision_time)
     released = [
         observation
         for observation in observations
         if _utc(_get(observation, "available_at")) <= decision_time
+        and _get(observation, "series_id") in requested_series
     ]
 
     by_series = {}
@@ -125,7 +132,9 @@ def build_macro_state(
     raw_contributions = {}
     freshness_by_series = {}
     for series_id, rows in by_series.items():
-        definition = _validated_definition(series_id, definitions.get(series_id, {}) or {})
+        definition = definitions.get(series_id, {}) or {}
+        if enforce_unit_semantics:
+            definition = _validated_definition(series_id, definition)
         raw_value, score = _normalized_value(rows, definition)
         raw_contributions[series_id] = raw_value
         contributions[series_id] = score
