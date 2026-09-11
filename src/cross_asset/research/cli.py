@@ -114,6 +114,7 @@ def readiness_command(
             protocol,
             required_series=required_series,
             decision_times=dates,
+            accounting_return_specs=model_config.return_specs,
         )
     finally:
         store.close()
@@ -179,6 +180,7 @@ def run_oos_command(
             protocol,
             required_series=required_series,
             decision_times=development_dates,
+            accounting_return_specs=model_config.return_specs,
         )
         if readiness["status"] != "READY_FOR_OOS" or plan.status != "READY_FOR_OOS":
             _emit(
