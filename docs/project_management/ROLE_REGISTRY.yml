@@ -1,4 +1,4 @@
-version: "2026-09-10-v2-lightweight"
+version: "2026-09-11-v3-four-window"
 status: ACTIVE
 canonical_control_issue: 35
 project_profile: PERSONAL_INTERNAL_WORKBENCH
@@ -43,19 +43,19 @@ roles:
     may_change_scope: false
     may_change_architecture: false
 
-  GROK-DEV:
-    window: online
-    description: auxiliary online executor used only for clear parallel or independent value
-    branch_prefixes: ["grok/"]
-    default_routing: ONLINE_AUX_ON_DEMAND
+  LOCAL-DEV-A:
+    window: local
+    description: local executor A for tasks that genuinely require local workstation/runtime/data/native tools
+    branch_prefixes: ["local-a/"]
+    default_routing: LOCAL_REQUIRED_ONLY
     may_merge: false
     may_change_scope: false
     may_change_architecture: false
 
-  LOCAL-DEV:
+  LOCAL-DEV-B:
     window: local
-    description: executor for tasks that genuinely require local workstation/runtime/data/native tools
-    branch_prefixes: ["local/"]
+    description: local executor B for isolated local work that genuinely requires local workstation/runtime/data/native tools
+    branch_prefixes: ["local-b/"]
     default_routing: LOCAL_REQUIRED_ONLY
     may_merge: false
     may_change_scope: false
@@ -63,7 +63,6 @@ roles:
 
 routing_modes:
   - ONLINE_DEFAULT
-  - ONLINE_AUX_ON_DEMAND
   - LOCAL_REQUIRED_ONLY
   - RESEARCH_ONLY
   - REVIEW_ONLY
@@ -92,7 +91,6 @@ rules:
   repeat_unchanged_verified_fact: false
   online_execution_preferred: true
   local_execution_only_when_environment_requires_it: true
-  aux_role_requires_clear_cost_or_parallel_value: true
   ordinary_task_target_user_relays_max: 2
 
 normal_acceptance:

@@ -1,6 +1,6 @@
 # Multi-Window GitHub Operating Model
 
-Date: 2026-09-10
+Date: 2026-09-11
 Status: ACTIVE
 Profile: PERSONAL / INTERNAL WORKBENCH
 Canonical control issue: `#35`
@@ -48,31 +48,19 @@ GPT-DEV is the default online implementation executor.
 
 For normal online-capable work it should receive one complete task packet and continue through implementation, directly relevant tests, smoke/validation where useful, PR creation where useful, review fixes and final handoff without asking WEB-CONTROL for intermediate permission unless a genuine scope/architecture/risk decision appears.
 
-### GROK-DEV
+### LOCAL-DEV-A
 
-GROK-DEV is an auxiliary online executor, not a second controller and not a mandatory reviewer.
+LOCAL-DEV-A is a local execution identity reserved for tasks that genuinely depend on a local workstation or local environment, including local databases/files, user-supplied manual source files, Windows runtime, approved local/native tooling, process state, credentials/environment or real local E2E validation.
 
-Use it only when at least one of these is true:
+It is not a generic fallback for online-capable development. WEB-CONTROL dispatches it when the required local capability is available on that execution host.
 
-- isolated parallel work materially shortens delivery;
-- an independent implementation/review has real technical value;
-- it can handle a task more cheaply or efficiently than the default executor.
+### LOCAL-DEV-B
 
-Do not duplicate ordinary implementation or review merely to exercise another role.
+LOCAL-DEV-B is a second local execution identity with the same local-only boundary. It exists so WEB-CONTROL can isolate or parallelize genuinely local work when host/data/tool availability makes that useful.
 
-### LOCAL-DEV
+Professional data terminals, if used by the user, are user-side manual export sources only; they are not project automated acquisition/runtime dependencies. The manual path remains `USER_MANUAL_DATA_EXPORT -> IMMUTABLE_RAW_FILE -> ...`. Existing FRED/ALFRED automated routes continue independently.
 
-LOCAL-DEV is reserved for tasks that genuinely depend on the local workstation or local environment, including:
-
-- local database state;
-- local files unavailable online;
-- Windows-specific runtime behavior;
-- Wind/iFind/native desktop tools;
-- process inspection/control;
-- real machine credentials or environment;
-- true local E2E validation.
-
-Ordinary code, documentation, PR work and tests should remain online whenever possible.
+It does not create a second project controller or runtime authority. The PC-A / PC-B runtime and data-ingress boundary remains governed separately by `docs/OPERATING_MODEL_PC_A_PC_B.md`.
 
 ## 3. Startup protocol: minimum necessary reads
 
@@ -106,10 +94,9 @@ No separate startup Gate is created by this block.
 WEB-CONTROL should route work in this order:
 
 1. GPT-DEV for work that can be completed online;
-2. GROK-DEV only when auxiliary/parallel value is clear;
-3. LOCAL-DEV only when local environment is materially required.
+2. LOCAL-DEV-A or LOCAL-DEV-B only when local environment, local data/files, user-supplied manual source files or approved local/native tooling is materially required; choose the local identity based on host capability, isolation and useful parallelism.
 
-LOCAL-DEV is not a generic second-choice coding window. GROK-DEV is not a generic second reviewer.
+Neither local role is a generic second-choice coding window. Ordinary code, documentation, PR work and tests should remain online whenever possible.
 
 ## 5. Default task loop
 
@@ -134,7 +121,7 @@ For ordinary implementation work, one dispatch should contain:
 
 ```text
 TASK: <stable id or issue>
-OWNER: <GPT-DEV | GROK-DEV | LOCAL-DEV>
+OWNER: <GPT-DEV | LOCAL-DEV-A | LOCAL-DEV-B>
 GOAL: <business outcome>
 SCOPE: <allowed files/logical surface or behavior>
 BOUNDARIES: <must-not-change items>
@@ -164,8 +151,8 @@ Branch prefixes remain useful logical identity hints:
 
 - `control/` or `governance/` — WEB-CONTROL
 - `gpt/` — GPT-DEV
-- `grok/` — GROK-DEV
-- `local/` — LOCAL-DEV
+- `local-a/` — LOCAL-DEV-A
+- `local-b/` — LOCAL-DEV-B
 
 They are coordination metadata, not security authentication.
 
@@ -256,8 +243,7 @@ The control should be the smallest one that mitigates that risk and should disap
 
 - Project/architecture/scope authority: WEB-CONTROL only.
 - Default implementation: GPT-DEV online.
-- Auxiliary parallel execution: GROK-DEV only when useful.
-- Local execution: LOCAL-DEV only when genuinely local.
+- Local execution: LOCAL-DEV-A / LOCAL-DEV-B only when genuinely local; WEB-CONTROL chooses the appropriate local identity.
 - Normal task process: one dispatch, end-to-end execution, one final handoff, one control acceptance.
 - Developer self-merge: not allowed unless WEB-CONTROL explicitly changes project policy.
 - Destructive DB write / restore / Schema migration: only under the minimum safety rules above.
