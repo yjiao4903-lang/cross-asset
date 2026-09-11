@@ -8,6 +8,7 @@ import pandas as pd
 
 from cross_asset.storage import latest_formal_observations_asof
 
+from .accounting_readiness import accounting_semantic_blockers
 from .protocol import ResearchProtocol
 
 
@@ -121,18 +122,27 @@ def evaluate_research_readiness(
     *,
     required_series: list[str] | tuple[str, ...] | None = None,
     decision_times=None,
+    accounting_return_specs=None,
 ) -> dict:
     """Evaluate protocol, registry, formal observations, history and PIT coverage.
 
     An explicit ``required_series`` set is authoritative for a formal research
     model. Legacy callers that omit it retain the catalog-critical fallback.
+    When ``accounting_return_specs`` is supplied by the formal model path,
+    unresolved return-accounting declarations fail closed before execution.
     """
 
     required = sorted(
         set(_required_series(connection) if required_series is None else required_series)
     )
     research_decisions = _decision_times(decision_times)
+    accounting_blockers = (
+        accounting_semantic_blockers(accounting_return_specs)
+        if accounting_return_specs is not None
+        else ()
+    )
     blockers = list(protocol.execution_blockers)
+    blockers.extend(accounting_blockers)
     usage_status = protocol.required_usage_status
     formal_count = int(
         latest_formal_observations_asof(
@@ -243,6 +253,7 @@ def evaluate_research_readiness(
         "critical_series_ready": ready_count,
         "critical_ready_fraction": critical_ready_fraction,
         "coverage_series_ready_fraction": coverage_ready_fraction,
+        "accounting_semantic_blockers": list(accounting_blockers),
         "series": series,
         "blockers": blockers,
     }
