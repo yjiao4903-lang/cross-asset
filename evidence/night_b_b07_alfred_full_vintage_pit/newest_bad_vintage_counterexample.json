@@ -1,0 +1,13 @@
+{
+  "decision": "2023-10-06T00:00:00+00:00",
+  "newest_ok_available_at_before": "2023-09-15 00:00:00",
+  "no_fallback_to_older_ok_vintage": true,
+  "observation": "2023-08-01",
+  "observation_dropped_when_newest_vintage_bad": true,
+  "observation_reappears_with_newer_good_vintage_at_later_decision": true,
+  "provider_series_id": "CPIAUCSL",
+  "scratch_db_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\db\\local_b_b07_scratch\\cross_asset_b07_scratch.duckdb",
+  "series": "US_CPI",
+  "synthetic_bad_quality": "stale",
+  "synthetic_bad_vintage_available_at": "2023-09-16 00:00:00"
+}

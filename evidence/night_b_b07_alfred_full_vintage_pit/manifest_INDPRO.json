@@ -1,0 +1,202 @@
+{
+  "canonical_series_id": "US_INDUSTRIAL_PRODUCTION",
+  "chunk_count": 12,
+  "distinct_observation_dates": 175,
+  "distinct_vintages": 186,
+  "dropped_future_vintage": 0,
+  "dropped_impossible_pit": 0,
+  "frequency": "Monthly",
+  "kept_row_count": 2250,
+  "latest_observation": "2026-07-01",
+  "latest_vintage": "2026-08-18",
+  "metadata_identity_ok": true,
+  "metadata_last_updated": "2026-08-18 08:20:15-05",
+  "metadata_raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\72f284b7b7b5c7ad56c5d5ced93af23b75e41509af20462b42083e0e10cba23e\\2026\\09\\20260911T013150Z_bdf39ed66275ff2d.json",
+  "metadata_raw_sha256": "bdf39ed66275ff2d9709bedda6643f6f307c96e7bee860d94c8ab94587bd12e9",
+  "metadata_request_fingerprint": "72f284b7b7b5c7ad56c5d5ced93af23b75e41509af20462b42083e0e10cba23e",
+  "missing_value_count": 0,
+  "mode": "ALL_REALTIME_PERIODS",
+  "observation_window": "2012-01-01..2026-08-28",
+  "parsed_row_count": 2250,
+  "provider_series_id": "INDPRO",
+  "request_count": 12,
+  "requests_summary": [
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\407913e70c89bb65e338d9c4b09ccbfa3e0ed86dd2673ba09ff28d9dedcd3d6a\\2026\\09\\20260911T013435Z_fa986c51a91f78ba.json",
+      "raw_sha256": "fa986c51a91f78ba2e24abe19d9ec81e971c6fa255f280100829ab4972f2b3c5",
+      "realtime": [
+        "1927-01-26",
+        "1976-12-15"
+      ],
+      "request_fingerprint": "407913e70c89bb65e338d9c4b09ccbfa3e0ed86dd2673ba09ff28d9dedcd3d6a",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\a75b46d48652ab68e8d323e4ea484a4f0b6711bbd6c7691f6b3f0cea25ea35d8\\2026\\09\\20260911T013436Z_a91383cc8bd4bde6.json",
+      "raw_sha256": "a91383cc8bd4bde66a5f16e69e18d4b28292e7a0da6f92aa25aa51c7ccb86d7e",
+      "realtime": [
+        "1977-01-17",
+        "2024-10-17"
+      ],
+      "request_fingerprint": "a75b46d48652ab68e8d323e4ea484a4f0b6711bbd6c7691f6b3f0cea25ea35d8",
+      "row_count": 751
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\995c44f99bc06336cf2d32f7a4cc250d44cd400f90560fc557e183e84624a29a\\2026\\09\\20260911T013438Z_a8c09089ec6824ac.json",
+      "raw_sha256": "a8c09089ec6824acedfd7f4ca9a4137223339d166f59832dd94f5ecb685c046f",
+      "realtime": [
+        "2024-11-15",
+        "2026-08-18"
+      ],
+      "request_fingerprint": "995c44f99bc06336cf2d32f7a4cc250d44cd400f90560fc557e183e84624a29a",
+      "row_count": 96
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\653aea2ca89b1e378f50c663365ab576344ab2c6005d61482a0b83e608674920\\2026\\09\\20260911T013439Z_aa94a9cd1055b3dc.json",
+      "raw_sha256": "aa94a9cd1055b3dc997e734bae441332309b213433fd66019cb2aa8eae9955ab",
+      "realtime": [
+        "1927-01-26",
+        "1976-12-15"
+      ],
+      "request_fingerprint": "653aea2ca89b1e378f50c663365ab576344ab2c6005d61482a0b83e608674920",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\12aabb2591863aa64b98ae7e3700789a6de1995c6fcbb5fc9beecca142d4f32a\\2026\\09\\20260911T013441Z_40844cf832e578d6.json",
+      "raw_sha256": "40844cf832e578d6031e6053497c45c34fd00f53e0029117e96506381f85757e",
+      "realtime": [
+        "1977-01-17",
+        "2024-10-17"
+      ],
+      "request_fingerprint": "12aabb2591863aa64b98ae7e3700789a6de1995c6fcbb5fc9beecca142d4f32a",
+      "row_count": 564
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\bf430600228b96abb5272d1c11d2e2c256a10aede601c183cd200c4e7f4839af\\2026\\09\\20260911T013442Z_8a6c3f83fb98288a.json",
+      "raw_sha256": "8a6c3f83fb98288af0912e6a9b6eaa6f83b2097d2dd62385497a24304001587f",
+      "realtime": [
+        "2024-11-15",
+        "2026-08-18"
+      ],
+      "request_fingerprint": "bf430600228b96abb5272d1c11d2e2c256a10aede601c183cd200c4e7f4839af",
+      "row_count": 96
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\8153a1d8bc8351e26793e592c876aaf4466247a7afe19d538362ea7d238db80e\\2026\\09\\20260911T013444Z_75fd2f8de225c5d8.json",
+      "raw_sha256": "75fd2f8de225c5d8b756aa8188561373f82d9df69f5be57a4b3fd134bd963c88",
+      "realtime": [
+        "1927-01-26",
+        "1976-12-15"
+      ],
+      "request_fingerprint": "8153a1d8bc8351e26793e592c876aaf4466247a7afe19d538362ea7d238db80e",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\1df6d14c4482e6eab48af189f3282408f334899a21fe4b287fba5e5c9095be80\\2026\\09\\20260911T013446Z_541bd1a33d87b863.json",
+      "raw_sha256": "541bd1a33d87b863ad947f6c12fe83afb7e2033054e48ecc6737175c537b759a",
+      "realtime": [
+        "1977-01-17",
+        "2024-10-17"
+      ],
+      "request_fingerprint": "1df6d14c4482e6eab48af189f3282408f334899a21fe4b287fba5e5c9095be80",
+      "row_count": 425
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\61146f081219ed1dbdcc33119d3ffb3ac6fdaa30318b04a8d08d97efc8e14943\\2026\\09\\20260911T013447Z_05261099f52bee2a.json",
+      "raw_sha256": "05261099f52bee2ad46271141c8cf7a6b4d0ce4660bbec854f3cd3551b853926",
+      "realtime": [
+        "2024-11-15",
+        "2026-08-18"
+      ],
+      "request_fingerprint": "61146f081219ed1dbdcc33119d3ffb3ac6fdaa30318b04a8d08d97efc8e14943",
+      "row_count": 96
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\971f934b4d5faea0753794b24767473531ccc107ed78fe5e0676e0a7554fa246\\2026\\09\\20260911T013449Z_ec44232ce5e20b7c.json",
+      "raw_sha256": "ec44232ce5e20b7ce4b9048e0b758408322870ad729aaf27f25009f4e07c779e",
+      "realtime": [
+        "1927-01-26",
+        "1976-12-15"
+      ],
+      "request_fingerprint": "971f934b4d5faea0753794b24767473531ccc107ed78fe5e0676e0a7554fa246",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\a7349d3bddbf9c5f4c8039fe40522fe92cfc2184148299dab7f688e089175f4d\\2026\\09\\20260911T013450Z_85caa5ce544cd0c1.json",
+      "raw_sha256": "85caa5ce544cd0c17776ad700eb0bcf284681c36879bccc9b826ca0ff063c412",
+      "realtime": [
+        "1977-01-17",
+        "2024-10-17"
+      ],
+      "request_fingerprint": "a7349d3bddbf9c5f4c8039fe40522fe92cfc2184148299dab7f688e089175f4d",
+      "row_count": 65
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\ac507aa1a96ba976d5429649af50c1430d3f178ddbdef3c2bcf3f13a8ae33b54\\2026\\09\\20260911T013452Z_aaf4d3f6eb22a7f8.json",
+      "raw_sha256": "aaf4d3f6eb22a7f82aadaf40b9e26c0e19a183d9eed4d424b4ccb4f8af2996e2",
+      "realtime": [
+        "2024-11-15",
+        "2026-08-18"
+      ],
+      "request_fingerprint": "ac507aa1a96ba976d5429649af50c1430d3f178ddbdef3c2bcf3f13a8ae33b54",
+      "row_count": 157
+    }
+  ],
+  "seasonal_adjustment": "Seasonally Adjusted",
+  "title": "Industrial Production: Total Index",
+  "units": "Index 2017=100",
+  "vintage_count_official": 1222,
+  "vintage_first": "1927-01-26",
+  "vintage_last": "2026-08-18",
+  "vintage_window": "2017-11-21..2026-08-28",
+  "vintagedates_raw_sha256": "4a4adc4a1f9e7635e4aa30752c783694a98a66d3260cf9aaca7d56b2e2a9fd1a",
+  "vintagedates_request_fingerprint": "6a297aa391a24e7108a9e3008645480ed124701961e908008989bd876b22a525"
+}

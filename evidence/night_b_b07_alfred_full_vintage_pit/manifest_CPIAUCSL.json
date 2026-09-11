@@ -1,0 +1,146 @@
+{
+  "canonical_series_id": "US_CPI",
+  "chunk_count": 8,
+  "distinct_observation_dates": 175,
+  "distinct_vintages": 184,
+  "dropped_future_vintage": 0,
+  "dropped_impossible_pit": 0,
+  "frequency": "Monthly",
+  "kept_row_count": 1024,
+  "latest_observation": "2026-07-01",
+  "latest_vintage": "2026-08-12",
+  "metadata_identity_ok": true,
+  "metadata_last_updated": "2026-08-12 09:10:19-05",
+  "metadata_raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\e6b8546fd683c4f633f39a15d7bf258bc1e1c6fbfac71acd6e05a307de7b3fb7\\2026\\09\\20260911T013106Z_371e87c2e58b7b27.json",
+  "metadata_raw_sha256": "371e87c2e58b7b27d59079174e43df4e4438ad1633dfdf9468aedb69c61f428b",
+  "metadata_request_fingerprint": "e6b8546fd683c4f633f39a15d7bf258bc1e1c6fbfac71acd6e05a307de7b3fb7",
+  "missing_value_count": 1,
+  "mode": "ALL_REALTIME_PERIODS",
+  "observation_window": "2012-01-01..2026-08-28",
+  "parsed_row_count": 1024,
+  "provider_series_id": "CPIAUCSL",
+  "request_count": 8,
+  "requests_summary": [
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\03422c954d95cf20ffd1c7ea56f7489690adfe19b5e0da4fbc91eb1488a83927\\2026\\09\\20260911T013352Z_d39dc769f277f6b2.json",
+      "raw_sha256": "d39dc769f277f6b27256a0184fee11a769cc9ca21084f67b2a41ab1e6bd61fb2",
+      "realtime": [
+        "1972-07-21",
+        "2021-02-10"
+      ],
+      "request_fingerprint": "03422c954d95cf20ffd1c7ea56f7489690adfe19b5e0da4fbc91eb1488a83927",
+      "row_count": 287
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\991f423d0e0682445dfa59c8307e7bc88cd40a342349723be4554cf823500e2c\\2026\\09\\20260911T013353Z_d94ad2823b6a1f53.json",
+      "raw_sha256": "d94ad2823b6a1f53449a8078e3b3abb763911e2cac096f0598d56b98b268ce3b",
+      "realtime": [
+        "2021-03-10",
+        "2026-08-12"
+      ],
+      "request_fingerprint": "991f423d0e0682445dfa59c8307e7bc88cd40a342349723be4554cf823500e2c",
+      "row_count": 48
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\a9522d6efb57ebc266e62f03e9cd5c8e211fa7ba520ac2bc3c40d85871c6f4cf\\2026\\09\\20260911T013355Z_a13169e9900273d6.json",
+      "raw_sha256": "a13169e9900273d6e61ff7565908c680d267a781feadd709ebaf448af8082ef1",
+      "realtime": [
+        "1972-07-21",
+        "2021-02-10"
+      ],
+      "request_fingerprint": "a9522d6efb57ebc266e62f03e9cd5c8e211fa7ba520ac2bc3c40d85871c6f4cf",
+      "row_count": 223
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\5c104780344d68c9af9ede93de3d3ca050cb655d2072bcd581844b115ba97bc7\\2026\\09\\20260911T013356Z_063d29f7cb7d10bb.json",
+      "raw_sha256": "063d29f7cb7d10bbfb52c103181e6c52b70d20e85d5599822f9aa54f6f31abb4",
+      "realtime": [
+        "2021-03-10",
+        "2026-08-12"
+      ],
+      "request_fingerprint": "5c104780344d68c9af9ede93de3d3ca050cb655d2072bcd581844b115ba97bc7",
+      "row_count": 117
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\caff3ce9ff77530b893252096bb70e56597f05951f82f14541bd0084670b5eb3\\2026\\09\\20260911T013358Z_2f43bbf1d9f279b7.json",
+      "raw_sha256": "2f43bbf1d9f279b7b6438d010d618028a9e2e8f11d6eafb8160cbcfeca15893a",
+      "realtime": [
+        "1972-07-21",
+        "2021-02-10"
+      ],
+      "request_fingerprint": "caff3ce9ff77530b893252096bb70e56597f05951f82f14541bd0084670b5eb3",
+      "row_count": 31
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\92195a0177be31270cfaf5e58bc4e69d830a21f611d9018aba73344dfaf92695\\2026\\09\\20260911T013359Z_7686ed811017b7c2.json",
+      "raw_sha256": "7686ed811017b7c24ad4776e87d1f867788f3128e9623e3c1bafdd31983ba633",
+      "realtime": [
+        "2021-03-10",
+        "2026-08-12"
+      ],
+      "request_fingerprint": "92195a0177be31270cfaf5e58bc4e69d830a21f611d9018aba73344dfaf92695",
+      "row_count": 240
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\18b779d29fa2c852a2cae45ab397481f3b1b1f07354bfa50d18835d4532312bb\\2026\\09\\20260911T013401Z_7ae80cb8663c7621.json",
+      "raw_sha256": "7ae80cb8663c7621fba1cf6e36ff42b777104ac382ea53c4453a0d2ccb42d9b8",
+      "realtime": [
+        "1972-07-21",
+        "2021-02-10"
+      ],
+      "request_fingerprint": "18b779d29fa2c852a2cae45ab397481f3b1b1f07354bfa50d18835d4532312bb",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\f5d036545342b96c7bf280933b14f7d446cd609429129eb58c259c9d845bd66e\\2026\\09\\20260911T013403Z_644dc478d25edca8.json",
+      "raw_sha256": "644dc478d25edca812dce64bbc8e84ad4441abd39e7e39a37b994ee2b6eb0580",
+      "realtime": [
+        "2021-03-10",
+        "2026-08-12"
+      ],
+      "request_fingerprint": "f5d036545342b96c7bf280933b14f7d446cd609429129eb58c259c9d845bd66e",
+      "row_count": 78
+    }
+  ],
+  "seasonal_adjustment": "Seasonally Adjusted",
+  "title": "Consumer Price Index for All Urban Consumers: All Items in U.S. City Average",
+  "units": "Index 1982-1984=100",
+  "vintage_count_official": 668,
+  "vintage_first": "1972-07-21",
+  "vintage_last": "2026-08-12",
+  "vintage_window": "2017-11-21..2026-08-28",
+  "vintagedates_raw_sha256": "eaf28247c14883eee76beb3f713bdba70bd4c2276feb3d906814ef2872e4d8da",
+  "vintagedates_request_fingerprint": "88f818bf499e639ac66f7e450f38a287c54ef7397ff738f191b613b18592c5b9"
+}

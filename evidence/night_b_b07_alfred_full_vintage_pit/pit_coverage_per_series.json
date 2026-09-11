@@ -1,0 +1,93 @@
+{
+  "US_CORE_PCE": {
+    "blockers": [],
+    "coverage": 0.9823008849557522,
+    "coverage_threshold": 0.95,
+    "covered_decisions": 444,
+    "eligible_decisions": 452,
+    "history_end": "2026-07-01 00:00:00",
+    "history_start": "2012-01-01 00:00:00",
+    "history_years": 14.496919917864476,
+    "observation_count": 175,
+    "stale_after_hours": 1080.0,
+    "threshold_met": true
+  },
+  "US_CPI": {
+    "blockers": [],
+    "coverage": 0.995575221238938,
+    "coverage_threshold": 0.95,
+    "covered_decisions": 450,
+    "eligible_decisions": 452,
+    "history_end": "2026-07-01 00:00:00",
+    "history_start": "2012-01-01 00:00:00",
+    "history_years": 14.496919917864476,
+    "observation_count": 174,
+    "stale_after_hours": 1080.0,
+    "threshold_met": true
+  },
+  "US_GOV_10Y": {
+    "blockers": [],
+    "coverage": 1.0,
+    "coverage_threshold": 0.95,
+    "covered_decisions": 452,
+    "eligible_decisions": 452,
+    "history_end": "2026-08-27 00:00:00",
+    "history_start": "2012-01-03 00:00:00",
+    "history_years": 14.647501711156742,
+    "observation_count": 3665,
+    "stale_after_hours": 96.0,
+    "threshold_met": true
+  },
+  "US_INDUSTRIAL_PRODUCTION": {
+    "blockers": [],
+    "coverage": 0.9933628318584071,
+    "coverage_threshold": 0.95,
+    "covered_decisions": 449,
+    "eligible_decisions": 452,
+    "history_end": "2026-07-01 00:00:00",
+    "history_start": "2012-01-01 00:00:00",
+    "history_years": 14.496919917864476,
+    "observation_count": 175,
+    "stale_after_hours": 1080.0,
+    "threshold_met": true
+  },
+  "US_INITIAL_CLAIMS": {
+    "blockers": [],
+    "coverage": 0.9867256637168141,
+    "coverage_threshold": 0.95,
+    "covered_decisions": 446,
+    "eligible_decisions": 452,
+    "history_end": "2026-08-22 00:00:00",
+    "history_start": "2012-01-07 00:00:00",
+    "history_years": 14.622861054072553,
+    "observation_count": 764,
+    "stale_after_hours": 336.0,
+    "threshold_met": true
+  },
+  "US_REAL_10Y": {
+    "blockers": [],
+    "coverage": 1.0,
+    "coverage_threshold": 0.95,
+    "covered_decisions": 452,
+    "eligible_decisions": 452,
+    "history_end": "2026-08-27 00:00:00",
+    "history_start": "2012-01-03 00:00:00",
+    "history_years": 14.647501711156742,
+    "observation_count": 3665,
+    "stale_after_hours": 96.0,
+    "threshold_met": true
+  },
+  "US_UNEMPLOYMENT": {
+    "blockers": [],
+    "coverage": 0.9889380530973452,
+    "coverage_threshold": 0.95,
+    "covered_decisions": 447,
+    "eligible_decisions": 452,
+    "history_end": "2026-07-01 00:00:00",
+    "history_start": "2012-01-01 00:00:00",
+    "history_years": 14.496919917864476,
+    "observation_count": 174,
+    "stale_after_hours": 1080.0,
+    "threshold_met": true
+  }
+}

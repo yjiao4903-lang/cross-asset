@@ -1,0 +1,290 @@
+{
+  "admitted": {
+    "US_CORE_PCE": {
+      "canonical_row_count": 1477,
+      "distinct_observation_dates": 175,
+      "distinct_vintages": 174,
+      "provider_series_id": "PCEPILFE",
+      "raw_file_verified": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\e365916fe33fb18e59f7db0809dd7eccde9abe84646d70ed3d65a4aa5aab6e3e\\2026\\09\\20260911T013404Z_65b9456cded26535.json",
+      "raw_sha256_verified": true,
+      "vintage_row_count": 1503,
+      "written": 1477
+    },
+    "US_CPI": {
+      "canonical_row_count": 1005,
+      "distinct_observation_dates": 174,
+      "distinct_vintages": 184,
+      "provider_series_id": "CPIAUCSL",
+      "raw_file_verified": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\03422c954d95cf20ffd1c7ea56f7489690adfe19b5e0da4fbc91eb1488a83927\\2026\\09\\20260911T013352Z_d39dc769f277f6b2.json",
+      "raw_sha256_verified": true,
+      "vintage_row_count": 1024,
+      "written": 1005
+    },
+    "US_GOV_10Y": {
+      "canonical_row_count": 14751,
+      "distinct_observation_dates": 3665,
+      "distinct_vintages": 3607,
+      "provider_series_id": "DGS10",
+      "raw_file_verified": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\86e57b69f5030fbb165a92a67b1238947a97f64d6ea3bf631b664d591119ca82\\2026\\09\\20260911T013721Z_b1f136e9bcb3c07a.json",
+      "raw_sha256_verified": true,
+      "vintage_row_count": 15391,
+      "written": 14751
+    },
+    "US_INDUSTRIAL_PRODUCTION": {
+      "canonical_row_count": 2213,
+      "distinct_observation_dates": 175,
+      "distinct_vintages": 186,
+      "provider_series_id": "INDPRO",
+      "raw_file_verified": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\407913e70c89bb65e338d9c4b09ccbfa3e0ed86dd2673ba09ff28d9dedcd3d6a\\2026\\09\\20260911T013435Z_fa986c51a91f78ba.json",
+      "raw_sha256_verified": true,
+      "vintage_row_count": 2250,
+      "written": 2213
+    },
+    "US_INITIAL_CLAIMS": {
+      "canonical_row_count": 4630,
+      "distinct_observation_dates": 764,
+      "distinct_vintages": 758,
+      "provider_series_id": "ICSA",
+      "raw_file_verified": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\cb01ce0df64cfb6c94fa509b32678e20e8c9ef77582b124fa84d3962b24f9c2a\\2026\\09\\20260911T013423Z_9c55da4f1b0c42aa.json",
+      "raw_sha256_verified": true,
+      "vintage_row_count": 4632,
+      "written": 4630
+    },
+    "US_REAL_10Y": {
+      "canonical_row_count": 14864,
+      "distinct_observation_dates": 3665,
+      "distinct_vintages": 3610,
+      "provider_series_id": "DFII10",
+      "raw_file_verified": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\a9d6a24a435317cb738f62fc2a09ce558dfdcaf077136f968e95d660d7ec1636\\2026\\09\\20260911T013453Z_209a4ad30e3ad308.json",
+      "raw_sha256_verified": true,
+      "vintage_row_count": 15510,
+      "written": 14864
+    },
+    "US_UNEMPLOYMENT": {
+      "canonical_row_count": 304,
+      "distinct_observation_dates": 174,
+      "distinct_vintages": 175,
+      "provider_series_id": "UNRATE",
+      "raw_file_verified": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\95ecaf5087942b33e53df9e131624ee0dcdfb26d51895ed69a3f6ce5842a2d16\\2026\\09\\20260911T013411Z_bfa49cf81b2e83cb.json",
+      "raw_sha256_verified": true,
+      "vintage_row_count": 311,
+      "written": 304
+    }
+  },
+  "blockers": [
+    "CN_BOND_10Y:formal_observations_missing",
+    "CN_BOND_10Y:pit_coverage_below_threshold",
+    "CN_BOND_10Y:registry_pass_research_admissible_required",
+    "CN_CPI:formal_observations_missing",
+    "CN_CPI:pit_coverage_below_threshold",
+    "CN_CPI:registry_pass_research_admissible_required",
+    "CN_DR007:formal_observations_missing",
+    "CN_DR007:pit_coverage_below_threshold",
+    "CN_DR007:registry_pass_research_admissible_required",
+    "CN_EQ_LARGE:formal_observations_missing",
+    "CN_EQ_LARGE:pit_coverage_below_threshold",
+    "CN_EQ_LARGE:registry_pass_research_admissible_required",
+    "CN_M1:formal_observations_missing",
+    "CN_M1:pit_coverage_below_threshold",
+    "CN_M1:registry_pass_research_admissible_required",
+    "CN_M2:formal_observations_missing",
+    "CN_M2:pit_coverage_below_threshold",
+    "CN_M2:registry_pass_research_admissible_required",
+    "CN_PMI:formal_observations_missing",
+    "CN_PMI:pit_coverage_below_threshold",
+    "CN_PMI:registry_pass_research_admissible_required",
+    "CN_PPI:formal_observations_missing",
+    "CN_PPI:pit_coverage_below_threshold",
+    "CN_PPI:registry_pass_research_admissible_required",
+    "COPPER:formal_observations_missing",
+    "COPPER:pit_coverage_below_threshold",
+    "COPPER:registry_pass_research_admissible_required",
+    "DXY:formal_observations_missing",
+    "DXY:pit_coverage_below_threshold",
+    "DXY:registry_pass_research_admissible_required",
+    "GOLD:formal_observations_missing",
+    "GOLD:pit_coverage_below_threshold",
+    "GOLD:registry_pass_research_admissible_required",
+    "HK_EQ:formal_observations_missing",
+    "HK_EQ:pit_coverage_below_threshold",
+    "HK_EQ:registry_pass_research_admissible_required",
+    "US_EQ:formal_observations_missing",
+    "US_EQ:pit_coverage_below_threshold",
+    "US_EQ:registry_pass_research_admissible_required",
+    "not_all_critical_series_ready"
+  ],
+  "collection": {
+    "US_CORE_PCE": {
+      "distinct_observation_dates": 175,
+      "distinct_vintages": 174,
+      "kept_row_count": 1503,
+      "metadata_identity_ok": true,
+      "provider_series_id": "PCEPILFE"
+    },
+    "US_CPI": {
+      "distinct_observation_dates": 175,
+      "distinct_vintages": 184,
+      "kept_row_count": 1024,
+      "metadata_identity_ok": true,
+      "provider_series_id": "CPIAUCSL"
+    },
+    "US_GOV_10Y": {
+      "distinct_observation_dates": 3824,
+      "distinct_vintages": 3607,
+      "kept_row_count": 15391,
+      "metadata_identity_ok": true,
+      "provider_series_id": "DGS10"
+    },
+    "US_INDUSTRIAL_PRODUCTION": {
+      "distinct_observation_dates": 175,
+      "distinct_vintages": 186,
+      "kept_row_count": 2250,
+      "metadata_identity_ok": true,
+      "provider_series_id": "INDPRO"
+    },
+    "US_INITIAL_CLAIMS": {
+      "distinct_observation_dates": 764,
+      "distinct_vintages": 758,
+      "kept_row_count": 4632,
+      "metadata_identity_ok": true,
+      "provider_series_id": "ICSA"
+    },
+    "US_REAL_10Y": {
+      "distinct_observation_dates": 3824,
+      "distinct_vintages": 3610,
+      "kept_row_count": 15510,
+      "metadata_identity_ok": true,
+      "provider_series_id": "DFII10"
+    },
+    "US_UNEMPLOYMENT": {
+      "distinct_observation_dates": 175,
+      "distinct_vintages": 175,
+      "kept_row_count": 311,
+      "metadata_identity_ok": true,
+      "provider_series_id": "UNRATE"
+    }
+  },
+  "full_tuple_status": "BLOCKED",
+  "grid_count": 452,
+  "grid_end": "2026-08-28T00:00:00+00:00",
+  "grid_start": "2018-01-05T00:00:00+00:00",
+  "main_sha": "19403f6d64340e9c17d8830c15a438c8992e6e0e",
+  "no_silent_fallback_counterexample": {
+    "decision": "2023-10-06T00:00:00+00:00",
+    "newest_ok_available_at_before": "2023-09-15 00:00:00",
+    "no_fallback_to_older_ok_vintage": true,
+    "observation": "2023-08-01",
+    "observation_dropped_when_newest_vintage_bad": true,
+    "observation_reappears_with_newer_good_vintage_at_later_decision": true,
+    "provider_series_id": "CPIAUCSL",
+    "scratch_db_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\db\\local_b_b07_scratch\\cross_asset_b07_scratch.duckdb",
+    "series": "US_CPI",
+    "synthetic_bad_quality": "stale",
+    "synthetic_bad_vintage_available_at": "2023-09-16 00:00:00"
+  },
+  "pit_coverage_per_series": {
+    "US_CORE_PCE": {
+      "blockers": [],
+      "coverage": 0.9823008849557522,
+      "coverage_threshold": 0.95,
+      "covered_decisions": 444,
+      "eligible_decisions": 452,
+      "history_end": "2026-07-01 00:00:00",
+      "history_start": "2012-01-01 00:00:00",
+      "history_years": 14.496919917864476,
+      "observation_count": 175,
+      "stale_after_hours": 1080.0,
+      "threshold_met": true
+    },
+    "US_CPI": {
+      "blockers": [],
+      "coverage": 0.995575221238938,
+      "coverage_threshold": 0.95,
+      "covered_decisions": 450,
+      "eligible_decisions": 452,
+      "history_end": "2026-07-01 00:00:00",
+      "history_start": "2012-01-01 00:00:00",
+      "history_years": 14.496919917864476,
+      "observation_count": 174,
+      "stale_after_hours": 1080.0,
+      "threshold_met": true
+    },
+    "US_GOV_10Y": {
+      "blockers": [],
+      "coverage": 1.0,
+      "coverage_threshold": 0.95,
+      "covered_decisions": 452,
+      "eligible_decisions": 452,
+      "history_end": "2026-08-27 00:00:00",
+      "history_start": "2012-01-03 00:00:00",
+      "history_years": 14.647501711156742,
+      "observation_count": 3665,
+      "stale_after_hours": 96.0,
+      "threshold_met": true
+    },
+    "US_INDUSTRIAL_PRODUCTION": {
+      "blockers": [],
+      "coverage": 0.9933628318584071,
+      "coverage_threshold": 0.95,
+      "covered_decisions": 449,
+      "eligible_decisions": 452,
+      "history_end": "2026-07-01 00:00:00",
+      "history_start": "2012-01-01 00:00:00",
+      "history_years": 14.496919917864476,
+      "observation_count": 175,
+      "stale_after_hours": 1080.0,
+      "threshold_met": true
+    },
+    "US_INITIAL_CLAIMS": {
+      "blockers": [],
+      "coverage": 0.9867256637168141,
+      "coverage_threshold": 0.95,
+      "covered_decisions": 446,
+      "eligible_decisions": 452,
+      "history_end": "2026-08-22 00:00:00",
+      "history_start": "2012-01-07 00:00:00",
+      "history_years": 14.622861054072553,
+      "observation_count": 764,
+      "stale_after_hours": 336.0,
+      "threshold_met": true
+    },
+    "US_REAL_10Y": {
+      "blockers": [],
+      "coverage": 1.0,
+      "coverage_threshold": 0.95,
+      "covered_decisions": 452,
+      "eligible_decisions": 452,
+      "history_end": "2026-08-27 00:00:00",
+      "history_start": "2012-01-03 00:00:00",
+      "history_years": 14.647501711156742,
+      "observation_count": 3665,
+      "stale_after_hours": 96.0,
+      "threshold_met": true
+    },
+    "US_UNEMPLOYMENT": {
+      "blockers": [],
+      "coverage": 0.9889380530973452,
+      "coverage_threshold": 0.95,
+      "covered_decisions": 447,
+      "eligible_decisions": 452,
+      "history_end": "2026-07-01 00:00:00",
+      "history_start": "2012-01-01 00:00:00",
+      "history_years": 14.496919917864476,
+      "observation_count": 174,
+      "stale_after_hours": 1080.0,
+      "threshold_met": true
+    }
+  },
+  "pit_threshold_met_count": 7,
+  "pit_threshold_met_series": [
+    "US_CORE_PCE",
+    "US_CPI",
+    "US_GOV_10Y",
+    "US_INDUSTRIAL_PRODUCTION",
+    "US_INITIAL_CLAIMS",
+    "US_REAL_10Y",
+    "US_UNEMPLOYMENT"
+  ],
+  "query_smoke_identity_ok": true,
+  "workstream": "B07-ALFRED-FULL-VINTAGE-PIT"
+}

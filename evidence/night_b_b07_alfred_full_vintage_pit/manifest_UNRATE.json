@@ -1,0 +1,146 @@
+{
+  "canonical_series_id": "US_UNEMPLOYMENT",
+  "chunk_count": 8,
+  "distinct_observation_dates": 175,
+  "distinct_vintages": 175,
+  "dropped_future_vintage": 1,
+  "dropped_impossible_pit": 0,
+  "frequency": "Monthly",
+  "kept_row_count": 311,
+  "latest_observation": "2026-07-01",
+  "latest_vintage": "2026-08-07",
+  "metadata_identity_ok": true,
+  "metadata_last_updated": "2026-09-04 08:27:31-05",
+  "metadata_raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\6373509c0d68deb014da72151c557dc5e9459db6108d9e314c60aea95e20da6f\\2026\\09\\20260911T013129Z_d4455cb505d4dab1.json",
+  "metadata_raw_sha256": "d4455cb505d4dab10a12153aaddb318c91550996298b3e9f54d83cbc637b70e4",
+  "metadata_request_fingerprint": "6373509c0d68deb014da72151c557dc5e9459db6108d9e314c60aea95e20da6f",
+  "missing_value_count": 1,
+  "mode": "ALL_REALTIME_PERIODS",
+  "observation_window": "2012-01-01..2026-08-28",
+  "parsed_row_count": 312,
+  "provider_series_id": "UNRATE",
+  "request_count": 8,
+  "requests_summary": [
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\95ecaf5087942b33e53df9e131624ee0dcdfb26d51895ed69a3f6ce5842a2d16\\2026\\09\\20260911T013411Z_bfa49cf81b2e83cb.json",
+      "raw_sha256": "bfa49cf81b2e83cbe72723073b2ecceb83fd79decccdd4ed4b2c61860effec2c",
+      "realtime": [
+        "1960-03-15",
+        "2010-02-05"
+      ],
+      "request_fingerprint": "95ecaf5087942b33e53df9e131624ee0dcdfb26d51895ed69a3f6ce5842a2d16",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\1d83b23c039b3b586d19e9c15ea0d494bddf80c2ab58ce94027aa696331db1e6\\2026\\09\\20260911T013412Z_3bd5174ee352f921.json",
+      "raw_sha256": "3bd5174ee352f921dc5e29d3ec4be1667599d88c1a2ca36997553083e5258660",
+      "realtime": [
+        "2010-03-05",
+        "2026-09-04"
+      ],
+      "request_fingerprint": "1d83b23c039b3b586d19e9c15ea0d494bddf80c2ab58ce94027aa696331db1e6",
+      "row_count": 90
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\0a2d7e9dffef5eba9179ab708fe2a7e6e276f7029305cbbf7e02514035ed17c5\\2026\\09\\20260911T013414Z_e5a391c5c70f46fa.json",
+      "raw_sha256": "e5a391c5c70f46fa8d71f7f0c0a65bdd4d1a2aff1a0499ddb259d0dca9ed43e3",
+      "realtime": [
+        "1960-03-15",
+        "2010-02-05"
+      ],
+      "request_fingerprint": "0a2d7e9dffef5eba9179ab708fe2a7e6e276f7029305cbbf7e02514035ed17c5",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\20b99a10515afd8d83b723bd9670cd3d0b7b7f30586ee9f81993e09379b73cce\\2026\\09\\20260911T013415Z_7e305e2c96fc27d1.json",
+      "raw_sha256": "7e305e2c96fc27d1aea8675ce402d5cf32b5337ac67f30997d4809b28e682e07",
+      "realtime": [
+        "2010-03-05",
+        "2026-09-04"
+      ],
+      "request_fingerprint": "20b99a10515afd8d83b723bd9670cd3d0b7b7f30586ee9f81993e09379b73cce",
+      "row_count": 86
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\a237c531531a5a3b649d0ab221c346f7de4f0714bceb533817cb08de7528a90d\\2026\\09\\20260911T013417Z_b3b47d2e2d5e3309.json",
+      "raw_sha256": "b3b47d2e2d5e3309fd65f0bd6967e4722cbd76c62705d78c1d75ae2f03a6368b",
+      "realtime": [
+        "1960-03-15",
+        "2010-02-05"
+      ],
+      "request_fingerprint": "a237c531531a5a3b649d0ab221c346f7de4f0714bceb533817cb08de7528a90d",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\bad1e425ea247672ebd5b9de79dc3beeaaf126d4da5155ff408016130ad54032\\2026\\09\\20260911T013418Z_424e07ef6447ec5b.json",
+      "raw_sha256": "424e07ef6447ec5ba5dc8a9da6d4cadc9026e6a25b227b4aef58e822284a8fe0",
+      "realtime": [
+        "2010-03-05",
+        "2026-09-04"
+      ],
+      "request_fingerprint": "bad1e425ea247672ebd5b9de79dc3beeaaf126d4da5155ff408016130ad54032",
+      "row_count": 91
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\6094c64db4ef9cee0543f7468e7c5be17e02c0d9ce5ba6b795db62c73428f7da\\2026\\09\\20260911T013420Z_27e4c19391e83dac.json",
+      "raw_sha256": "27e4c19391e83dacb1a48e37d0311840022e55b6562c5be47f63beb02c34319c",
+      "realtime": [
+        "1960-03-15",
+        "2010-02-05"
+      ],
+      "request_fingerprint": "6094c64db4ef9cee0543f7468e7c5be17e02c0d9ce5ba6b795db62c73428f7da",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\b255af1f2bb09b9cb33e5e95213e118fe7172bffee973ff11dab9c25ada852fb\\2026\\09\\20260911T013421Z_19769ffc9701cf97.json",
+      "raw_sha256": "19769ffc9701cf97cc495697470f17cc6b34b67ecff22c3e13939119fbb9ed8b",
+      "realtime": [
+        "2010-03-05",
+        "2026-09-04"
+      ],
+      "request_fingerprint": "b255af1f2bb09b9cb33e5e95213e118fe7172bffee973ff11dab9c25ada852fb",
+      "row_count": 45
+    }
+  ],
+  "seasonal_adjustment": "Seasonally Adjusted",
+  "title": "Unemployment Rate",
+  "units": "Percent",
+  "vintage_count_official": 799,
+  "vintage_first": "1960-03-15",
+  "vintage_last": "2026-09-04",
+  "vintage_window": "2017-11-21..2026-08-28",
+  "vintagedates_raw_sha256": "161a8b8a0b4ab65af58e02712e38eadf91d6309445454a28068e14b671c3e603",
+  "vintagedates_request_fingerprint": "fb3c31b90b1bc3e9f52d5b5c39b6112b2b03e3c5dd26d6ba141d7638034db566"
+}

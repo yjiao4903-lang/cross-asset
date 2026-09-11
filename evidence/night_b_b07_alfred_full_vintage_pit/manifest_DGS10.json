@@ -1,0 +1,538 @@
+{
+  "canonical_series_id": "US_GOV_10Y",
+  "chunk_count": 36,
+  "distinct_observation_dates": 3824,
+  "distinct_vintages": 3607,
+  "dropped_future_vintage": 1,
+  "dropped_impossible_pit": 0,
+  "frequency": "Daily",
+  "kept_row_count": 15391,
+  "latest_observation": "2026-08-27",
+  "latest_vintage": "2026-08-28",
+  "metadata_identity_ok": true,
+  "metadata_last_updated": "2026-09-10 15:16:35-05",
+  "metadata_raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\1ff3e0debe9f5cf848656672e1e9bd1fcf8f0708f578928813b6131ca424d803\\2026\\09\\20260911T013718Z_71a0becc2123c555.json",
+  "metadata_raw_sha256": "71a0becc2123c5553c502c5af8825b28b75e6b7a10fcb2a80188e2ceea57fafc",
+  "metadata_request_fingerprint": "1ff3e0debe9f5cf848656672e1e9bd1fcf8f0708f578928813b6131ca424d803",
+  "missing_value_count": 640,
+  "mode": "ALL_REALTIME_PERIODS",
+  "observation_window": "2012-01-01..2026-08-28",
+  "parsed_row_count": 15392,
+  "provider_series_id": "DGS10",
+  "request_count": 36,
+  "requests_summary": [
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\86e57b69f5030fbb165a92a67b1238947a97f64d6ea3bf631b664d591119ca82\\2026\\09\\20260911T013721Z_b1f136e9bcb3c07a.json",
+      "raw_sha256": "b1f136e9bcb3c07ac08513a30c5639cc863a3437d80ed7c457056df5850a3b4c",
+      "realtime": [
+        "2005-06-28",
+        "2008-05-23"
+      ],
+      "request_fingerprint": "86e57b69f5030fbb165a92a67b1238947a97f64d6ea3bf631b664d591119ca82",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\4ca5bfbf8064a1f965d0f6c641fa24e205a740894edbc37ce2a24e682df5364c\\2026\\09\\20260911T013723Z_3fd1489a4a95d4e2.json",
+      "raw_sha256": "3fd1489a4a95d4e215b1c26cf040b2ef8618d77107302af53a7659b2a585bca9",
+      "realtime": [
+        "2008-05-27",
+        "2010-10-27"
+      ],
+      "request_fingerprint": "4ca5bfbf8064a1f965d0f6c641fa24e205a740894edbc37ce2a24e682df5364c",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\ff36e86ed39b2236ccd4e70e41c42a431e1fabd7ab9ec6ec88e738f2c04d8b41\\2026\\09\\20260911T013724Z_7418f949f96e3d29.json",
+      "raw_sha256": "7418f949f96e3d29e36a64df56fd74bbfb48bc5d302d30a031cff55d12776609",
+      "realtime": [
+        "2010-10-28",
+        "2013-04-12"
+      ],
+      "request_fingerprint": "ff36e86ed39b2236ccd4e70e41c42a431e1fabd7ab9ec6ec88e738f2c04d8b41",
+      "row_count": 334
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\b15db7723f46582746c55cfb5f231115c702824ba74098cf582450f7359fba73\\2026\\09\\20260911T013726Z_15e9771cdb9fa6a6.json",
+      "raw_sha256": "15e9771cdb9fa6a667dcb0b3cf55c1322ae7d636d7b1c6a45dde66ea94df6b91",
+      "realtime": [
+        "2013-04-15",
+        "2015-09-29"
+      ],
+      "request_fingerprint": "b15db7723f46582746c55cfb5f231115c702824ba74098cf582450f7359fba73",
+      "row_count": 977
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\4d2dea2d2cf1bd5ca9d3914ff0f5773d69f04330cb424c228f43d1b594b31685\\2026\\09\\20260911T013728Z_35237df5ab3be107.json",
+      "raw_sha256": "35237df5ab3be107a68767fcfece19fea84f126300e6f5858fbc7bdd6bedb46e",
+      "realtime": [
+        "2015-09-30",
+        "2018-03-13"
+      ],
+      "request_fingerprint": "4d2dea2d2cf1bd5ca9d3914ff0f5773d69f04330cb424c228f43d1b594b31685",
+      "row_count": 1029
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\759d943189ead336fb568d0bd4750035909e3a190cfbf885030ab9d8b4913218\\2026\\09\\20260911T013729Z_adb07ca9f80c61f9.json",
+      "raw_sha256": "adb07ca9f80c61f9dacedf51ca98e00588d67157677e1725db4e3a40e5e31827",
+      "realtime": [
+        "2018-03-14",
+        "2020-08-12"
+      ],
+      "request_fingerprint": "759d943189ead336fb568d0bd4750035909e3a190cfbf885030ab9d8b4913218",
+      "row_count": 1029
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\56dbbb70ed0f94d200f07169fcea29e4e307cf3fd7fae9adbce1898a0d347d18\\2026\\09\\20260911T013731Z_8682ea6b3994647d.json",
+      "raw_sha256": "8682ea6b3994647de9bef8630f7420c1e22ae3f88f262817f32838c97bbce25f",
+      "realtime": [
+        "2020-08-13",
+        "2023-01-13"
+      ],
+      "request_fingerprint": "56dbbb70ed0f94d200f07169fcea29e4e307cf3fd7fae9adbce1898a0d347d18",
+      "row_count": 1029
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\105b04791633a0b8de2f686506e2d785ecfc13519199167fe3216e37262a560a\\2026\\09\\20260911T013733Z_72c45e452773f309.json",
+      "raw_sha256": "72c45e452773f3090cc8944649ae5818acc515ddc56c23bad021aa4ec0604e41",
+      "realtime": [
+        "2023-01-17",
+        "2025-06-17"
+      ],
+      "request_fingerprint": "105b04791633a0b8de2f686506e2d785ecfc13519199167fe3216e37262a560a",
+      "row_count": 1029
+    },
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\34f4dab1b825083ee6b2f130f82137cbe32c5f442e3fa59cc208f3d49a9a100d\\2026\\09\\20260911T013734Z_74b21538058e884b.json",
+      "raw_sha256": "74b21538058e884b212866eff42587cb12bbef1fdc08a7bc43a71e5a13b9de29",
+      "realtime": [
+        "2025-06-18",
+        "2026-09-10"
+      ],
+      "request_fingerprint": "34f4dab1b825083ee6b2f130f82137cbe32c5f442e3fa59cc208f3d49a9a100d",
+      "row_count": 1029
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\3d00d1c39d183e2d270dc650bc3cc1ea31b6442deefe7363adc1c6f285aef7f3\\2026\\09\\20260911T013736Z_a35c87db8af70577.json",
+      "raw_sha256": "a35c87db8af70577d1ea3b08de206c4b1a665c7b0248d2eb0a3e2264fe75bfb3",
+      "realtime": [
+        "2005-06-28",
+        "2008-05-23"
+      ],
+      "request_fingerprint": "3d00d1c39d183e2d270dc650bc3cc1ea31b6442deefe7363adc1c6f285aef7f3",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\f5f11841d28d4dabbcf8522127ca8a8191b4a8c9ce53330fc4471c473a8149ca\\2026\\09\\20260911T013738Z_0d4822a665f59ec5.json",
+      "raw_sha256": "0d4822a665f59ec5517a9790154c5cccce7d41dbc4c699d34a38f1dc523c55ef",
+      "realtime": [
+        "2008-05-27",
+        "2010-10-27"
+      ],
+      "request_fingerprint": "f5f11841d28d4dabbcf8522127ca8a8191b4a8c9ce53330fc4471c473a8149ca",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\657bc33ce5c87abf199727a7f67d2b4bf7346a2d0b2a1a45339c0abd3e02d89b\\2026\\09\\20260911T013741Z_f6b6e609922d8d9c.json",
+      "raw_sha256": "f6b6e609922d8d9ccab09e22be5cce275021f52b900438a44bdfdc5750ff8d01",
+      "realtime": [
+        "2010-10-28",
+        "2013-04-12"
+      ],
+      "request_fingerprint": "657bc33ce5c87abf199727a7f67d2b4bf7346a2d0b2a1a45339c0abd3e02d89b",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\bd9c2d8e614dd5fd641244374ce6fc3cd8d0c6798f357ee7aeb68ae3d52c37f4\\2026\\09\\20260911T013742Z_1e9190c7a9e22be7.json",
+      "raw_sha256": "1e9190c7a9e22be76f85287c96bf61af73c52a19fa73e836eca44aa4449fff81",
+      "realtime": [
+        "2013-04-15",
+        "2015-09-29"
+      ],
+      "request_fingerprint": "bd9c2d8e614dd5fd641244374ce6fc3cd8d0c6798f357ee7aeb68ae3d52c37f4",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\19cb649791ab23ba88f792da5282c7e1a18297bb24bf0d32b64b24d86136bbb6\\2026\\09\\20260911T013743Z_c75c0fd811843f35.json",
+      "raw_sha256": "c75c0fd811843f3521093e339256e888310959dc9627f8caacc50ebfb68eb412",
+      "realtime": [
+        "2015-09-30",
+        "2018-03-13"
+      ],
+      "request_fingerprint": "19cb649791ab23ba88f792da5282c7e1a18297bb24bf0d32b64b24d86136bbb6",
+      "row_count": 587
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\ab86a40b2fd86f6a986c788d1b63bb8c6a6bc10c1e42b19784735e608ada6e86\\2026\\09\\20260911T013745Z_ed49fb163945113e.json",
+      "raw_sha256": "ed49fb163945113e15a10e9272054d2030771cd5837c43ad468055acb79d8c55",
+      "realtime": [
+        "2018-03-14",
+        "2020-08-12"
+      ],
+      "request_fingerprint": "ab86a40b2fd86f6a986c788d1b63bb8c6a6bc10c1e42b19784735e608ada6e86",
+      "row_count": 1028
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\82e3740c123a483111563f766b553ba2f5142963274ce8661bc45cc64623d667\\2026\\09\\20260911T013747Z_92bb13bd488aa21c.json",
+      "raw_sha256": "92bb13bd488aa21c0bac31a30e3f97a180ff1bdaf00a65a70e392f14c53f1971",
+      "realtime": [
+        "2020-08-13",
+        "2023-01-13"
+      ],
+      "request_fingerprint": "82e3740c123a483111563f766b553ba2f5142963274ce8661bc45cc64623d667",
+      "row_count": 1028
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\abb68e58910010756487bb7325af935c01fa9b11436e837d6eaaa7f6fd8e96ca\\2026\\09\\20260911T013749Z_98f46e160a0e015a.json",
+      "raw_sha256": "98f46e160a0e015a8f597b95864e2c3c2df4c87bcc83b23a9b5b076b5446c2e1",
+      "realtime": [
+        "2023-01-17",
+        "2025-06-17"
+      ],
+      "request_fingerprint": "abb68e58910010756487bb7325af935c01fa9b11436e837d6eaaa7f6fd8e96ca",
+      "row_count": 1028
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\5351a42fa221648c0408c3cca1ac794f28913833efb425691317110402f86775\\2026\\09\\20260911T013751Z_720536175cfc967a.json",
+      "raw_sha256": "720536175cfc967a67e5b3d522bf94bc3b388313e123a0704ae4dfea844f73e7",
+      "realtime": [
+        "2025-06-18",
+        "2026-09-10"
+      ],
+      "request_fingerprint": "5351a42fa221648c0408c3cca1ac794f28913833efb425691317110402f86775",
+      "row_count": 1028
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\1a1808acfd65670919bf3918d81bea57b25114eecd6599b3aa21f54b4e37fc6d\\2026\\09\\20260911T013752Z_48ea24a17293a645.json",
+      "raw_sha256": "48ea24a17293a6459b567720c07949b35f65b4f1ae2a6f7eb4a6c8bd6ce4e892",
+      "realtime": [
+        "2005-06-28",
+        "2008-05-23"
+      ],
+      "request_fingerprint": "1a1808acfd65670919bf3918d81bea57b25114eecd6599b3aa21f54b4e37fc6d",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\1b254535e23134e2dc18870b0c90a183a7159f00a01445ad7e192da5c6c56a4c\\2026\\09\\20260911T013754Z_d222eb74906a324d.json",
+      "raw_sha256": "d222eb74906a324d83dfe047d1efa730720cf9fba4ad8a45e03216a1ce604b94",
+      "realtime": [
+        "2008-05-27",
+        "2010-10-27"
+      ],
+      "request_fingerprint": "1b254535e23134e2dc18870b0c90a183a7159f00a01445ad7e192da5c6c56a4c",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\81ee0193bef902cc0f0e6277cb4a25b3b32625631149234178075456afe69052\\2026\\09\\20260911T013755Z_d0f74578d5807e71.json",
+      "raw_sha256": "d0f74578d5807e711902d154091cd2f0d56275da18ce4bdc3e32a7718b8dc8a1",
+      "realtime": [
+        "2010-10-28",
+        "2013-04-12"
+      ],
+      "request_fingerprint": "81ee0193bef902cc0f0e6277cb4a25b3b32625631149234178075456afe69052",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\36f3e744ff037886f296f08f8c3af9be06796eb71ae846f5a0094eba7d45f598\\2026\\09\\20260911T013757Z_e8a9b90ff5c13123.json",
+      "raw_sha256": "e8a9b90ff5c13123cbada450bbf2fc54f3310029a47974bb6393a1b8dc58d47b",
+      "realtime": [
+        "2013-04-15",
+        "2015-09-29"
+      ],
+      "request_fingerprint": "36f3e744ff037886f296f08f8c3af9be06796eb71ae846f5a0094eba7d45f598",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\3d430f75386aa10534c504f6f1f08daadb9ce1f3b8cf198c212d0dc27eb7297e\\2026\\09\\20260911T013758Z_fc2a50f77fbdd806.json",
+      "raw_sha256": "fc2a50f77fbdd806c955b377e4ab222303c46e00412e61a60c1dd8082d2cab11",
+      "realtime": [
+        "2015-09-30",
+        "2018-03-13"
+      ],
+      "request_fingerprint": "3d430f75386aa10534c504f6f1f08daadb9ce1f3b8cf198c212d0dc27eb7297e",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\caa098202389ef00ca523255c8ecbd3c8e963d4484c42e7f446c3df125df319b\\2026\\09\\20260911T013800Z_6d822c4c4963a7af.json",
+      "raw_sha256": "6d822c4c4963a7af20080b9596994f5e7695ce9cf3b83a474f1d2ac809623a1c",
+      "realtime": [
+        "2018-03-14",
+        "2020-08-12"
+      ],
+      "request_fingerprint": "caa098202389ef00ca523255c8ecbd3c8e963d4484c42e7f446c3df125df319b",
+      "row_count": 190
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\558c04b56354504e720ec52220e689994762141df5119896809393fe71fc050d\\2026\\09\\20260911T013802Z_97b6f51d9912863a.json",
+      "raw_sha256": "97b6f51d9912863af128c663612db40288b3ca5b37a4d153b45307628774626b",
+      "realtime": [
+        "2020-08-13",
+        "2023-01-13"
+      ],
+      "request_fingerprint": "558c04b56354504e720ec52220e689994762141df5119896809393fe71fc050d",
+      "row_count": 825
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\bef6566f3097c4e141c3252808376e7578be81fbd74a1ff1cd4376634bc0b87c\\2026\\09\\20260911T013804Z_63911493646a07b7.json",
+      "raw_sha256": "63911493646a07b75c042d08b51908fc6b076cce947ea751a9c4b439ab25faac",
+      "realtime": [
+        "2023-01-17",
+        "2025-06-17"
+      ],
+      "request_fingerprint": "bef6566f3097c4e141c3252808376e7578be81fbd74a1ff1cd4376634bc0b87c",
+      "row_count": 1028
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\e02e58bc6f8d7356cc58c389a7b9f400a7d87141ed62db0907342a8418108981\\2026\\09\\20260911T013806Z_3957197ecc6984de.json",
+      "raw_sha256": "3957197ecc6984de9636619fc4b0f4a272bdcf4fba1182a643c1f4d125615fe0",
+      "realtime": [
+        "2025-06-18",
+        "2026-09-10"
+      ],
+      "request_fingerprint": "e02e58bc6f8d7356cc58c389a7b9f400a7d87141ed62db0907342a8418108981",
+      "row_count": 1028
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\86821ac6b26e3aedb28a33c85f4594d69b04b72fe696277685e6ba00ac0e9be9\\2026\\09\\20260911T013811Z_b31cb418520f8e53.json",
+      "raw_sha256": "b31cb418520f8e5325f95fb2b464de099a87b56e8a034abd9947101e2b77ca08",
+      "realtime": [
+        "2005-06-28",
+        "2008-05-23"
+      ],
+      "request_fingerprint": "86821ac6b26e3aedb28a33c85f4594d69b04b72fe696277685e6ba00ac0e9be9",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\c33eafb7f9ec7aab7f9e36959fce118a0b378a96e15889e77d10bbb7145493ea\\2026\\09\\20260911T013813Z_d129526c30f70239.json",
+      "raw_sha256": "d129526c30f70239dbd3edd912b9fe49a764ad6ae1ef73e10b128c4ac93be253",
+      "realtime": [
+        "2008-05-27",
+        "2010-10-27"
+      ],
+      "request_fingerprint": "c33eafb7f9ec7aab7f9e36959fce118a0b378a96e15889e77d10bbb7145493ea",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\7ee663ce5fd2091fda4c4f5bb755c234705fcabd0ff163967b2431ec97828f78\\2026\\09\\20260911T013815Z_e41e773ad9073071.json",
+      "raw_sha256": "e41e773ad90730714675785ce182bf609c71ec07ae682864c595bd1c190d7bb7",
+      "realtime": [
+        "2010-10-28",
+        "2013-04-12"
+      ],
+      "request_fingerprint": "7ee663ce5fd2091fda4c4f5bb755c234705fcabd0ff163967b2431ec97828f78",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\e1537f1cf1f785b83217f8832bef758d9039b0c3dc9d06f009164a45427e463c\\2026\\09\\20260911T013817Z_3cd530588c4c4de4.json",
+      "raw_sha256": "3cd530588c4c4de4a99a082460dcfc1724aa248b33fc458de2ba0ad758f16087",
+      "realtime": [
+        "2013-04-15",
+        "2015-09-29"
+      ],
+      "request_fingerprint": "e1537f1cf1f785b83217f8832bef758d9039b0c3dc9d06f009164a45427e463c",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\72339bf5783070e42cea17c726ea09b3289d1d39e7acdc46ea3cfd76035545da\\2026\\09\\20260911T013818Z_e1e72a52a2211395.json",
+      "raw_sha256": "e1e72a52a2211395449e5e73bfe82cf8d0179bf7a8c07dae18e9422643d1d795",
+      "realtime": [
+        "2015-09-30",
+        "2018-03-13"
+      ],
+      "request_fingerprint": "72339bf5783070e42cea17c726ea09b3289d1d39e7acdc46ea3cfd76035545da",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\ed4d63b1862d52f8d42c61cdfc4d4ddc3e2e30147062b408bcb6197a79b38d9d\\2026\\09\\20260911T013821Z_ceae859aad7ac97a.json",
+      "raw_sha256": "ceae859aad7ac97a2df40b6ee92c2c9d9acacd9ac91733a7af9064513aec9e0f",
+      "realtime": [
+        "2018-03-14",
+        "2020-08-12"
+      ],
+      "request_fingerprint": "ed4d63b1862d52f8d42c61cdfc4d4ddc3e2e30147062b408bcb6197a79b38d9d",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\0c1b970f1158a5e03fd2e9f485b1c4c687f110533c5623eb86b0d0127bd2bd44\\2026\\09\\20260911T013822Z_03096bd444315e51.json",
+      "raw_sha256": "03096bd444315e51725f4eb317216ff55321b9889bb6f2770f6933e670d1a50a",
+      "realtime": [
+        "2020-08-13",
+        "2023-01-13"
+      ],
+      "request_fingerprint": "0c1b970f1158a5e03fd2e9f485b1c4c687f110533c5623eb86b0d0127bd2bd44",
+      "row_count": 0
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\1cce772e2d74a8ac96f922f642abd55f6ab662f264c0ef786260a91581e44d0f\\2026\\09\\20260911T013823Z_14dd1fc8fe33dba2.json",
+      "raw_sha256": "14dd1fc8fe33dba254f3d15f86ff802b75a993277d9fd1f116bed0385a744ef9",
+      "realtime": [
+        "2023-01-17",
+        "2025-06-17"
+      ],
+      "request_fingerprint": "1cce772e2d74a8ac96f922f642abd55f6ab662f264c0ef786260a91581e44d0f",
+      "row_count": 426
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\42caa387a15c9286ed106f20acf3f6c46bb0eed9ac1430b301177eab5020d59c\\2026\\09\\20260911T013825Z_3285ca647789d954.json",
+      "raw_sha256": "3285ca647789d9540fd9f118105c557ac07df8fea98ff2c29a469151a98cb731",
+      "realtime": [
+        "2025-06-18",
+        "2026-09-10"
+      ],
+      "request_fingerprint": "42caa387a15c9286ed106f20acf3f6c46bb0eed9ac1430b301177eab5020d59c",
+      "row_count": 740
+    }
+  ],
+  "seasonal_adjustment": "Not Seasonally Adjusted",
+  "title": "Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted on an Investment Basis",
+  "units": "Percent",
+  "vintage_count_official": 5106,
+  "vintage_first": "2005-06-28",
+  "vintage_last": "2026-09-10",
+  "vintage_window": "2017-11-21..2026-08-28",
+  "vintagedates_raw_sha256": "1012958ab61d31f8427253529e997e3898943afd4601f1a488ca82ca382b6b35",
+  "vintagedates_request_fingerprint": "8a8ddc432f74672b0fb31c67566c0f236c9a2132cb579b7198f093bfec332f50"
+}

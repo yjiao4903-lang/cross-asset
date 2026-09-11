@@ -1,0 +1,90 @@
+{
+  "canonical_series_id": "US_CORE_PCE",
+  "chunk_count": 4,
+  "distinct_observation_dates": 175,
+  "distinct_vintages": 174,
+  "dropped_future_vintage": 0,
+  "dropped_impossible_pit": 0,
+  "frequency": "Monthly",
+  "kept_row_count": 1503,
+  "latest_observation": "2026-07-01",
+  "latest_vintage": "2026-08-26",
+  "metadata_identity_ok": true,
+  "metadata_last_updated": "2026-08-26 07:43:44-05",
+  "metadata_raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\6939131ccaa629c1db59e7aeaf80f57872d404762962e6627320837bffce2cb2\\2026\\09\\20260911T013120Z_4c1c19245ad3d954.json",
+  "metadata_raw_sha256": "4c1c19245ad3d954594f2d6f17c0e686da8448b7df879ecc9f9e6f21fb222c83",
+  "metadata_request_fingerprint": "6939131ccaa629c1db59e7aeaf80f57872d404762962e6627320837bffce2cb2",
+  "missing_value_count": 0,
+  "mode": "ALL_REALTIME_PERIODS",
+  "observation_window": "2012-01-01..2026-08-28",
+  "parsed_row_count": 1503,
+  "provider_series_id": "PCEPILFE",
+  "request_count": 4,
+  "requests_summary": [
+    {
+      "chunk": [
+        "2012-01-01",
+        "2015-12-10"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\e365916fe33fb18e59f7db0809dd7eccde9abe84646d70ed3d65a4aa5aab6e3e\\2026\\09\\20260911T013404Z_65b9456cded26535.json",
+      "raw_sha256": "65b9456cded26535235a21aebf21f9aadf94df2053265fed334f6cda8e1cc0c9",
+      "realtime": [
+        "2000-08-01",
+        "2026-08-26"
+      ],
+      "request_fingerprint": "e365916fe33fb18e59f7db0809dd7eccde9abe84646d70ed3d65a4aa5aab6e3e",
+      "row_count": 514
+    },
+    {
+      "chunk": [
+        "2015-12-11",
+        "2019-11-19"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\cac0d99e1d0b673b6a0cc3513f641893f12bb604d7ce68fc3e3d5ea3b0bc9f10\\2026\\09\\20260911T013406Z_763bf18fe6cea235.json",
+      "raw_sha256": "763bf18fe6cea235e2dce479a9876d8151c87c6b0e5cb15b71c9ef998bfed67e",
+      "realtime": [
+        "2000-08-01",
+        "2026-08-26"
+      ],
+      "request_fingerprint": "cac0d99e1d0b673b6a0cc3513f641893f12bb604d7ce68fc3e3d5ea3b0bc9f10",
+      "row_count": 462
+    },
+    {
+      "chunk": [
+        "2019-11-20",
+        "2023-10-29"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\b6f19684d286f04133982063448acf072eeaebcaa17e20591ad938af3555d424\\2026\\09\\20260911T013408Z_bd8da5ef70b37d16.json",
+      "raw_sha256": "bd8da5ef70b37d16b84c02437f53c6e9c7d12b2c57b21e5684012965ed92129e",
+      "realtime": [
+        "2000-08-01",
+        "2026-08-26"
+      ],
+      "request_fingerprint": "b6f19684d286f04133982063448acf072eeaebcaa17e20591ad938af3555d424",
+      "row_count": 374
+    },
+    {
+      "chunk": [
+        "2023-10-30",
+        "2026-08-28"
+      ],
+      "raw_archive_path": "d:\\跨资产监控项目\\worktrees\\local-b-full-vintage-pit\\data\\raw\\fred_alfred_b07\\fred_alfred\\3abe078b5a1d8995a407c47475f1c8c7d02201c3fd2b1094426b147a3870e7fe\\2026\\09\\20260911T013410Z_0fe6da9b119d3184.json",
+      "raw_sha256": "0fe6da9b119d318404c3a0f3ece4cb4b323796f76aadb6bc196927c603b8038d",
+      "realtime": [
+        "2000-08-01",
+        "2026-08-26"
+      ],
+      "request_fingerprint": "3abe078b5a1d8995a407c47475f1c8c7d02201c3fd2b1094426b147a3870e7fe",
+      "row_count": 153
+    }
+  ],
+  "seasonal_adjustment": "Seasonally Adjusted",
+  "title": "Personal Consumption Expenditures Excluding Food and Energy (Chain-Type Price Index)",
+  "units": "Index 2017=100",
+  "vintage_count_official": 315,
+  "vintage_first": "2000-08-01",
+  "vintage_last": "2026-08-26",
+  "vintage_window": "2017-11-21..2026-08-28",
+  "vintagedates_raw_sha256": "8244a205c1bc617f313948d01115afdc4fcec9c8dffc37bf3cad6dc4c28933be",
+  "vintagedates_request_fingerprint": "82b9ce6cd189eee36c6e9e65acffbc46d05a0f3f8ea257438e0ec03514a89916"
+}

@@ -1,0 +1,1091 @@
+{
+  "grid_size": 452,
+  "sample_stride": 40,
+  "series": {
+    "US_CORE_PCE": {
+      "duplicate_observation_dates_total": 0,
+      "identities_per_sample_decision": {
+        "2018-01-05": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "2018-10-12": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "2019-07-19": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "2020-04-24": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "2021-01-29": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "2021-11-05": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "2022-08-12": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "2023-05-19": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "2024-02-23": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "2024-11-29": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "2025-09-05": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ],
+        "2026-06-12": [
+          [
+            "fred/alfred",
+            "PCEPILFE"
+          ]
+        ]
+      },
+      "identity_ok": true,
+      "newest_vintage_per_sample_decision": [
+        {
+          "decision": "2018-01-05",
+          "newest_available_at": "2017-12-24 00:00:00",
+          "newest_observation_date": "2017-07-01 00:00:00",
+          "vintage_date": "2017-12-22 00:00:00"
+        },
+        {
+          "decision": "2018-10-12",
+          "newest_available_at": "2018-09-30 00:00:00",
+          "newest_observation_date": "2018-04-01 00:00:00",
+          "vintage_date": "2018-09-28 00:00:00"
+        },
+        {
+          "decision": "2019-07-19",
+          "newest_available_at": "2019-06-30 00:00:00",
+          "newest_observation_date": "2019-01-01 00:00:00",
+          "vintage_date": "2019-06-28 00:00:00"
+        },
+        {
+          "decision": "2020-04-24",
+          "newest_available_at": "2020-03-29 00:00:00",
+          "newest_observation_date": "2019-10-01 00:00:00",
+          "vintage_date": "2020-03-27 00:00:00"
+        },
+        {
+          "decision": "2021-01-29",
+          "newest_available_at": "2020-12-25 00:00:00",
+          "newest_observation_date": "2020-07-01 00:00:00",
+          "vintage_date": "2020-12-23 00:00:00"
+        },
+        {
+          "decision": "2021-11-05",
+          "newest_available_at": "2021-10-31 00:00:00",
+          "newest_observation_date": "2021-07-01 00:00:00",
+          "vintage_date": "2021-10-29 00:00:00"
+        },
+        {
+          "decision": "2022-08-12",
+          "newest_available_at": "2022-07-31 00:00:00",
+          "newest_observation_date": "2022-04-01 00:00:00",
+          "vintage_date": "2022-07-29 00:00:00"
+        },
+        {
+          "decision": "2023-05-19",
+          "newest_available_at": "2023-04-30 00:00:00",
+          "newest_observation_date": "2023-01-01 00:00:00",
+          "vintage_date": "2023-04-28 00:00:00"
+        },
+        {
+          "decision": "2024-02-23",
+          "newest_available_at": "2024-01-28 00:00:00",
+          "newest_observation_date": "2023-10-01 00:00:00",
+          "vintage_date": "2024-01-26 00:00:00"
+        },
+        {
+          "decision": "2024-11-29",
+          "newest_available_at": "2024-11-29 00:00:00",
+          "newest_observation_date": "2024-07-01 00:00:00",
+          "vintage_date": "2024-11-27 00:00:00"
+        },
+        {
+          "decision": "2025-09-05",
+          "newest_available_at": "2025-08-31 00:00:00",
+          "newest_observation_date": "2025-04-01 00:00:00",
+          "vintage_date": "2025-08-29 00:00:00"
+        },
+        {
+          "decision": "2026-06-12",
+          "newest_available_at": "2026-05-30 00:00:00",
+          "newest_observation_date": "2026-01-01 00:00:00",
+          "vintage_date": "2026-05-28 00:00:00"
+        }
+      ],
+      "no_silent_fallback": true,
+      "provider_series_id": "PCEPILFE",
+      "sample_decision_count": 12
+    },
+    "US_CPI": {
+      "duplicate_observation_dates_total": 0,
+      "identities_per_sample_decision": {
+        "2018-01-05": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "2018-10-12": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "2019-07-19": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "2020-04-24": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "2021-01-29": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "2021-11-05": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "2022-08-12": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "2023-05-19": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "2024-02-23": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "2024-11-29": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "2025-09-05": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ],
+        "2026-06-12": [
+          [
+            "fred/alfred",
+            "CPIAUCSL"
+          ]
+        ]
+      },
+      "identity_ok": true,
+      "newest_vintage_per_sample_decision": [
+        {
+          "decision": "2018-01-05",
+          "newest_available_at": "2017-12-15 00:00:00",
+          "newest_observation_date": "2017-11-01 00:00:00",
+          "vintage_date": "2017-12-13 00:00:00"
+        },
+        {
+          "decision": "2018-10-12",
+          "newest_available_at": "2018-09-15 00:00:00",
+          "newest_observation_date": "2018-08-01 00:00:00",
+          "vintage_date": "2018-09-13 00:00:00"
+        },
+        {
+          "decision": "2019-07-19",
+          "newest_available_at": "2019-07-13 00:00:00",
+          "newest_observation_date": "2019-06-01 00:00:00",
+          "vintage_date": "2019-07-11 00:00:00"
+        },
+        {
+          "decision": "2020-04-24",
+          "newest_available_at": "2020-04-12 00:00:00",
+          "newest_observation_date": "2020-03-01 00:00:00",
+          "vintage_date": "2020-04-10 00:00:00"
+        },
+        {
+          "decision": "2021-01-29",
+          "newest_available_at": "2021-01-15 00:00:00",
+          "newest_observation_date": "2020-12-01 00:00:00",
+          "vintage_date": "2021-01-13 00:00:00"
+        },
+        {
+          "decision": "2021-11-05",
+          "newest_available_at": "2021-10-15 00:00:00",
+          "newest_observation_date": "2021-09-01 00:00:00",
+          "vintage_date": "2021-10-13 00:00:00"
+        },
+        {
+          "decision": "2022-08-12",
+          "newest_available_at": "2022-08-12 00:00:00",
+          "newest_observation_date": "2022-07-01 00:00:00",
+          "vintage_date": "2022-08-10 00:00:00"
+        },
+        {
+          "decision": "2023-05-19",
+          "newest_available_at": "2023-05-12 00:00:00",
+          "newest_observation_date": "2023-04-01 00:00:00",
+          "vintage_date": "2023-05-10 00:00:00"
+        },
+        {
+          "decision": "2024-02-23",
+          "newest_available_at": "2024-02-15 00:00:00",
+          "newest_observation_date": "2024-01-01 00:00:00",
+          "vintage_date": "2024-02-13 00:00:00"
+        },
+        {
+          "decision": "2024-11-29",
+          "newest_available_at": "2024-11-15 00:00:00",
+          "newest_observation_date": "2024-10-01 00:00:00",
+          "vintage_date": "2024-11-13 00:00:00"
+        },
+        {
+          "decision": "2025-09-05",
+          "newest_available_at": "2025-08-14 00:00:00",
+          "newest_observation_date": "2025-07-01 00:00:00",
+          "vintage_date": "2025-08-12 00:00:00"
+        },
+        {
+          "decision": "2026-06-12",
+          "newest_available_at": "2026-06-12 00:00:00",
+          "newest_observation_date": "2026-05-01 00:00:00",
+          "vintage_date": "2026-06-10 00:00:00"
+        }
+      ],
+      "no_silent_fallback": true,
+      "provider_series_id": "CPIAUCSL",
+      "sample_decision_count": 12
+    },
+    "US_GOV_10Y": {
+      "duplicate_observation_dates_total": 0,
+      "identities_per_sample_decision": {
+        "2018-01-05": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "2018-10-12": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "2019-07-19": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "2020-04-24": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "2021-01-29": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "2021-11-05": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "2022-08-12": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "2023-05-19": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "2024-02-23": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "2024-11-29": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "2025-09-05": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ],
+        "2026-06-12": [
+          [
+            "fred/alfred",
+            "DGS10"
+          ]
+        ]
+      },
+      "identity_ok": true,
+      "newest_vintage_per_sample_decision": [
+        {
+          "decision": "2018-01-05",
+          "newest_available_at": "2018-01-04 00:00:00",
+          "newest_observation_date": "2017-12-29 00:00:00",
+          "vintage_date": "2018-01-02 00:00:00"
+        },
+        {
+          "decision": "2018-10-12",
+          "newest_available_at": "2018-10-12 00:00:00",
+          "newest_observation_date": "2018-10-09 00:00:00",
+          "vintage_date": "2018-10-10 00:00:00"
+        },
+        {
+          "decision": "2019-07-19",
+          "newest_available_at": "2019-07-19 00:00:00",
+          "newest_observation_date": "2019-07-16 00:00:00",
+          "vintage_date": "2019-07-17 00:00:00"
+        },
+        {
+          "decision": "2020-04-24",
+          "newest_available_at": "2020-04-24 00:00:00",
+          "newest_observation_date": "2020-04-21 00:00:00",
+          "vintage_date": "2020-04-22 00:00:00"
+        },
+        {
+          "decision": "2021-01-29",
+          "newest_available_at": "2021-01-29 00:00:00",
+          "newest_observation_date": "2021-01-26 00:00:00",
+          "vintage_date": "2021-01-27 00:00:00"
+        },
+        {
+          "decision": "2021-11-05",
+          "newest_available_at": "2021-11-05 00:00:00",
+          "newest_observation_date": "2021-11-02 00:00:00",
+          "vintage_date": "2021-11-03 00:00:00"
+        },
+        {
+          "decision": "2022-08-12",
+          "newest_available_at": "2022-08-12 00:00:00",
+          "newest_observation_date": "2022-08-09 00:00:00",
+          "vintage_date": "2022-08-10 00:00:00"
+        },
+        {
+          "decision": "2023-05-19",
+          "newest_available_at": "2023-05-19 00:00:00",
+          "newest_observation_date": "2023-05-16 00:00:00",
+          "vintage_date": "2023-05-17 00:00:00"
+        },
+        {
+          "decision": "2024-02-23",
+          "newest_available_at": "2024-02-23 00:00:00",
+          "newest_observation_date": "2024-02-20 00:00:00",
+          "vintage_date": "2024-02-21 00:00:00"
+        },
+        {
+          "decision": "2024-11-29",
+          "newest_available_at": "2024-11-29 00:00:00",
+          "newest_observation_date": "2024-11-26 00:00:00",
+          "vintage_date": "2024-11-27 00:00:00"
+        },
+        {
+          "decision": "2025-09-05",
+          "newest_available_at": "2025-09-05 00:00:00",
+          "newest_observation_date": "2025-09-02 00:00:00",
+          "vintage_date": "2025-09-03 00:00:00"
+        },
+        {
+          "decision": "2026-06-12",
+          "newest_available_at": "2026-06-12 00:00:00",
+          "newest_observation_date": "2026-06-09 00:00:00",
+          "vintage_date": "2026-06-10 00:00:00"
+        }
+      ],
+      "no_silent_fallback": true,
+      "provider_series_id": "DGS10",
+      "sample_decision_count": 12
+    },
+    "US_INDUSTRIAL_PRODUCTION": {
+      "duplicate_observation_dates_total": 0,
+      "identities_per_sample_decision": {
+        "2018-01-05": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "2018-10-12": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "2019-07-19": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "2020-04-24": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "2021-01-29": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "2021-11-05": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "2022-08-12": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "2023-05-19": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "2024-02-23": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "2024-11-29": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "2025-09-05": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ],
+        "2026-06-12": [
+          [
+            "fred/alfred",
+            "INDPRO"
+          ]
+        ]
+      },
+      "identity_ok": true,
+      "newest_vintage_per_sample_decision": [
+        {
+          "decision": "2018-01-05",
+          "newest_available_at": "2017-12-17 00:00:00",
+          "newest_observation_date": "2017-06-01 00:00:00",
+          "vintage_date": "2017-12-15 00:00:00"
+        },
+        {
+          "decision": "2018-10-12",
+          "newest_available_at": "2018-09-16 00:00:00",
+          "newest_observation_date": "2018-03-01 00:00:00",
+          "vintage_date": "2018-09-14 00:00:00"
+        },
+        {
+          "decision": "2019-07-19",
+          "newest_available_at": "2019-07-18 00:00:00",
+          "newest_observation_date": "2019-01-01 00:00:00",
+          "vintage_date": "2019-07-16 00:00:00"
+        },
+        {
+          "decision": "2020-04-24",
+          "newest_available_at": "2020-04-17 00:00:00",
+          "newest_observation_date": "2019-10-01 00:00:00",
+          "vintage_date": "2020-04-15 00:00:00"
+        },
+        {
+          "decision": "2021-01-29",
+          "newest_available_at": "2021-01-17 00:00:00",
+          "newest_observation_date": "2020-07-01 00:00:00",
+          "vintage_date": "2021-01-15 00:00:00"
+        },
+        {
+          "decision": "2021-11-05",
+          "newest_available_at": "2021-10-20 00:00:00",
+          "newest_observation_date": "2021-04-01 00:00:00",
+          "vintage_date": "2021-10-18 00:00:00"
+        },
+        {
+          "decision": "2022-08-12",
+          "newest_available_at": "2022-07-17 00:00:00",
+          "newest_observation_date": "2022-01-01 00:00:00",
+          "vintage_date": "2022-07-15 00:00:00"
+        },
+        {
+          "decision": "2023-05-19",
+          "newest_available_at": "2023-05-18 00:00:00",
+          "newest_observation_date": "2022-11-01 00:00:00",
+          "vintage_date": "2023-05-16 00:00:00"
+        },
+        {
+          "decision": "2024-02-23",
+          "newest_available_at": "2024-02-17 00:00:00",
+          "newest_observation_date": "2023-08-01 00:00:00",
+          "vintage_date": "2024-02-15 00:00:00"
+        },
+        {
+          "decision": "2024-11-29",
+          "newest_available_at": "2024-11-17 00:00:00",
+          "newest_observation_date": "2012-01-01 00:00:00",
+          "vintage_date": "2024-11-15 00:00:00"
+        },
+        {
+          "decision": "2025-09-05",
+          "newest_available_at": "2025-08-17 00:00:00",
+          "newest_observation_date": "2025-02-01 00:00:00",
+          "vintage_date": "2025-08-15 00:00:00"
+        },
+        {
+          "decision": "2026-06-12",
+          "newest_available_at": "2026-05-17 00:00:00",
+          "newest_observation_date": "2025-11-01 00:00:00",
+          "vintage_date": "2026-05-15 00:00:00"
+        }
+      ],
+      "no_silent_fallback": true,
+      "provider_series_id": "INDPRO",
+      "sample_decision_count": 12
+    },
+    "US_INITIAL_CLAIMS": {
+      "duplicate_observation_dates_total": 0,
+      "identities_per_sample_decision": {
+        "2018-01-05": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "2018-10-12": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "2019-07-19": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "2020-04-24": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "2021-01-29": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "2021-11-05": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "2022-08-12": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "2023-05-19": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "2024-02-23": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "2024-11-29": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "2025-09-05": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ],
+        "2026-06-12": [
+          [
+            "fred/alfred",
+            "ICSA"
+          ]
+        ]
+      },
+      "identity_ok": true,
+      "newest_vintage_per_sample_decision": [
+        {
+          "decision": "2018-01-05",
+          "newest_available_at": "2017-12-30 00:00:00",
+          "newest_observation_date": "2017-12-23 00:00:00",
+          "vintage_date": "2017-12-28 00:00:00"
+        },
+        {
+          "decision": "2018-10-12",
+          "newest_available_at": "2018-10-06 00:00:00",
+          "newest_observation_date": "2018-09-22 00:00:00",
+          "vintage_date": "2018-10-04 00:00:00"
+        },
+        {
+          "decision": "2019-07-19",
+          "newest_available_at": "2019-07-13 00:00:00",
+          "newest_observation_date": "2019-06-08 00:00:00",
+          "vintage_date": "2019-07-11 00:00:00"
+        },
+        {
+          "decision": "2020-04-24",
+          "newest_available_at": "2020-04-18 00:00:00",
+          "newest_observation_date": "2020-04-04 00:00:00",
+          "vintage_date": "2020-04-16 00:00:00"
+        },
+        {
+          "decision": "2021-01-29",
+          "newest_available_at": "2021-01-23 00:00:00",
+          "newest_observation_date": "2021-01-09 00:00:00",
+          "vintage_date": "2021-01-21 00:00:00"
+        },
+        {
+          "decision": "2021-11-05",
+          "newest_available_at": "2021-10-30 00:00:00",
+          "newest_observation_date": "2021-10-16 00:00:00",
+          "vintage_date": "2021-10-28 00:00:00"
+        },
+        {
+          "decision": "2022-08-12",
+          "newest_available_at": "2022-08-06 00:00:00",
+          "newest_observation_date": "2022-07-23 00:00:00",
+          "vintage_date": "2022-08-04 00:00:00"
+        },
+        {
+          "decision": "2023-05-19",
+          "newest_available_at": "2023-05-13 00:00:00",
+          "newest_observation_date": "2023-05-06 00:00:00",
+          "vintage_date": "2023-05-11 00:00:00"
+        },
+        {
+          "decision": "2024-02-23",
+          "newest_available_at": "2024-02-17 00:00:00",
+          "newest_observation_date": "2024-02-03 00:00:00",
+          "vintage_date": "2024-02-15 00:00:00"
+        },
+        {
+          "decision": "2024-11-29",
+          "newest_available_at": "2024-11-29 00:00:00",
+          "newest_observation_date": "2024-11-16 00:00:00",
+          "vintage_date": "2024-11-27 00:00:00"
+        },
+        {
+          "decision": "2025-09-05",
+          "newest_available_at": "2025-08-30 00:00:00",
+          "newest_observation_date": "2025-08-16 00:00:00",
+          "vintage_date": "2025-08-28 00:00:00"
+        },
+        {
+          "decision": "2026-06-12",
+          "newest_available_at": "2026-06-06 00:00:00",
+          "newest_observation_date": "2026-05-23 00:00:00",
+          "vintage_date": "2026-06-04 00:00:00"
+        }
+      ],
+      "no_silent_fallback": true,
+      "provider_series_id": "ICSA",
+      "sample_decision_count": 12
+    },
+    "US_REAL_10Y": {
+      "duplicate_observation_dates_total": 0,
+      "identities_per_sample_decision": {
+        "2018-01-05": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "2018-10-12": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "2019-07-19": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "2020-04-24": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "2021-01-29": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "2021-11-05": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "2022-08-12": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "2023-05-19": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "2024-02-23": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "2024-11-29": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "2025-09-05": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ],
+        "2026-06-12": [
+          [
+            "fred/alfred",
+            "DFII10"
+          ]
+        ]
+      },
+      "identity_ok": true,
+      "newest_vintage_per_sample_decision": [
+        {
+          "decision": "2018-01-05",
+          "newest_available_at": "2018-01-04 00:00:00",
+          "newest_observation_date": "2017-12-29 00:00:00",
+          "vintage_date": "2018-01-02 00:00:00"
+        },
+        {
+          "decision": "2018-10-12",
+          "newest_available_at": "2018-10-12 00:00:00",
+          "newest_observation_date": "2018-10-09 00:00:00",
+          "vintage_date": "2018-10-10 00:00:00"
+        },
+        {
+          "decision": "2019-07-19",
+          "newest_available_at": "2019-07-19 00:00:00",
+          "newest_observation_date": "2019-07-16 00:00:00",
+          "vintage_date": "2019-07-17 00:00:00"
+        },
+        {
+          "decision": "2020-04-24",
+          "newest_available_at": "2020-04-24 00:00:00",
+          "newest_observation_date": "2020-04-21 00:00:00",
+          "vintage_date": "2020-04-22 00:00:00"
+        },
+        {
+          "decision": "2021-01-29",
+          "newest_available_at": "2021-01-29 00:00:00",
+          "newest_observation_date": "2021-01-26 00:00:00",
+          "vintage_date": "2021-01-27 00:00:00"
+        },
+        {
+          "decision": "2021-11-05",
+          "newest_available_at": "2021-11-05 00:00:00",
+          "newest_observation_date": "2021-11-02 00:00:00",
+          "vintage_date": "2021-11-03 00:00:00"
+        },
+        {
+          "decision": "2022-08-12",
+          "newest_available_at": "2022-08-12 00:00:00",
+          "newest_observation_date": "2022-08-09 00:00:00",
+          "vintage_date": "2022-08-10 00:00:00"
+        },
+        {
+          "decision": "2023-05-19",
+          "newest_available_at": "2023-05-19 00:00:00",
+          "newest_observation_date": "2023-05-16 00:00:00",
+          "vintage_date": "2023-05-17 00:00:00"
+        },
+        {
+          "decision": "2024-02-23",
+          "newest_available_at": "2024-02-23 00:00:00",
+          "newest_observation_date": "2024-02-20 00:00:00",
+          "vintage_date": "2024-02-21 00:00:00"
+        },
+        {
+          "decision": "2024-11-29",
+          "newest_available_at": "2024-11-29 00:00:00",
+          "newest_observation_date": "2024-11-26 00:00:00",
+          "vintage_date": "2024-11-27 00:00:00"
+        },
+        {
+          "decision": "2025-09-05",
+          "newest_available_at": "2025-09-05 00:00:00",
+          "newest_observation_date": "2025-09-02 00:00:00",
+          "vintage_date": "2025-09-03 00:00:00"
+        },
+        {
+          "decision": "2026-06-12",
+          "newest_available_at": "2026-06-12 00:00:00",
+          "newest_observation_date": "2026-06-09 00:00:00",
+          "vintage_date": "2026-06-10 00:00:00"
+        }
+      ],
+      "no_silent_fallback": true,
+      "provider_series_id": "DFII10",
+      "sample_decision_count": 12
+    },
+    "US_UNEMPLOYMENT": {
+      "duplicate_observation_dates_total": 0,
+      "identities_per_sample_decision": {
+        "2018-01-05": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "2018-10-12": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "2019-07-19": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "2020-04-24": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "2021-01-29": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "2021-11-05": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "2022-08-12": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "2023-05-19": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "2024-02-23": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "2024-11-29": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "2025-09-05": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ],
+        "2026-06-12": [
+          [
+            "fred/alfred",
+            "UNRATE"
+          ]
+        ]
+      },
+      "identity_ok": true,
+      "newest_vintage_per_sample_decision": [
+        {
+          "decision": "2018-01-05",
+          "newest_available_at": "2017-12-10 00:00:00",
+          "newest_observation_date": "2017-11-01 00:00:00",
+          "vintage_date": "2017-12-08 00:00:00"
+        },
+        {
+          "decision": "2018-10-12",
+          "newest_available_at": "2018-10-07 00:00:00",
+          "newest_observation_date": "2018-09-01 00:00:00",
+          "vintage_date": "2018-10-05 00:00:00"
+        },
+        {
+          "decision": "2019-07-19",
+          "newest_available_at": "2019-07-07 00:00:00",
+          "newest_observation_date": "2019-06-01 00:00:00",
+          "vintage_date": "2019-07-05 00:00:00"
+        },
+        {
+          "decision": "2020-04-24",
+          "newest_available_at": "2020-04-05 00:00:00",
+          "newest_observation_date": "2020-03-01 00:00:00",
+          "vintage_date": "2020-04-03 00:00:00"
+        },
+        {
+          "decision": "2021-01-29",
+          "newest_available_at": "2021-01-10 00:00:00",
+          "newest_observation_date": "2016-01-01 00:00:00",
+          "vintage_date": "2021-01-08 00:00:00"
+        },
+        {
+          "decision": "2021-11-05",
+          "newest_available_at": "2021-10-10 00:00:00",
+          "newest_observation_date": "2021-09-01 00:00:00",
+          "vintage_date": "2021-10-08 00:00:00"
+        },
+        {
+          "decision": "2022-08-12",
+          "newest_available_at": "2022-08-07 00:00:00",
+          "newest_observation_date": "2022-07-01 00:00:00",
+          "vintage_date": "2022-08-05 00:00:00"
+        },
+        {
+          "decision": "2023-05-19",
+          "newest_available_at": "2023-05-07 00:00:00",
+          "newest_observation_date": "2023-04-01 00:00:00",
+          "vintage_date": "2023-05-05 00:00:00"
+        },
+        {
+          "decision": "2024-02-23",
+          "newest_available_at": "2024-02-04 00:00:00",
+          "newest_observation_date": "2024-01-01 00:00:00",
+          "vintage_date": "2024-02-02 00:00:00"
+        },
+        {
+          "decision": "2024-11-29",
+          "newest_available_at": "2024-11-03 00:00:00",
+          "newest_observation_date": "2024-10-01 00:00:00",
+          "vintage_date": "2024-11-01 00:00:00"
+        },
+        {
+          "decision": "2025-09-05",
+          "newest_available_at": "2025-08-03 00:00:00",
+          "newest_observation_date": "2025-07-01 00:00:00",
+          "vintage_date": "2025-08-01 00:00:00"
+        },
+        {
+          "decision": "2026-06-12",
+          "newest_available_at": "2026-06-07 00:00:00",
+          "newest_observation_date": "2026-05-01 00:00:00",
+          "vintage_date": "2026-06-05 00:00:00"
+        }
+      ],
+      "no_silent_fallback": true,
+      "provider_series_id": "UNRATE",
+      "sample_decision_count": 12
+    }
+  }
+}
