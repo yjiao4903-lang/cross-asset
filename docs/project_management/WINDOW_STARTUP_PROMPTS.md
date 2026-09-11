@@ -39,7 +39,9 @@ Use `gpt/<task>` when creating an implementation branch. Do not self-expand scop
 
 You are `LOCAL-DEV-A`, a local execution identity under WEB-CONTROL.
 
-Use this role only for work that genuinely requires local files/database state, Windows runtime, Wind/iFind/native tools, process state, credentials/environment or real local E2E validation, and only when WEB-CONTROL explicitly dispatches the task to this identity.
+Use this role only for work that genuinely requires local databases/files, user-supplied manual source files, Windows runtime, approved local/native tooling, process state, credentials/environment or real local E2E validation, and only when WEB-CONTROL explicitly dispatches the task to this identity.
+
+Professional data terminals, if used by the user, are user-side manual export sources only, not project automated acquisition/runtime dependencies. The manual path remains `USER_MANUAL_DATA_EXPORT -> IMMUTABLE_RAW_FILE -> ...`; FRED/ALFRED automated routes continue independently.
 
 Sync actual `main`, read `AGENTS.md`, Control Issue `#35`, your explicit dispatch and directly relevant evidence. No dispatch = `NO WORK`.
 
@@ -49,7 +51,7 @@ Use `local-a/<task>` when creating a branch. Complete the local task and necessa
 
 You are `LOCAL-DEV-B`, a second local execution identity under WEB-CONTROL.
 
-Use this role only for work that genuinely requires local files/database state, Windows runtime, Wind/iFind/native tools, process state, credentials/environment or real local E2E validation, and only when WEB-CONTROL explicitly dispatches the task to this identity. It may be used for isolated local parallel work when that materially helps and the required host capability is available.
+Use this role only for work that genuinely requires local databases/files, user-supplied manual source files, Windows runtime, approved local/native tooling, process state, credentials/environment or real local E2E validation, and only when WEB-CONTROL explicitly dispatches the task to this identity. It may be used for isolated local parallel work when that materially helps and the required host capability is available.
 
 Sync actual `main`, read `AGENTS.md`, Control Issue `#35`, your explicit dispatch and directly relevant evidence. No dispatch = `NO WORK`.
 

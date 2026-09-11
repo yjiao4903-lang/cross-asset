@@ -20,8 +20,10 @@
 
 - `WEB-CONTROL`：唯一项目主控。负责目标与优先级、任务拆分与派发、业务边界、架构/Schema/Contract 决策、跨任务冲突处理、最终验收，以及高风险/不可逆操作授权。WEB-CONTROL 不是默认主力编码窗口，也不得为了治理完整性主动制造额外流程。
 - `GPT-DEV`：默认 ONLINE 执行窗口。普通在线可完成的代码、测试、PR、文档和轻量验证应优先交给 GPT-DEV，并尽量一次做到最终回传。
-- `LOCAL-DEV-A`：本地执行窗口 A，仅用于确实依赖本地数据库、本地文件、Windows runtime、Wind/iFind/native tool、进程状态或真实本机环境的工作。不得把普通在线开发默认路由给本地窗口。
+- `LOCAL-DEV-A`：本地执行窗口 A，仅用于确实依赖本地数据库/文件、用户提供的手工源文件、Windows runtime、经批准的本地/native tooling、进程状态或真实本机 E2E 验证的工作。不得把普通在线开发默认路由给本地窗口。
 - `LOCAL-DEV-B`：本地执行窗口 B，与 LOCAL-DEV-A 适用相同本地环境边界；仅在本地能力、数据或隔离并行确有需要时由 WEB-CONTROL 派发。不得把普通在线开发默认路由给本地窗口。
+
+专业数据终端如果由用户使用，只是用户侧人工导出数据的来源，不是项目自动化 acquisition/runtime dependency。手工数据链路保持 `USER_MANUAL_DATA_EXPORT -> IMMUTABLE_RAW_FILE -> ...`；FRED/ALFRED 自动路线继续独立存在。
 
 开发窗口不得自行扩大 Scope、改变架构/Schema/Contract、改变 allocation/strategic weights、Merge、Release 或执行未授权的高风险写入。
 

@@ -50,13 +50,15 @@ For normal online-capable work it should receive one complete task packet and co
 
 ### LOCAL-DEV-A
 
-LOCAL-DEV-A is a local execution identity reserved for tasks that genuinely depend on a local workstation or local environment, including local database state, local-only files, Windows runtime, Wind/iFind/native desktop tools, process state, credentials/environment or real local E2E validation.
+LOCAL-DEV-A is a local execution identity reserved for tasks that genuinely depend on a local workstation or local environment, including local databases/files, user-supplied manual source files, Windows runtime, approved local/native tooling, process state, credentials/environment or real local E2E validation.
 
 It is not a generic fallback for online-capable development. WEB-CONTROL dispatches it when the required local capability is available on that execution host.
 
 ### LOCAL-DEV-B
 
 LOCAL-DEV-B is a second local execution identity with the same local-only boundary. It exists so WEB-CONTROL can isolate or parallelize genuinely local work when host/data/tool availability makes that useful.
+
+Professional data terminals, if used by the user, are user-side manual export sources only; they are not project automated acquisition/runtime dependencies. The manual path remains `USER_MANUAL_DATA_EXPORT -> IMMUTABLE_RAW_FILE -> ...`. Existing FRED/ALFRED automated routes continue independently.
 
 It does not create a second project controller or runtime authority. The PC-A / PC-B runtime and data-ingress boundary remains governed separately by `docs/OPERATING_MODEL_PC_A_PC_B.md`.
 
@@ -92,7 +94,7 @@ No separate startup Gate is created by this block.
 WEB-CONTROL should route work in this order:
 
 1. GPT-DEV for work that can be completed online;
-2. LOCAL-DEV-A or LOCAL-DEV-B only when local environment, data or native-tool access is materially required; choose the local identity based on host capability, isolation and useful parallelism.
+2. LOCAL-DEV-A or LOCAL-DEV-B only when local environment, local data/files, user-supplied manual source files or approved local/native tooling is materially required; choose the local identity based on host capability, isolation and useful parallelism.
 
 Neither local role is a generic second-choice coding window. Ordinary code, documentation, PR work and tests should remain online whenever possible.
 
