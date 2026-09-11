@@ -77,6 +77,10 @@ def load_research_model_config(
     universe = _mapping(universe_path)
     allocation = _mapping(allocation_path)
     macro = _mapping(macro_path)
+    # Formal research always enables the existing macro unit-semantics guard.
+    # This is execution policy, not a second metadata system: individual series
+    # still resolve through features.macro.transform_unit_semantics.
+    macro["enforce_unit_semantics"] = True
     assets_config = universe.get("assets", {})
     strategic = {
         str(asset): float(weight)

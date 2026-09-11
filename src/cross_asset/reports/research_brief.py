@@ -69,9 +69,6 @@ def generate_research_brief(
         text += "\n".join(_fact_line(item) for item in holding_lines)
     else:
         text += "- 未提供真实持仓；本简报不推断账户、币种、敞口或推荐。"
-    text += "\n\n## 计算信号（模型输出）\n\n"
-    signals = _items(computed_signals)
-    text += "\n".join(_fact_line(item) for item in signals) if signals else "- 未提供计算信号"
     text += "\n\n## 模型计算信号（非市场事实）\n\n"
     signals = _items(computed_signals)
     text += "\n".join(_fact_line(item) for item in signals) if signals else "- 未提供计算信号"

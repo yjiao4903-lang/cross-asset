@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from cross_asset.features.macro import transform_history, transform_series
+from cross_asset.features.macro import (
+    transform_history,
+    transform_series,
+    transform_unit_semantics,
+)
 from cross_asset.features.normalization import latest_causal_zscore
 
 
@@ -54,6 +58,20 @@ def _latest_revision_snapshot(rows):
     return sorted(selected.values(), key=lambda row: _get(row, "observation_date"))
 
 
+def _validated_definition(series_id, definition):
+    """Fail closed when a formal active macro input has unresolved semantics."""
+
+    semantics = transform_unit_semantics(definition)
+    if not semantics.resolved:
+        raise ValueError(
+            "macro_unit_semantics_unresolved: "
+            f"series_id={series_id}; reason={semantics.reason}; "
+            f"transform={semantics.transform_type}; raw_unit={semantics.raw_unit}; "
+            f"derived_unit={semantics.derived_unit}"
+        )
+    return definition
+
+
 def _normalized_value(rows, definition):
     transform = (definition or {}).get("transform", {})
     raw = transform_series(rows, transform)
@@ -88,15 +106,26 @@ def build_macro_state(
     cfg = config or {}
     definitions = cfg.get("series", cfg)
     dims = cfg.get("dimensions", {})
+    enforce_unit_semantics = bool(cfg.get("enforce_unit_semantics", False))
+    requested_series = {
+        str(series_id)
+        for ids in dims.values()
+        for series_id in ids
+    }
     decision_time = _utc(decision_time)
     released = [
         observation
         for observation in observations
         if _utc(_get(observation, "available_at")) <= decision_time
     ]
+    requested_released = [
+        observation
+        for observation in released
+        if _get(observation, "series_id") in requested_series
+    ]
 
     by_series = {}
-    for observation in released:
+    for observation in requested_released:
         by_series.setdefault(_get(observation, "series_id"), []).append(observation)
     by_series = {
         series_id: _latest_revision_snapshot(rows)
@@ -108,6 +137,8 @@ def build_macro_state(
     freshness_by_series = {}
     for series_id, rows in by_series.items():
         definition = definitions.get(series_id, {}) or {}
+        if enforce_unit_semantics:
+            definition = _validated_definition(series_id, definition)
         raw_value, score = _normalized_value(rows, definition)
         raw_contributions[series_id] = raw_value
         contributions[series_id] = score
