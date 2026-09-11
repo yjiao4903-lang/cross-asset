@@ -34,6 +34,7 @@ def _definition(transform, **extra):
 def test_macro_vintage_cutoff_hides_future_and_selects_revision():
     rows = _fixture_rows()
     config = {
+        "enforce_unit_semantics": True,
         "series": {"TEST_MACRO_JAN": _definition({"type": "level"})},
         "dimensions": {"GROWTH": ["TEST_MACRO_JAN"]},
     }
@@ -176,6 +177,7 @@ def test_unresolved_active_macro_semantics_fail_closed_before_contribution():
         }
     ]
     config = {
+        "enforce_unit_semantics": True,
         "series": {
             "CN_CPI": {
                 "raw_unit": "UNRESOLVED",
@@ -200,6 +202,7 @@ def test_unrelated_unresolved_macro_definition_does_not_block_resolved_active_in
         }
     ]
     config = {
+        "enforce_unit_semantics": True,
         "series": {
             "US_CPI": _definition({"type": "level"}),
             "CN_CPI": {
