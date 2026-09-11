@@ -3,7 +3,7 @@ from pathlib import Path
 from cross_asset.reports.research_brief import generate_research_brief
 
 
-def test_research_brief_discloses_missing_holdings():
+def test_research_brief_discloses_missing_holdings_and_renders_signals_once():
     path_out = Path("tests/.research_brief_test.md")
     path = generate_research_brief(
         output=path_out,
@@ -18,4 +18,6 @@ def test_research_brief_discloses_missing_holdings():
     assert "不构成交易建议" in text
     assert "CPI" in text and "来源：fixture" in text
     assert "模型计算信号" in text and "Equity score" in text
+    assert text.count("Equity score") == 1
+    assert text.count("## 模型计算信号（非市场事实）") == 1
     path.unlink(missing_ok=True)
