@@ -1,0 +1,8 @@
+{
+  "status": "DEVELOPMENT_PRIOR",
+  "scenarios": [
+    {"scenario_id":"cn-bond-parallel-25bp","asset":"CN_BOND","kind":"bond_duration","baseline":2.0,"shock":25,"unit":"bp","duration":8,"cost_bps":5,"as_of":"2026-09-09","evidence_refs":["fixture:yield"],"assumptions":["parallel shift; duration approximation"]},
+    {"scenario_id":"us-equity-cny","asset":"US_EQ","kind":"foreign_asset","baseline":100.0,"unit":"fraction","local_price_shock":0.05,"fx_shock":0.03,"currency":"USD","base_currency":"CNY","quote_currency":"USD","quote_convention":"CNY_per_USD","cost_bps":10,"as_of":"2026-09-09","evidence_refs":["fixture:price","fixture:fx"],"assumptions":["unhedged USD/CNY exposure"]}
+  ],
+  "note": "FIXTURE_ONLY; shocks are assumptions, not forecasts or probabilities."
+}

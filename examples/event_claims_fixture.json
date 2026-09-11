@@ -1,0 +1,7 @@
+{
+  "status": "DEVELOPMENT_PRIOR",
+  "claims": [
+    {"claim_id":"pmi-202609","source":"fixture-house","source_document":"fixture:note-1","published_at":"2026-09-01T09:00:00+08:00","as_of":"2026-09-01","target":"PMI","target_unit":"index","baseline":50,"operator":">=","threshold":50,"horizon":"next_release","evaluation_window_start":"2026-09-01","evaluation_window_end":"2026-10-01","next_release_at":"2026-09-30T09:00:00+08:00","evidence_refs":["fixture:note-1"],"alternative_explanations":["季节性"]}
+  ],
+  "note": "FIXTURE_ONLY; statuses are evaluated only when next_release and available actual exist."
+}
