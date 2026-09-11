@@ -1,0 +1,19 @@
+provider: "user-export"
+dataset: "manual_export"
+series:
+  - series_id: "US_EQ"
+    provider: "user-export"
+    source_series_id: "SPX"
+    instrument_identity: "S&P 500 Index"
+    field: "index_level"
+    # Intentionally missing unit / currency -> semantic validation must block.
+    # (unit and currency are required, no inference allowed.)
+    price_type: "price_index"
+    instrument_type: "index"
+    frequency: "daily"
+    timezone: "America/New_York"
+    observation_date_rule: "trading_date"
+    available_at_rule: "market_close"
+    vintage_rule: "immaterial"
+    missing_policy: "drop_explicit_no_zerofill"
+    pit_grade: "B"

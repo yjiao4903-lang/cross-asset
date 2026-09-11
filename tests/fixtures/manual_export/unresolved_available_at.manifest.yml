@@ -1,0 +1,21 @@
+provider: "user-export"
+dataset: "manual_export"
+series:
+  - series_id: "CN_PMI"
+    provider: "user-export"
+    source_series_id: "CN_PMI_NBS"
+    instrument_identity: "China NBS Manufacturing PMI"
+    field: "index_level"
+    unit: "index_points"
+    currency: "NONE_FOR_RATIO"
+    price_type: "price_index"
+    instrument_type: "macro"
+    frequency: "monthly"
+    timezone: "Asia/Shanghai"
+    observation_date_rule: "period_end"
+    # Intentionally no available_at_rule and no explicit_column available_at:
+    # intake must BLOCK (pit_available_at_unresolved), never fallback to obs date.
+    available_at_rule: "unresolved"
+    vintage_rule: "immaterial"
+    missing_policy: "drop_explicit_no_zerofill"
+    pit_grade: "B"

@@ -1,0 +1,64 @@
+# User-facing semantic manifest template (Lane-B manual export contract).
+#
+# One manifest accompanies one exported data file. It states explicit source
+# facts only. It NEVER self-approves: research admission still requires an
+# existing acceptance-registry PASS whose `manifest_hash` equals the combined
+# (raw-data + semantic-contract) contract hash, a reviewer/approved_at and an
+# enabled policy.
+#
+# All fields are REQUIRED per series; no inference is performed for a missing
+# field - intake is fail-closed. The file/top-level `provider` is REQUIRED
+# (never inferred, never falls back to "manual") and MUST equal every per-series
+# `provider`; a conflict BLOCKS.
+# Phase-1 scope: ONE file carries EXACTLY ONE formal series. A multi-series pack
+# BLOCKS (`MULTI_SERIES_MANUAL_PACK_UNSUPPORTED`); split into one file per series.
+provider: "YOUR_PROFESSIONAL_SOURCE_OR_TOOL"   # REQUIRED - e.g. cmac-terminal / sse-export / not "manual"
+dataset: "manual_export"
+series:
+  - series_id: "FORMAL_SERIES_ID"              # must match the research series registry
+    provider: "SAME_PROFESSIONAL_SOURCE"       # MUST equal the file/top-level provider
+    source_series_id: "EXACT_SOURCE_CODE"      # e.g. SPX, USDCNY.IMF, 10Y_CN_CFETS
+    instrument_identity: "human-readable instrument/contract description"
+    field: "index_level|yield|fx_spot|close|total_return|excess_return"
+    unit: "index_points|percent|ratio|native_unit"
+    currency: "USD|CNY|JPY|NONE_FOR_RATIO"
+    price_type: "price_index|total_return_index|yield|spot"
+    instrument_type: "index|futures_continuous|spot|yield|fx|macro"
+    frequency: "daily|monthly|weekly"
+    timezone: "America/New_York|Asia/Shanghai|UTC"
+    observation_date_rule: "trading_date|period_end|explicit_column"
+    # DOCUMENTATION ONLY: a rule name such as `market_close` NEVER resolves an
+    # actual timestamp. An explicit timezone-aware `available_at` is required
+    # per row, otherwise the row is BLOCKED.
+    available_at_rule: "market_close|release_rule|documentation"
+    vintage_rule: "immaterial|release_map|explicit_column"
+    missing_policy: "drop_explicit_no_zerofill"
+    # Material-semantics disambiguators (fail-closed; required by instrument type
+    # when relevant; NEVER guessed from source_series_id/filename/column names).
+    # FX (instrument_type=fx/fx_spot/fx_forward):
+    base_currency: "USD|CNY|..."              # FX only; missing -> FX_QUOTE_DIRECTION_UNRESOLVED
+    quote_currency: "CNY|JPY|..."             # FX only; missing -> FX_QUOTE_DIRECTION_UNRESOLVED
+    quote_direction: "QUOTE_PER_BASE|BASE_PER_QUOTE"  # FX only; canonical enum. Missing/sentinel/non-canonical -> FX_QUOTE_DIRECTION_UNRESOLVED
+    # Continuous futures (instrument_type=futures_continuous/continuous_futures):
+    continuous_contract_identity: "e.g. front-continuous CL"  # missing -> FUTURES_ROLL_SEMANTICS_UNRESOLVED
+    roll_method: "fixed_roll_date|volume_based|open_interest"  # missing -> FUTURES_ROLL_SEMANTICS_UNRESOLVED
+    roll_semantics: "front_month|perpetual"    # missing -> FUTURES_ROLL_SEMANTICS_UNRESOLVED
+    adjustment_semantics: "unadjusted|back_adjusted|proportional"  # missing -> FUTURES_ROLL_SEMANTICS_UNRESOLVED
+    # Returns/index (when field/price_type is a return type):
+    return_type: "price_index|total_return|excess_return|net_return"  # missing -> RETURN_TYPE_UNRESOLVED
+    # For XLSX only: the explicit worksheet/table name this series comes from.
+    # Must equal the worksheet actually read; a mismatch is BLOCKED. Not inferred.
+    worksheet: "OptionalSheetName"            # required for xlsx, unused for csv
+
+# Data file columns (normative CSV headers):
+#   series_id,observation_date,available_at,value[,source_series_id]
+#
+#   observation_date : YYYY-MM-DD (or a date/datetime cell for XLSX).
+#   available_at     : ISO-8601 WITH timezone, per row.
+#                      Missing/naive -> row BLOCKED, never fallback to
+#                      observation_date, never a guessed timezone, and never
+#                      resolved from the rule name alone.
+#   value            : numeric. A numeric 0 is a VALID value. None/blank/non-finite
+#                      rows are excluded and counted; NEVER coerced to zero.
+#   source_series_id : optional; if present every cell must equal the manifest
+#                      series.source_series_id, else the row is BLOCKED.
