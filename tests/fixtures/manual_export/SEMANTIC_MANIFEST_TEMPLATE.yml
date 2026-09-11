@@ -2,19 +2,21 @@
 #
 # One manifest accompanies one exported data file. It states explicit source
 # facts only. It NEVER self-approves: research admission still requires an
-# existing acceptance-registry PASS (whose manifest_hash matches this file),
-# a reviewer/approved_at and an enabled policy.
+# existing acceptance-registry PASS whose `manifest_hash` equals the combined
+# (raw-data + semantic-contract) contract hash, a reviewer/approved_at and an
+# enabled policy.
 #
 # All fields are REQUIRED per series; no inference is performed for a missing
-# field - intake is fail-closed.
+# field - intake is fail-closed. The top-level `provider` MUST equal every
+# per-series `provider`; a conflict BLOCKS.
 provider: "YOUR_PROFESSIONAL_SOURCE_OR_TOOL"   # e.g. cmac-terminal / sse-export / not "manual"
 dataset: "manual_export"
 series:
   - series_id: "FORMAL_SERIES_ID"              # must match the research series registry
-    provider: "SAME_PROFESSIONAL_SOURCE"       # source/tool identity, not collapsed to "manual"
+    provider: "SAME_PROFESSIONAL_SOURCE"       # MUST equal the file/top-level provider
     source_series_id: "EXACT_SOURCE_CODE"      # e.g. SPX, USDCNY.IMF, 10Y_CN_CFETS
     instrument_identity: "human-readable instrument/contract description"
-    field: "index_level|yield|fx_spot|close"   # explicit field semantic
+    field: "index_level|yield|fx_spot|close|total_return|excess_return"
     unit: "index_points|percent|ratio|native_unit"
     currency: "USD|CNY|JPY|NONE_FOR_RATIO"
     price_type: "price_index|total_return_index|yield|spot"
@@ -28,6 +30,19 @@ series:
     available_at_rule: "market_close|release_rule|documentation"
     vintage_rule: "immaterial|release_map|explicit_column"
     missing_policy: "drop_explicit_no_zerofill"
+    # Material-semantics disambiguators (fail-closed; required by instrument type
+    # when relevant; NEVER guessed from source_series_id/filename/column names).
+    # FX (instrument_type=fx/fx_spot/fx_forward):
+    base_currency: "USD|CNY|..."              # FX only; missing -> FX_QUOTE_DIRECTION_UNRESOLVED
+    quote_currency: "CNY|JPY|..."             # FX only; missing -> FX_QUOTE_DIRECTION_UNRESOLVED
+    quote_direction: "base_quote|quote_base"  # FX only; missing -> FX_QUOTE_DIRECTION_UNRESOLVED
+    # Continuous futures (instrument_type=futures_continuous/continuous_futures):
+    continuous_contract_identity: "e.g. front-continuous CL"  # missing -> FUTURES_ROLL_SEMANTICS_UNRESOLVED
+    roll_method: "fixed_roll_date|volume_based|open_interest"  # missing -> FUTURES_ROLL_SEMANTICS_UNRESOLVED
+    roll_semantics: "front_month|perpetual"    # missing -> FUTURES_ROLL_SEMANTICS_UNRESOLVED
+    adjustment_semantics: "unadjusted|back_adjusted|proportional"  # missing -> FUTURES_ROLL_SEMANTICS_UNRESOLVED
+    # Returns/index (when field/price_type is a return type):
+    return_type: "price_index|total_return|excess_return|net_return"  # missing -> RETURN_TYPE_UNRESOLVED
     # For XLSX only: the explicit worksheet/table name this series comes from.
     # Must equal the worksheet actually read; a mismatch is BLOCKED. Not inferred.
     worksheet: "OptionalSheetName"            # required for xlsx, unused for csv

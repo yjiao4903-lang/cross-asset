@@ -21,6 +21,7 @@ from cross_asset.ingestion.manual_intake import (
     ingest_manual_pack,
     read_manual_tabular,
     sha256_bytes,
+    validate_semantic_manifest,
 )
 from cross_asset.ingestion.raw_archive import ImmutableRawArchive
 from cross_asset.storage import init_db
@@ -108,6 +109,49 @@ def _registry_with_pass(db_path, *, manifest_hash):
         },
     )
     store.close()
+
+
+def _contract_hash(manifest, data) -> str:
+    """Compute the combined raw+semantic contract hash via the real mechanism."""
+    rows = read_manual_tabular(data)["rows"]
+    rec = build_candidate_records_from_rows(
+        raw_file="r.csv", raw_sha256=compute_sha256(data), semantic_manifest=manifest, rows=rows
+    )[0]
+    return rec["contract_hash"]
+
+
+def _write_ok_csv(dir_path, series_id="T", name="data.csv") -> Path:
+    return _write_csv(
+        dir_path,
+        name,
+        ["series_id", "observation_date", "available_at", "value"],
+        [
+            {"series_id": series_id, "observation_date": "2020-01-02", "available_at": "2020-01-02T22:00:00+00:00", "value": "1.0"},
+            {"series_id": series_id, "observation_date": "2020-01-03", "available_at": "2020-01-03T22:00:00+00:00", "value": "2.0"},
+        ],
+    )
+
+
+def _mk_manifest(provider="src-export", source_series_id="SPX", instrument_type="index", field="index_level", price_type="price_index", **overrides):
+    entry = {
+        "series_id": "T",
+        "provider": provider,
+        "source_series_id": source_series_id,
+        "instrument_identity": "x",
+        "field": field,
+        "unit": "native",
+        "currency": "USD",
+        "price_type": price_type,
+        "instrument_type": instrument_type,
+        "frequency": "daily",
+        "timezone": "America/New_York",
+        "observation_date_rule": "trading_date",
+        "available_at_rule": "market_close",
+        "vintage_rule": "immaterial",
+        "missing_policy": "drop_explicit_no_zerofill",
+    }
+    entry.update(overrides)
+    return {"provider": provider, "dataset": "manual_export", "series": [entry]}
 
 
 # --------------------------------------------------------------------------- #
@@ -313,7 +357,8 @@ def test_manifest_hash_binding_rejects_stale_pass(tmp_path):
     data = FIXTURES / "us_eq_market_price.csv"
     manifest = _write_yaml(tmp_path, "manifest.yml", _valid_manifest())
     db_path = tmp_path / "db.duckdb"
-    # PASS exists but its manifest_hash does NOT match the current data bytes.
+    # PASS exists but its manifest_hash is neither the raw data hash nor the
+    # combined contract hash for these bytes+semantics -> the contract differs.
     _registry_with_pass(db_path, manifest_hash="manifest-US_EQ")  # stale/unchanged-but-unknown contract
     result = ingest_manual_pack(
         source_file=data,
@@ -329,14 +374,47 @@ def test_manifest_hash_binding_rejects_stale_pass(tmp_path):
 
 
 # --------------------------------------------------------------------------- #
-# 7. Valid fixture + registry PASS with the exact manifest_hash  =>  admitted
-#    via ingest_research_data and visible through the sanctioned query.
+# 6c. PRECISE binding regression: IDENTICAL raw bytes + a materially different
+#     semantic manifest must reject a PASS minted for the ORIGINAL semantics.
+#     This is the fail-closed joint (raw-data identity + semantic-contract
+#     identity) requirement - NOT merely "different raw hash is rejected".
+# --------------------------------------------------------------------------- #
+def test_same_raw_bytes_changed_semantics_rejects_old_pass(tmp_path):
+    data = FIXTURES / "us_eq_market_price.csv"
+    m_original = _valid_manifest(unit="index_points")
+    m_changed = _valid_manifest(unit="tens_of_index_points")  # material semantics change
+    db_path = tmp_path / "db.duckdb"
+    # 1. First semantic manifest obtains/simulates an existing PASS via the real
+    #    contract hash (raw bytes + original semantics).
+    _registry_with_pass(db_path, manifest_hash=_contract_hash(m_original, data))
+    # 2. Same raw bytes, changed material semantics.
+    manifest = _write_yaml(tmp_path, "manifest.yml", m_changed)
+    result = ingest_manual_pack(
+        source_file=data,
+        manifest_path=manifest,
+        raw_archive=ImmutableRawArchive(tmp_path / "raw"),
+        policies_payload=_write_policy(tmp_path),
+        database=str(db_path),
+        write=True,
+    )
+    # 3. The old PASS must be rejected - identical byte-level data does NOT let a
+    #    changed semantic contract reuse the prior approval.
+    assert result["status"] == "BLOCKED"
+    codes = {e["code"] for e in result["blockers"]}
+    assert "research_admission_not_satisfied" in codes
+
+
+# --------------------------------------------------------------------------- #
+# 7. Valid fixture + registry PASS with the exact combined contract hash
+#    (raw data + current semantics)  =>  admitted via ingest_research_data and
+#    visible through the sanctioned query.
 # --------------------------------------------------------------------------- #
 def test_valid_fixture_admitted_and_visible(tmp_path):
     data = FIXTURES / "us_eq_market_price.csv"
-    manifest = _write_yaml(tmp_path, "manifest.yml", _valid_manifest())
+    m = _valid_manifest()
+    manifest = _write_yaml(tmp_path, "manifest.yml", m)
     db_path = tmp_path / "db.duckdb"
-    _registry_with_pass(db_path, manifest_hash=compute_sha256(data))
+    _registry_with_pass(db_path, manifest_hash=_contract_hash(m, data))
 
     result = ingest_manual_pack(
         source_file=data,
@@ -498,3 +576,104 @@ def test_xlsx_naive_datetime_available_at_blocks_no_tz_guess(tmp_path):
     assert result["status"] == "BLOCKED"
     codes = {e["code"] for e in result["blockers"]}
     assert "available_at_timezone_required" in codes
+
+
+# --------------------------------------------------------------------------- #
+# 9. Provider identity fail closed: a file/top-level provider that conflicts
+#    with a per-series provider must BLOCK (no silent preference to either).
+# --------------------------------------------------------------------------- #
+def test_provider_identity_conflict_blocks(tmp_path):
+    data = _write_ok_csv(tmp_path, series_id="T")
+    m = _mk_manifest(provider="src-export")  # per-series provider = src-export
+    m["provider"] = "other-provider"  # top-level differs from per-series -> conflict
+    manifest = _write_yaml(tmp_path, "manifest.yml", m)
+    result = ingest_manual_pack(
+        source_file=data,
+        manifest_path=manifest,
+        raw_archive=ImmutableRawArchive(tmp_path / "raw"),
+        sidecar_dir=tmp_path / "sidecar",
+    )
+    assert result["status"] == "BLOCKED"
+    codes = {e["code"] for e in result["blockers"]}
+    assert "PROVIDER_IDENTITY_CONFLICT" in codes
+
+
+def test_provider_identity_consistent_ok(tmp_path):
+    # Top-level and per-series provider agree -> passes semantic validation.
+    m = _mk_manifest(provider="cmac")
+    errors = validate_semantic_manifest(m)
+    assert all(e["code"] != "PROVIDER_IDENTITY_CONFLICT" for e in errors)
+    assert all(e["code"] != "semantic_series_required" for e in errors)
+
+
+# --------------------------------------------------------------------------- #
+# 10. Conditional fail-closed semantics - never inferred from source_series_id,
+#     filename or column names. Missing explicit contract => specific error code.
+# --------------------------------------------------------------------------- #
+def test_fx_quote_direction_unresolved_blocks(tmp_path):
+    m = _mk_manifest(instrument_type="fx")
+    # _mk_manifest carries no base/quote currency / quote_direction -> unresolved.
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "FX_QUOTE_DIRECTION_UNRESOLVED" in codes
+
+
+def test_fx_resolved_when_explicit_contract(tmp_path):
+    m = _mk_manifest(
+        instrument_type="fx",
+        base_currency="USD",
+        quote_currency="CNY",
+        quote_direction="USD_PER_CNY",
+    )
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "FX_QUOTE_DIRECTION_UNRESOLVED" not in codes
+
+
+def test_futures_roll_semantics_unresolved_blocks(tmp_path):
+    m = _mk_manifest(instrument_type="continuous_futures")
+    # No continuous-contract identity / roll method / roll semantics / adjustment.
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "FUTURES_ROLL_SEMANTICS_UNRESOLVED" in codes
+
+
+def test_futures_resolved_when_explicit_contract(tmp_path):
+    m = _mk_manifest(
+        instrument_type="continuous_futures",
+        continuous_contract_identity="front-adjusted",
+        roll_method="volume",
+        roll_semantics="roll-1d-before-expiry",
+        adjustment_semantics="ratio-adjust",
+    )
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "FUTURES_ROLL_SEMANTICS_UNRESOLVED" not in codes
+
+
+def test_return_type_unresolved_blocks(tmp_path):
+    m = _mk_manifest(field="total_return", price_type="total_return_index")
+    # field/price_type declare a return but no explicit return_type -> unresolved.
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "RETURN_TYPE_UNRESOLVED" in codes
+
+
+def test_return_resolved_when_explicit_return_type(tmp_path):
+    m = _mk_manifest(
+        field="total_return",
+        price_type="total_return_index",
+        return_type="total_return_pct",
+    )
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "RETURN_TYPE_UNRESOLVED" not in codes
+
+
+def test_plain_price_index_needs_no_return_type(tmp_path):
+    # A series declared purely as a price index is not a return; no return type
+    # is demanded and the manifest is not blocked for a return-type gap.
+    m = _mk_manifest(field="index_level", price_type="price_index")
+    errors = validate_semantic_manifest(m)
+    codes = {e["code"] for e in errors}
+    assert "RETURN_TYPE_UNRESOLVED" not in codes

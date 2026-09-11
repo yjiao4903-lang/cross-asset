@@ -374,11 +374,71 @@ def evaluate_row(row: dict[str, Any], entry: dict[str, Any]) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # Explicit semantic manifest validation (fail-closed, no inference).
 # --------------------------------------------------------------------------- #
+def _conditional_semantics_errors(entry: dict[str, Any]) -> list[dict[str, str]]:
+    """Material-semantics gates keyed off the DECLARED instrument/field semantics.
+
+    These never guess from ``source_series_id``, filename or column names. If a
+    series declares a semantic that needs a disambiguating contract and that
+    contract is unresolved, the manifest is rejected fail-closed.
+    """
+    errors: list[dict[str, str]] = []
+    series_id = str(entry.get("series_id") or "unknown")
+    instrument_type = str(entry.get("instrument_type") or "").strip().lower()
+    field = str(entry.get("field") or "").strip().lower()
+    price_type = str(entry.get("price_type") or "").strip().lower()
+
+    # FX: explicit base/quote currency AND quote direction are required.
+    if (
+        instrument_type in {"fx", "fx_spot", "fx_forward"}
+        and not (
+            str(entry.get("base_currency") or "").strip()
+            and str(entry.get("quote_currency") or "").strip()
+            and str(entry.get("quote_direction") or "").strip()
+        )
+    ):
+        errors.append({"code": "FX_QUOTE_DIRECTION_UNRESOLVED", "message": series_id})
+
+    # Continuous futures: roll/adjustment semantics must be explicit.
+    if (
+        instrument_type in {"futures_continuous", "continuous_futures"}
+        and not (
+            str(entry.get("continuous_contract_identity") or "").strip()
+            and str(entry.get("roll_method") or "").strip()
+            and str(entry.get("roll_semantics") or "").strip()
+            and str(entry.get("adjustment_semantics") or "").strip()
+        )
+    ):
+        errors.append({"code": "FUTURES_ROLL_SEMANTICS_UNRESOLVED", "message": series_id})
+
+    # Returns/index: a series declared as a return must state its return type.
+    is_return = (
+        "return" in field
+        or "return" in price_type
+        or price_type in {"total_return_index", "excess_return_index", "net_return_index"}
+    )
+    if is_return and not str(entry.get("return_type") or "").strip():
+        errors.append({"code": "RETURN_TYPE_UNRESOLVED", "message": series_id})
+    return errors
+
+
+def _provider_identity_errors(entry: dict[str, Any], top_level_provider: str) -> list[dict[str, str]]:
+    provider = str(entry.get("provider") or "").strip()
+    if top_level_provider and provider and provider != top_level_provider:
+        return [
+            {
+                "code": "PROVIDER_IDENTITY_CONFLICT",
+                "message": f"{entry.get('series_id', 'unknown')}: {provider} != file provider {top_level_provider}",
+            }
+        ]
+    return []
+
+
 def validate_semantic_manifest(manifest: dict[str, Any]) -> list[dict[str, str]]:
     errors: list[dict[str, str]] = []
     series = manifest.get("series", manifest.get("records", [manifest]))
     if not isinstance(series, list) or not series:
         return [{"code": "semantic_series_required", "message": "manifest declares no series"}]
+    top_level_provider = str(manifest.get("provider") or "").strip()
     for entry in series:
         if not isinstance(entry, dict):
             errors.append({"code": "semantic_series_invalid", "message": "series entry must be a mapping"})
@@ -399,6 +459,8 @@ def validate_semantic_manifest(manifest: dict[str, Any]) -> list[dict[str, str]]
                         "message": f"{entry.get('series_id', 'unknown')}:{field}",
                     }
                 )
+        errors.extend(_provider_identity_errors(entry, top_level_provider))
+        errors.extend(_conditional_semantics_errors(entry))
     return sorted(errors, key=lambda item: (item["code"], item["message"]))
 
 
@@ -442,6 +504,18 @@ def validate_rows_against_semantics(
 # --------------------------------------------------------------------------- #
 # Canonical candidate conversion -> public admission-record shape.
 # --------------------------------------------------------------------------- #
+def approval_contract_sha256(*, raw_sha256: str, semantic_digest: str) -> str:
+    """Combined approval contract hash = raw-data identity + semantic-contract identity.
+
+    Reuses the existing acceptance-registry ``manifest_hash`` field to bind an
+    approval to BOTH the exact raw bytes AND the material semantic contract. A
+    PASS minted for the same raw bytes under different semantics is therefore
+    rejected. No schema migration. ``manifest_hash == raw_sha256`` alone is NOT
+    sufficient (same bytes + changed semantics would silently reuse an old PASS).
+    """
+    return sha256_bytes(f"{raw_sha256}::{semantic_digest}".encode())
+
+
 def build_candidate_records_from_rows(
     *,
     raw_file: str,
@@ -453,10 +527,12 @@ def build_candidate_records_from_rows(
 
     Candidates are deliberately NOT approved: they carry no ``usage_status``,
     no ``reviewer``/``approved_at`` and no PIT grade. Only after a matching
-    existing acceptance-registry PASS (with ``manifest_hash`` binding) is
-    verified may the caller enrich the record before handing it to
-    ``ingest_research_data()``. ``source_contract`` binds raw + semantic-manifest
-    identity so the same raw bytes under different semantics differ.
+    existing acceptance-registry PASS (whose ``manifest_hash`` equals the
+    combined ``contract_hash``) is verified may the caller enrich the record
+    before handing it to ``ingest_research_data()``. ``source_contract`` binds
+    raw + semantic-manifest identity so the same raw bytes under different
+    semantics differ, and ``contract_hash`` is the combined raw+semantic hash
+    used to match an existing approval.
     """
     records: list[dict[str, Any]] = []
     fields = {entry.get("series_id"): entry for entry in _manifest_entries(semantic_manifest)}
@@ -468,6 +544,7 @@ def build_candidate_records_from_rows(
             json.dumps(entry, sort_keys=True, separators=(",", ":")).encode("utf-8")
         )
         source_contract = f"manual:{provider}:{source_series_id}:{semantic_digest[:16]}"
+        contract_hash = approval_contract_sha256(raw_sha256=raw_sha256, semantic_digest=semantic_digest)
         observations = [
             verdict["observation"]
             for row in rows
@@ -482,6 +559,7 @@ def build_candidate_records_from_rows(
                 "raw_file": raw_file,
                 "raw_hash": raw_sha256,
                 "source_contract": source_contract,
+                "contract_hash": contract_hash,
                 # No usage_status / reviewer / approved_at / pit_grade here:
                 # staging state must remain non-approved.
                 "observations": observations,
@@ -509,9 +587,12 @@ def _registry_pass_reviewer(
     semantic/data contract.
 
     The PASS must reside on the same identity triple and its ``manifest_hash``
-    must equal the current raw data hash. Otherwise a materially different
-    semantic/data contract could reuse an old approval - which is not allowed.
-    No schema migration is performed.
+    must equal the current combined contract hash (raw-data identity AND
+    semantic-contract identity, see ``approval_contract_sha256``). Otherwise a
+    materially different semantic/data contract could reuse an old approval - which
+    is not allowed. An old PASS minted against ``raw_sha256`` only (or against
+    different semantics) for the same bytes is rejected. No schema migration is
+    performed.
     """
     from cross_asset.storage.acceptance_registry import query_data_acceptance
 
@@ -808,7 +889,7 @@ def ingest_manual_pack(
         try:
             valid_records: list[dict[str, Any]] = []
             for rec in candidates:
-                pass_row = _registry_pass_reviewer(store, rec, expected_manifest_hash=raw_sha256)
+                pass_row = _registry_pass_reviewer(store, rec, expected_manifest_hash=rec["contract_hash"])
                 if pass_row is None:
                     blockers.append(
                         {"code": "research_admission_not_satisfied", "message": rec.get("series_id")}
@@ -875,6 +956,7 @@ def ingest_manual_pack(
 
 
 __all__ = [
+    "approval_contract_sha256",
     "build_candidate_records_from_rows",
     "collect_sidecar_record",
     "compute_sha256",
