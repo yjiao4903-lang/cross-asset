@@ -1,6 +1,6 @@
 """Weekly personal-review fact table.
 
-Assembles point-in-time market levels and lookback changes for a Friday
+Assembles point-in-time market levels and bounded lookback changes for a Friday
 week-end, compared on the Beijing clock. Missing values stay missing.
 This module does not allocate, impute, or produce trade instructions.
 """
@@ -28,6 +28,7 @@ WEEKDAYS = {
 }
 DEFAULT_CONFIG = Path("config/weekly_review.yml")
 DEFAULT_REVIEW_TIME = time(12, 0)
+DEFAULT_MAX_SLIPPAGE_DAYS = 3
 DEFAULT_HOLD = {
     "decision": "不行动",
     "stance": "HOLD",
@@ -84,6 +85,11 @@ def load_weekly_config(path: str | Path | None = None) -> dict[str, Any]:
     config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
     if not isinstance(config.get("required_series"), list) or not config["required_series"]:
         raise ValueError("weekly review config must declare non-empty required_series")
+    for name, window in (config.get("lookbacks") or {}).items():
+        if "max_slippage_days" not in window:
+            raise ValueError(f"weekly lookback {name} must declare max_slippage_days")
+        if int(window["max_slippage_days"]) < 0:
+            raise ValueError(f"weekly lookback {name} max_slippage_days must be non-negative")
     return config
 
 
@@ -147,6 +153,29 @@ def _change(current: Observation | None, prior: Observation | None, kind: str) -
     return round(current.value / prior.value - 1.0, 6)
 
 
+def _comparison_reason(
+    current: Observation | None,
+    prior: Observation | None,
+    *,
+    slippage_days: int | None,
+    max_slippage_days: int,
+    kind: str,
+) -> str | None:
+    if current is None or current.value is None:
+        return "CURRENT_LEVEL_UNAVAILABLE"
+    if prior is None:
+        return "PRIOR_OBSERVATION_MISSING"
+    if slippage_days is None:
+        return "PRIOR_OBSERVATION_MISSING"
+    if slippage_days > max_slippage_days:
+        return "LOOKBACK_SLIPPAGE_EXCEEDED"
+    if prior.value is None:
+        return "PRIOR_VALUE_MISSING"
+    if kind != "yield" and prior.value == 0:
+        return "PRIOR_VALUE_ZERO"
+    return None
+
+
 def build_fact_table(
     rows: list[Observation],
     *,
@@ -158,14 +187,21 @@ def build_fact_table(
     cfg = config or {}
     end = week_end_date or week_end(as_of, cfg.get("week_end_weekday", "Friday"))
     lookbacks = cfg.get("lookbacks") or {
-        "week": {"days": 7, "label": "1w"},
-        "month": {"days": 21, "label": "21d_calendar"},
+        "week": {"days": 7, "label": "1w", "max_slippage_days": DEFAULT_MAX_SLIPPAGE_DAYS},
+        "month": {
+            "days": 21,
+            "label": "21d_calendar",
+            "max_slippage_days": DEFAULT_MAX_SLIPPAGE_DAYS,
+        },
     }
     beijing_cutoff = to_beijing(cutoff)
     facts = []
     missing_levels = []
     missing_lookbacks = []
     unverified_sources = []
+    require_provider_match = bool(
+        cfg.get("require_provider_match", cfg.get("require_source_admission", False))
+    )
     for spec in cfg.get("required_series", []):
         series_id = spec["series_id"]
         kind = spec.get("kind", "price")
@@ -182,12 +218,12 @@ def build_fact_table(
         source_status = "UNVERIFIED"
         if current is not None and current.value is not None:
             source_status = (
-                "ADMITTED"
+                "PROVIDER_MATCHED"
                 if expected_provider is not None
                 and current.source.lower() == str(expected_provider).lower()
                 else "UNVERIFIED"
             )
-            if source_status == "UNVERIFIED" and cfg.get("require_source_admission", False):
+            if source_status == "UNVERIFIED" and require_provider_match:
                 unverified_sources.append(series_id)
         fact = {
             "label": spec.get("asset_id", series_id),
@@ -207,18 +243,42 @@ def build_fact_table(
             missing_levels.append(series_id)
         for name, window in lookbacks.items():
             days = int(window["days"])
-            prior = latest_on_or_before(rows, series_id, end - timedelta(days=days), beijing_cutoff)
-            change = _change(current, prior, kind)
             label = window.get("label", name)
+            target_date = end - timedelta(days=days)
+            max_slippage_days = int(window.get("max_slippage_days", DEFAULT_MAX_SLIPPAGE_DAYS))
+            prior = latest_on_or_before(rows, series_id, target_date, beijing_cutoff)
+            actual_prior_date = None if prior is None else prior.observation_date
+            slippage_days = (
+                None if actual_prior_date is None else (target_date - actual_prior_date).days
+            )
+            reason = _comparison_reason(
+                current,
+                prior,
+                slippage_days=slippage_days,
+                max_slippage_days=max_slippage_days,
+                kind=kind,
+            )
+            comparable = reason is None
+            change = _change(current, prior if comparable else None, kind)
             fact["changes"][label] = {
                 "value": change,
                 "unit": "bp" if kind == "yield" else "fraction",
-                "prior_observation_date": None if prior is None else prior.observation_date.isoformat(),
+                "target_date": target_date.isoformat(),
+                "actual_prior_date": (
+                    None if actual_prior_date is None else actual_prior_date.isoformat()
+                ),
+                "prior_observation_date": (
+                    None if actual_prior_date is None else actual_prior_date.isoformat()
+                ),
+                "slippage_days": slippage_days,
+                "max_slippage_days": max_slippage_days,
+                "status": "COMPARABLE" if comparable else "NON_COMPARABLE",
+                "reason": reason,
             }
             if name == "month" and label != "1m":
-                fact["changes"]["1m"] = fact["changes"][label]
-            if current is not None and change is None:
-                missing_lookbacks.append(f"{series_id}:{label}")
+                fact["changes"]["1m"] = dict(fact["changes"][label])
+            if current is not None and current.value is not None and change is None:
+                missing_lookbacks.append(f"{series_id}:{label}:{reason or 'CHANGE_UNAVAILABLE'}")
         facts.append(fact)
 
     if missing_levels or unverified_sources:
