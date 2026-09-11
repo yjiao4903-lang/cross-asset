@@ -648,14 +648,21 @@ def run_data_acceptance_gate(
     contract_hash: str,
     first_obs_date: str | None,
     last_obs_date: str | None,
-    reviewer: str | None,
-    approved_at: str | None,
+    approval_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run the existing ``validate_data_file`` gate for the staged pack.
 
     The authoritative acceptance checker is reused; PARTIAL (e.g. MANUAL
     three-batch STABILITY) and FAIL are surfaced faithfully. This does not
     create a parallel admission gate.
+
+    Approval evidence (``reviewer``, ``approved_at``, ``permission_scope``,
+    MANUAL ``repeatability_evidence``, ``pit_grade``) is supplied ONLY through
+    the explicit ``approval_evidence`` overlay coming from the reviewer/control
+    side. It is NEVER read from the user ``semantic_manifest`` (which is a
+    source-facts-only contract and cannot self-approve). With no overlay the
+    gate stays PARTIAL, so ``ingest_manual_pack(source + manifest)`` is always
+    fail-closed and can never mint a formal PASS on its own.
 
     The returned result carries ``sha256`` = the combined approval contract hash
     (raw-data identity + semantic-contract identity). Feeding this result through
@@ -692,11 +699,16 @@ def run_data_acceptance_gate(
         manifest_available_at = (
             max((obs.get("available_at", "") for obs in parsed_ok_rows if obs.get("available_at")), default=None)
         )
+        # Approval/review evidence lives ENTIRELY outside the user manifest. The
+        # semantic manifest (source facts only) contributes the data-property
+        # fields below (permission_scope and every approval field below come from
+        # ``approval_evidence``, never from ``entry``).
+        evidence = approval_evidence or {}
         acceptance_manifest = {
             "series_id": entry.get("series_id"),
             "provider": entry.get("provider"),
             "source_series_id": entry.get("source_series_id"),
-            "permission_scope": entry.get("permission_scope"),
+            "permission_scope": evidence.get("permission_scope"),
             "origin": "MANUAL",
             "observation_definition": entry.get("instrument_identity"),
             "unit": entry.get("unit"),
@@ -715,16 +727,10 @@ def run_data_acceptance_gate(
             "template_version": "manual_export_v1",
             "file_sha256": projection_sha,
             "available_at": manifest_available_at,
-            # Forward the MANUAL admission evidence the authoritative gate
-            # actually requires (MANUAL three-batch STABILITY, LEGAL approval and
-            # PIT grade). These come from the semantic manifest entry ONLY when
-            # declared; explicit ``reviewer``/``approved_at`` params (if given)
-            # take precedence. Without this evidence the gate stays PARTIAL and
-            # can never mint a PASS - it is never upgraded downstream.
-            "reviewer": reviewer if reviewer is not None else entry.get("reviewer"),
-            "approved_at": approved_at if approved_at is not None else entry.get("approved_at"),
-            "repeatability_evidence": entry.get("repeatability_evidence"),
-            "pit_grade": entry.get("pit_grade"),
+            "reviewer": evidence.get("reviewer"),
+            "approved_at": evidence.get("approved_at"),
+            "repeatability_evidence": evidence.get("repeatability_evidence"),
+            "pit_grade": evidence.get("pit_grade"),
             "reconciliation_notes": "",
         }
         manifest_path = tmp_dir / "projection.manifest.json"
@@ -959,8 +965,10 @@ def ingest_manual_pack(
             contract_hash=gate_contract_hash,
             first_obs_date=first_obs,
             last_obs_date=last_obs,
-            reviewer=None,
-            approved_at=None,
+            # No approval evidence in the normal user path: the semantic manifest
+            # is source-facts only and cannot self-approve, so the authoritative
+            # gate always stays PARTIAL/UNKNOWN here (never a formal PASS).
+            approval_evidence=None,
         )
 
     report: dict[str, Any] = {

@@ -22,6 +22,7 @@ from cross_asset.ingestion.manual_intake import (
     compute_sha256,
     ingest_manual_pack,
     read_manual_tabular,
+    run_data_acceptance_gate,
     sha256_bytes,
     validate_semantic_manifest,
 )
@@ -156,49 +157,62 @@ def _mk_manifest(provider="src-export", source_series_id="SPX", instrument_type=
     return {"provider": provider, "dataset": "manual_export", "series": [entry]}
 
 
-def _approved_manifest(unit="index_points"):
-    """A MANUAL pack that genuinely satisfies the existing admission gate.
+def _source_manifest(unit="index_points"):
+    """A source-facts-only semantic manifest (NEVER carries approval evidence).
 
-    Declares the MANUAL three-batch repeatability evidence, LEGAL approval
-    metadata and PIT grade so ``validate_data_file`` itself returns PASS (it is
-    never upgraded anywhere downstream).
+    It may describe data/usability properties (e.g. ``available_at_rule``,
+    ``vintage_rule``) but contains NO reviewer / approved_at / permission_scope /
+    repeatability_evidence / pit_grade. Approval evidence is supplied separately
+    via ``_approval_evidence()`` on the control side - never from the manifest.
     """
     m = _valid_manifest(unit=unit)
     entry = m["series"][0]
     entry.update(
         {
-            "permission_scope": "research",
-            "reviewer": "reviewer-1",
-            "approved_at": "2026-01-02T00:00:00+00:00",  # timezone-aware ISO
-            "pit_grade": "B",
-            "available_at_rule": "release_timestamp",  # B-grade evidence keyword
+            # data-usability properties (source facts), not approval evidence
+            "available_at_rule": "release_timestamp",  # B-grade evidence keyword lives in the approval overlay
             "vintage_rule": "first_release",
-            "repeatability_evidence": [
-                {
-                    "batch_id": "b1",
-                    "file_sha256": "a" * 64,
-                    "exported_at": "2026-01-01T10:00:00+00:00",
-                    "reviewer": "reviewer-1",
-                    "approved_at": "2026-01-02T00:00:00+00:00",
-                },
-                {
-                    "batch_id": "b2",
-                    "file_sha256": "b" * 64,
-                    "exported_at": "2026-01-02T10:00:00+00:00",
-                    "reviewer": "reviewer-1",
-                    "approved_at": "2026-01-02T00:00:00+00:00",
-                },
-                {
-                    "batch_id": "b3",
-                    "file_sha256": "c" * 64,
-                    "exported_at": "2026-01-03T10:00:00+00:00",
-                    "reviewer": "reviewer-1",
-                    "approved_at": "2026-01-02T00:00:00+00:00",
-                },
-            ],
         }
     )
     return m
+
+
+def _approval_evidence(series_id="US_EQ", source_series_id="SPX"):
+    """Explicit external approval/review overlay (control side, not user manifest).
+
+    Carries exactly what the existing authoritative gate requires for a genuine
+    PASS: MANUAL three-batch repeatability/STABILITY evidence, LEGAL approval
+    metadata and the PIT grade.
+    """
+    return {
+        "reviewer": "reviewer-1",
+        "approved_at": "2026-01-02T00:00:00+00:00",  # timezone-aware ISO
+        "permission_scope": "research",
+        "pit_grade": "B",
+        "repeatability_evidence": [
+            {
+                "batch_id": "b1",
+                "file_sha256": "a" * 64,
+                "exported_at": "2026-01-01T10:00:00+00:00",
+                "reviewer": "reviewer-1",
+                "approved_at": "2026-01-02T00:00:00+00:00",
+            },
+            {
+                "batch_id": "b2",
+                "file_sha256": "b" * 64,
+                "exported_at": "2026-01-02T10:00:00+00:00",
+                "reviewer": "reviewer-1",
+                "approved_at": "2026-01-02T00:00:00+00:00",
+            },
+            {
+                "batch_id": "b3",
+                "file_sha256": "c" * 64,
+                "exported_at": "2026-01-03T10:00:00+00:00",
+                "reviewer": "reviewer-1",
+                "approved_at": "2026-01-02T00:00:00+00:00",
+            },
+        ],
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -833,26 +847,25 @@ def test_multi_series_manual_pack_blocks(tmp_path):
 
 
 # --------------------------------------------------------------------------- #
-# 14. Helper fails closed when the authoritative gate is not a real PASS;
-#     incomplete MANUAL evidence (missing three-batch STABILITY) stays PARTIAL.
+# 14. A user manifest can NEVER self-approve: even if the user sneaks
+#     reviewer / approved_at / permission / repeatability evidence into the
+#     source-facts manifest, the authoritative gate stays PARTIAL (approval
+#     evidence is only accepted through the explicit control-side overlay,
+#     never the manifest), so registration fails closed and --write is BLOCKED.
 # --------------------------------------------------------------------------- #
-def test_registration_fails_when_authoritative_gate_is_partial(tmp_path):
+def test_user_manifest_approval_fields_cannot_pass_gate(tmp_path):
     from cross_asset.ingestion.manual_intake import build_manual_registration_result
 
     data = FIXTURES / "us_eq_market_price.csv"
-    # This manifest has NO three-batch repeatability evidence (just the
-    # standard test manifest without the required MANUAL admission evidence).
-    manifest_dict = _valid_manifest()
-    manifest_dict["series"][0].update(
-        {
-            "permission_scope": "research",
-            "reviewer": "reviewer-1",
-            "approved_at": "2026-01-02T00:00:00+00:00",
-        }
+    # User sneaks a full approval/evidence block into the semantic manifest.
+    m = _valid_manifest()
+    m["series"][0].update(_approval_evidence())  # reviewer/approved_at/permission_scope/pit_grade/repeatability
+    m["series"][0].update(
+        {"available_at_rule": "release_timestamp", "vintage_rule": "first_release"}
     )
-    manifest = _write_yaml(tmp_path, "manifest.yml", manifest_dict)
-    # 1. Validate/stage as normal - the gate will be PARTIAL (STABILITY UNKNOWN)
-    # because MANUAL three-batch evidence is missing.
+    manifest = _write_yaml(tmp_path, "manifest.yml", m)
+    db_path = tmp_path / "db.duckdb"
+
     staged = ingest_manual_pack(
         source_file=data,
         manifest_path=manifest,
@@ -860,10 +873,11 @@ def test_registration_fails_when_authoritative_gate_is_partial(tmp_path):
         sidecar_dir=tmp_path / "sidecar",
     )
     assert staged["status"] == "STAGED"
-    # validate_data_file gate will be PARTIAL (not PASS), not upgraded.
+    # Approval evidence in the manifest is IGNORED -> authoritative gate stays
+    # PARTIAL (not PASS); it is never upgraded downstream.
     assert staged["data_acceptance_gate"]["status"] == "PARTIAL"
-    # 2. The helper must fail closed before even getting to the registration
-    # primitive - it cannot upgrade a PARTIAL to PASS.
+
+    # Registration helper fails closed on the PARTIAL gate.
     contract_hash = staged["candidate_series"][0]["contract_hash"]
     with pytest.raises(ValueError, match="manual_registration_requires_authoritative_pass"):
         build_manual_registration_result(
@@ -876,27 +890,41 @@ def test_registration_fails_when_authoritative_gate_is_partial(tmp_path):
             approved_at=datetime(2026, 1, 1, tzinfo=UTC),
         )
 
+    # --write stays BLOCKED (no legitimately-registered PASS exists).
+    res = ingest_manual_pack(
+        source_file=data,
+        manifest_path=manifest,
+        raw_archive=ImmutableRawArchive(tmp_path / "raw"),
+        policies_payload=_write_policy(tmp_path),
+        database=str(db_path),
+        write=True,
+    )
+    assert res["status"] == "BLOCKED"
+    codes = {e["code"] for e in res["blockers"]}
+    assert "research_admission_not_satisfied" in codes
+
 
 # --------------------------------------------------------------------------- #
-# 15. Genuine PASS from authoritative gate (full MANUAL three-batch
-#     repeatability/STABILITY evidence) -> registration persists exact
-#     combined contract hash -> --write succeeds for exact contract, fails
-#     with changed semantics. This is the success path verification.
+# 15. Genuine success path: user source file + source-facts-only semantic
+#     manifest + SEPARATE explicit approval/review overlay (control side, never
+#     from the manifest). validate_data_file itself returns PASS ->
+#     registration persists the exact combined contract hash -> --write succeeds
+#     only for that contract, fails with changed material semantics.
 # --------------------------------------------------------------------------- #
-def test_registration_succeeds_when_authoritative_gate_is_pass(tmp_path):
+def test_registration_succeeds_with_external_approval_overlay(tmp_path):
     from cross_asset.storage.acceptance_registry import (
         candidate_registry_record,
         upsert_data_acceptance,
     )
 
     data = FIXTURES / "us_eq_market_price.csv"
-    # m1 - genuinely satisfies all admission gates (three-batch MANUAL,
-    # LEGAL approval, PIT grade) -> validate_data_file returns PASS.
-    m1 = _approved_manifest(unit="index_points")
-    manifest1 = _write_yaml(tmp_path, "manifest1.yml", m1)
     db_path = tmp_path / "db.duckdb"
+    # Source-facts-only manifest (no approval fields).
+    m1 = _source_manifest(unit="index_points")
+    manifest1 = _write_yaml(tmp_path, "manifest1.yml", m1)
 
-    # 1. manual validate/stage produces the combined contract hash.
+    # 1. Normal user validation/stage: the authoritative gate stays PARTIAL
+    #    because the user path carries no approval evidence (fail-closed).
     staged = ingest_manual_pack(
         source_file=data,
         manifest_path=manifest1,
@@ -904,19 +932,34 @@ def test_registration_succeeds_when_authoritative_gate_is_pass(tmp_path):
         sidecar_dir=tmp_path / "sidecar",
     )
     assert staged["status"] == "STAGED"
-    # authoritative gate (validate_data_file) itself returns PASS - all four
-    # gates are PASS, so registration is allowed. No upgrade anywhere.
-    assert staged["data_acceptance_gate"]["status"] == "PASS"
-    assert all(
-        v == "PASS" for v in staged["data_acceptance_gate"]["gates"].values()
-    )
-    contract_hash1 = staged["candidate_series"][0]["contract_hash"]
+    assert staged["data_acceptance_gate"]["status"] == "PARTIAL"
+    contract_hash = staged["candidate_series"][0]["contract_hash"]
+    raw_sha256 = staged["raw_sha256"]
 
-    # 2. Build registration payload and cross real registration primitives.
-    # The helper is allowed because the gate is already PASS.
+    # 2. Control side supplies the SEPARATE explicit approval/review overlay;
+    #    the existing authoritative gate then returns a genuine PASS itself.
+    parsed = read_manual_tabular(data)
+    candidates = build_candidate_records_from_rows(
+        raw_file=str(data), raw_sha256=raw_sha256, semantic_manifest=m1, rows=parsed["rows"]
+    )
+    ok_rows = [obs for rec in candidates for obs in rec["observations"]]
+    obs_dates = [o.get("observation_date") for o in ok_rows if o.get("observation_date")]
+    gate = run_data_acceptance_gate(
+        parsed_ok_rows=ok_rows,
+        semantic_manifest=m1,
+        raw_sha256=raw_sha256,
+        contract_hash=contract_hash,
+        first_obs_date=min(obs_dates),
+        last_obs_date=max(obs_dates),
+        approval_evidence=_approval_evidence(),
+    )
+    assert gate["status"] == "PASS"
+    assert all(v == "PASS" for v in gate["gates"].values())
+
+    # 3. Registration over the REAL primitives persists the exact combined hash.
     reg = build_manual_registration_result(
-        gate_result=staged["data_acceptance_gate"],
-        contract_hash=contract_hash1,
+        gate_result=gate,
+        contract_hash=contract_hash,
         series_id="US_EQ",
         provider="cmac-export",
         source_series_id="SPX",
@@ -929,9 +972,7 @@ def test_registration_succeeds_when_authoritative_gate_is_pass(tmp_path):
         row = upsert_data_acceptance(store, record)
     finally:
         store.close()
-    # 3. Registry PASS holds the EXACT combined contract hash; pit_grade
-    # matches what was declared in the manifest (no B forced).
-    assert row["manifest_hash"] == contract_hash1
+    assert row["manifest_hash"] == contract_hash
     assert row["pit_grade"] == "B"
 
     # 4. --write succeeds only for that exact contract.
@@ -945,9 +986,8 @@ def test_registration_succeeds_when_authoritative_gate_is_pass(tmp_path):
     )
     assert res1["status"] == "ADMITTED"
 
-    # 5. Same raw bytes, changed material semantics (unit changed) -> old PASS
-    #    (with different contract hash) cannot be reused, write BLOCKED.
-    m2 = _approved_manifest(unit="tens_of_index_points")
+    # 5. Same raw bytes, changed material semantics (unit) -> old PASS fails.
+    m2 = _source_manifest(unit="tens_of_index_points")
     manifest2 = _write_yaml(tmp_path, "manifest2.yml", m2)
     res2 = ingest_manual_pack(
         source_file=data,
