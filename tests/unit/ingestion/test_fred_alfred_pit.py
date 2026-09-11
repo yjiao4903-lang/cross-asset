@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from itertools import pairwise
 
 import pytest
 
@@ -8,9 +9,54 @@ from cross_asset.ingestion.fred_alfred_pit import (
     MODE_INITIAL_RELEASE,
     MODE_REVISED_LATEST,
     FredPITError,
+    chunk_vintage_window,
     parse_observations,
     snapshot_asof,
 )
+
+
+def test_chunk_vintage_window_covers_every_vintage_exactly_once():
+    # Provider-limit regression: ALFRED realtime windows cap at 2000 vintage
+    # dates. Use a genuinely unique set of 2172 dates (matching the observed
+    # 2017-11-21..2026-08-28 span) so the helper must split into multiple chunks.
+    base = date(2017, 11, 21)
+    vintages = [date.fromordinal(base.toordinal() + i) for i in range(2172)]
+    per_chunk = 500
+    chunks = chunk_vintage_window(vintages, per_chunk=per_chunk)
+    assert len(chunks) > 1  # the 2000-vintage cap forces multiple requests
+
+    covered = []
+    for start, end in chunks:
+        assert start <= end
+        in_chunk = [v for v in vintages if start <= v <= end]
+        assert len(in_chunk) <= per_chunk
+        covered.extend(in_chunk)
+    # every supplied vintage covered exactly once
+    assert len(covered) == len(set(covered)) == len(vintages) == 2172
+    assert sorted(covered) == sorted(vintages)
+    # chunks do not overlap and are strictly increasing
+    for prev, cur in pairwise(chunks):
+        assert prev[1] < cur[0]
+    # first/last boundaries are exact
+    assert chunks[0][0] == min(vintages)
+    assert chunks[-1][1] == max(vintages)
+
+
+def test_chunk_vintage_window_sorts_dedupes_and_splits_on_limit():
+    vintages = ["2020-02-01", "2020-01-01", "2020-01-01", "2020-03-01", "2020-04-01"]
+    chunks = chunk_vintage_window(vintages, per_chunk=2)
+    assert chunks == [
+        (date(2020, 1, 1), date(2020, 2, 1)),
+        (date(2020, 3, 1), date(2020, 4, 1)),
+    ]
+
+
+def test_chunk_vintage_window_empty_and_invalid_per_chunk():
+    assert chunk_vintage_window([]) == []
+    with pytest.raises(ValueError):
+        chunk_vintage_window(["2020-01-01"], per_chunk=0)
+    with pytest.raises(ValueError):
+        chunk_vintage_window(["not-a-date"])
 
 
 def _row(value, realtime_start, realtime_end="9999-12-31", obs_date="2020-01-01"):

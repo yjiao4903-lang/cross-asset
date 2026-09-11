@@ -59,6 +59,31 @@ def conservative_available_at(vintage_date: date) -> datetime:
     return datetime.combine(vintage_date + timedelta(days=2), time.min, tzinfo=UTC)
 
 
+def chunk_vintage_window(
+    vintages: Iterable[str | date],
+    *,
+    per_chunk: int = 600,
+) -> list[tuple[date, date]]:
+    """Split a realtime/vintage window into bounded closed intervals.
+
+    ALFRED full-vintage requests (ALL_REALTIME_PERIODS) reject a realtime window
+    with more than 2000 vintage dates (observed: 2017-11-21..2026-08-28 spans 2172
+    vintages for DGS10/DFII10). Each returned interval is cut exactly on vintage
+    dates so every vintage belongs to exactly one closed interval, preserving the
+    full matrix. Callers issue one observations request per interval.
+    """
+    if per_chunk < 1:
+        raise ValueError("per_chunk_must_be_positive")
+    values = sorted({_date(v, field="vintage") for v in vintages})
+    if not values:
+        return []
+    chunks: list[tuple[date, date]] = []
+    n = len(values)
+    for i in range(0, n, per_chunk):
+        chunks.append((values[i], values[min(i + per_chunk, n) - 1]))
+    return chunks
+
+
 def _numeric(raw: Any) -> float | None:
     text = str(raw).strip()
     if text in {"", ".", "nan", "NaN", "None"}:
@@ -185,6 +210,7 @@ __all__ = [
     "MODE_REVISED_LATEST",
     "FredPITError",
     "VintageObservation",
+    "chunk_vintage_window",
     "conservative_available_at",
     "parse_observations",
     "records_to_frame",

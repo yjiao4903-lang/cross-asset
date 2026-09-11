@@ -226,6 +226,17 @@ class FredAlfredClient:
                     fetched_at=fetched_at,
                     ingested_at=datetime.now(UTC),
                     cache_hit=True,
+                    raw_archive_path=(
+                        self.raw_archive.write(
+                            "fred_alfred",
+                            fingerprint,
+                            raw,
+                            captured_at=fetched_at,
+                            extension="json",
+                        )
+                        if self.raw_archive is not None
+                        else None
+                    ),
                 )
 
         request_params = dict(clean_params)
@@ -415,6 +426,8 @@ class FredAlfredClient:
         *,
         observation_start: str,
         observation_end: str,
+        realtime_start: str = "1776-07-04",
+        realtime_end: str = "9999-12-31",
         use_cache: bool = True,
     ) -> FredPayload:
         return self.request_json(
@@ -423,8 +436,8 @@ class FredAlfredClient:
                 "series_id": provider_series_id,
                 "observation_start": observation_start,
                 "observation_end": observation_end,
-                "realtime_start": "1776-07-04",
-                "realtime_end": "9999-12-31",
+                "realtime_start": realtime_start,
+                "realtime_end": realtime_end,
                 "output_type": 1,
             },
             use_cache=use_cache,
