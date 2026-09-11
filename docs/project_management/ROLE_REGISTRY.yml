@@ -1,4 +1,4 @@
-version: "2026-09-11-v3-four-window"
+version: "2026-09-11-v4-lightweight-control"
 status: ACTIVE
 canonical_control_issue: 35
 project_profile: PERSONAL_INTERNAL_WORKBENCH
@@ -18,16 +18,30 @@ note: >-
 roles:
   WEB-CONTROL:
     window: online
-    description: sole project controller; not the default implementation executor
+    description: sole project controller; reduce decision/coordination cost rather than add process
     branch_prefixes: ["control/", "governance/"]
     owns:
       - roadmap_priority
+      - task_value_judgement
       - task_dispatch_and_scope
       - business_boundaries
       - architecture_schema_contract_decisions
       - cross_task_coordination
       - final_acceptance_and_merge
       - explicit_high_risk_authorization
+    default_actions:
+      - DECIDE_IF_WORK_IS_WORTH_DOING
+      - ROUTE_ONLINE_BEFORE_LOCAL
+      - DISPATCH_ONCE_TO_COMPLETION_BOUNDARY
+      - REQUIRE_MINIMUM_SUFFICIENT_EVIDENCE
+      - ACCEPT_OR_RETURN_CONCRETE_DEFECTS
+      - CLOSE_TASK_WITH_RESIDUAL_RISK_RECORDED
+    must_not:
+      - CREATE_INTERMEDIATE_APPROVAL_GATES_FOR_NORMAL_WORK
+      - USE_USER_AS_AGENT_MESSAGE_BUS
+      - REVERIFY_UNCHANGED_FACTS
+      - ROUTE_ONLINE_CAPABLE_WORK_TO_LOCAL_BY_DEFAULT
+      - REQUIRE_FULL_ENTERPRISE_GOVERNANCE
     may_merge: true
     may_change_scope: true
     may_change_architecture: true
@@ -38,7 +52,7 @@ roles:
     description: default online end-to-end implementation executor
     branch_prefixes: ["gpt/"]
     default_routing: ONLINE_DEFAULT
-    expected_loop: IMPLEMENT_TEST_SMOKE_HANDOFF
+    expected_loop: IMPLEMENT_TEST_SMOKE_PR_FIX_HANDOFF
     may_merge: false
     may_change_scope: false
     may_change_architecture: false
@@ -92,12 +106,25 @@ rules:
   online_execution_preferred: true
   local_execution_only_when_environment_requires_it: true
   ordinary_task_target_user_relays_max: 2
+  ordinary_task_intermediate_control_approval_required: false
+  ordinary_task_executor_should_continue_until_control_boundary: true
 
 normal_acceptance:
   - target_function_works
   - directly_related_regression_passes
   - business_semantics_correct
   - no_obvious_core_flow_breakage
+
+extra_control_only_if:
+  - DESTRUCTIVE_DB_WRITE
+  - DB_RESTORE
+  - SCHEMA_MIGRATION
+  - IRREVERSIBLE_EXTERNAL_WRITE
+  - CREDENTIAL_OR_FUNDS_HANDLING
+  - UNKNOWN_PROCESS_TERMINATION
+  - MATERIAL_PUBLIC_NETWORK_EXPOSURE
+  - MATERIAL_CONCURRENT_OVERLAP
+  - MATERIAL_RESEARCH_MISSTATEMENT_RISK
 
 risk_controls:
   UNKNOWN_PROCESS_KILL: FORBIDDEN
