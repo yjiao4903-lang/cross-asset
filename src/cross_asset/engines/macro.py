@@ -117,11 +117,15 @@ def build_macro_state(
         observation
         for observation in observations
         if _utc(_get(observation, "available_at")) <= decision_time
-        and _get(observation, "series_id") in requested_series
+    ]
+    requested_released = [
+        observation
+        for observation in released
+        if _get(observation, "series_id") in requested_series
     ]
 
     by_series = {}
-    for observation in released:
+    for observation in requested_released:
         by_series.setdefault(_get(observation, "series_id"), []).append(observation)
     by_series = {
         series_id: _latest_revision_snapshot(rows)
