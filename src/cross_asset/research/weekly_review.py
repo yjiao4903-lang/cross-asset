@@ -28,13 +28,30 @@ def compare_weeks(current: dict[str, Any], prior: dict[str, Any] | None) -> list
     if not prior:
         return [
             {
-                "label": "prior_week",
+                "label": "prior_snapshot",
                 "value": "未提供上周快照",
                 "unit": "status",
                 "period": current.get("week_end"),
                 "source": "weekly_review",
             }
         ]
+    try:
+        current_end = _as_date(current.get("week_end"))
+        prior_end = _as_date(prior.get("week_end"))
+    except (TypeError, ValueError):
+        current_end = None
+        prior_end = None
+    if current_end is None or prior_end is None or (current_end - prior_end).days != 7:
+        return [
+            {
+                "label": "snapshot_comparability",
+                "value": "NON_ADJACENT_SNAPSHOT",
+                "unit": "status",
+                "period": f"{prior.get('week_end', 'missing')} -> {current.get('week_end', 'missing')}",
+                "source": "weekly_review",
+            }
+        ]
+
     prior_map = {item["series_id"]: item for item in prior.get("facts", [])}
     out = []
     for item in current.get("facts", []):
@@ -74,7 +91,7 @@ def _limitations(table: dict[str, Any]) -> str:
     if table["missing_levels"]:
         parts.append("缺最新水平: " + ", ".join(table["missing_levels"]))
     if table["missing_lookbacks"]:
-        parts.append("缺回溯窗口: " + ", ".join(table["missing_lookbacks"]))
+        parts.append("缺/不可比回溯窗口: " + ", ".join(table["missing_lookbacks"]))
     if table.get("unverified_sources"):
         parts.append("来源未核验: " + ", ".join(table["unverified_sources"]))
     parts.append("时钟为北京时间；周复盘不产生交易建议，也不改战略权重。")
@@ -93,7 +110,11 @@ def _market_facts(table: dict[str, Any], changes: list[dict[str, Any]]) -> list[
                 "period": item.get("observation_date") or item["period"],
                 "source": (
                     f"{item['source']}; series_id={item['series_id']}; "
-                    f"usage={item.get('usage', 'PERSONAL_WEEKLY')}; 1w={change_1w.get('value')}"
+                    f"usage={item.get('usage', 'PERSONAL_WEEKLY')}; "
+                    f"source_status={item.get('source_status', 'UNVERIFIED')}; "
+                    f"1w={change_1w.get('value')}; 1w_status={change_1w.get('status')}; "
+                    f"1w_actual_prior_date={change_1w.get('actual_prior_date')}; "
+                    f"1w_slippage_days={change_1w.get('slippage_days')}"
                 ),
             }
         )
@@ -182,7 +203,7 @@ def run_weekly_review(
         next_check=(week_end(review_date) + timedelta(days=7)).isoformat(),
         research_question="本周可见价格/收益率事实是否足够支持人工判断？",
         supporting_evidence="见事实表与 requested/source/effective cutoff；缺水平保持 DATA_BLOCKED。",
-        counterevidence="缺回溯为 PARTIAL；未知不等于零。默认不行动。",
+        counterevidence="缺/不可比回溯为 PARTIAL；未知不等于零。默认不行动。",
     )
     brief_path = Path(brief)
     appendix = "\n".join(
