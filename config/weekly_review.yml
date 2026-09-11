@@ -1,6 +1,6 @@
-version: "0.2"
+version: "0.3"
 status: DEVELOPMENT_PRIOR
-require_source_admission: true
+require_provider_match: true
 purpose: Personal weekly review cutoff and fact-table contract. Not a trading schedule.
 clock:
   timezone: Asia/Shanghai
@@ -10,8 +10,8 @@ week_end_weekday: Friday
 review_weekday: Saturday
 review_local_time: "12:00"
 lookbacks:
-  week: {days: 7, label: 1w}
-  month: {days: 21, label: 21d_calendar}
+  week: {days: 7, label: 1w, max_slippage_days: 3}
+  month: {days: 21, label: 21d_calendar, max_slippage_days: 3}
 required_series:
   - {series_id: CN_EQ_LARGE, asset_id: CN_EQ, kind: price, unit: index_points, max_age_days: 7, usage: PERSONAL_WEEKLY, provider: manual}
   - {series_id: HK_EQ, asset_id: HK_EQ, kind: price, unit: index_points, max_age_days: 7, usage: PERSONAL_WEEKLY, provider: manual}
@@ -40,8 +40,10 @@ notes:
   - 观察日仍按各市场交易日（周五周终），复盘截止默认为次日周六 12:00 北京时间。
   - 周五北京晚间看不到当周美股/COMEX 收盘；周六 12:00 可以看到。
   - Missing required latest level fails closed as DATA_BLOCKED.
-  - The month label is explicitly 21d_calendar; actual prior date is retained, never presented as a natural month or trading-month return.
+  - Lookback target_date, actual_prior_date and slippage_days are disclosed; comparisons exceeding max_slippage_days are NON_COMPARABLE/PARTIAL and never zero-filled.
+  - The month label is explicitly 21d_calendar; it is never presented as a natural month or trading-month return.
   - Missing lookback windows are PARTIAL, never zero-filled.
+  - Provider identity match is reported only as PROVIDER_MATCHED; it is not formal admission or RESEARCH_ADMISSIBLE.
   - Yield series report level change in basis points, not percent return.
   - This contract does not change strategic weights or authorize trades.
   - Overlay series are declared only; this acceptance does not score them, treat missing overlay as DATA_BLOCKED, or fill zeros.
