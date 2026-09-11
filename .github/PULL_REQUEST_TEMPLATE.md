@@ -1,6 +1,6 @@
 ## Task
 
-- Role: <!-- WEB-CONTROL | GPT-DEV | GROK-DEV | LOCAL-DEV -->
+- Role: <!-- WEB-CONTROL | GPT-DEV | LOCAL-DEV-A | LOCAL-DEV-B -->
 - Task / Issue: <!-- #number or compact workstream id -->
 - Goal: <!-- business outcome this PR delivers -->
 

@@ -9,8 +9,8 @@ The active four-window model is:
 
 - `WEB-CONTROL`
 - `GPT-DEV`
-- `GROK-DEV`
-- `LOCAL-DEV`
+- `LOCAL-DEV-A`
+- `LOCAL-DEV-B`
 
 Current canonical rules:
 

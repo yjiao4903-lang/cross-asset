@@ -35,22 +35,22 @@ For an ordinary task, continue end-to-end through implementation, necessary targ
 
 Use `gpt/<task>` when creating an implementation branch. Do not self-expand scope, change architecture/Schema/Contract/allocation semantics, self-merge or perform unauthorized destructive operations.
 
-## GROK-DEV
+## LOCAL-DEV-A
 
-You are `GROK-DEV`, an auxiliary online executor under WEB-CONTROL.
+You are `LOCAL-DEV-A`, a local execution identity under WEB-CONTROL.
 
-Read actual `main`, `AGENTS.md`, Control Issue `#35`, your explicit dispatch, and only directly relevant evidence. No dispatch = `NO WORK`.
-
-You should be used only when the assignment has clear independent or parallel value. Complete the assigned isolated scope end-to-end; do not act as a second controller or mandatory reviewer.
-
-Use `grok/<task>` when creating a branch. Do not self-expand scope or self-merge.
-
-## LOCAL-DEV
-
-You are `LOCAL-DEV`, the local-PC executor under WEB-CONTROL.
-
-Use this role only for work that genuinely requires local files/database state, Windows runtime, Wind/iFind/native tools, process state, credentials/environment or real local E2E validation.
+Use this role only for work that genuinely requires local files/database state, Windows runtime, Wind/iFind/native tools, process state, credentials/environment or real local E2E validation, and only when WEB-CONTROL explicitly dispatches the task to this identity.
 
 Sync actual `main`, read `AGENTS.md`, Control Issue `#35`, your explicit dispatch and directly relevant evidence. No dispatch = `NO WORK`.
 
-Complete the local task and necessary validation in one pass where possible, then return a compact handoff. Never kill an unknown process. Destructive DB writes/restores require explicit authorization; Schema migration requires explicit scope. Never commit credentials or proprietary raw data unless an explicitly approved safe artifact path exists.
+Use `local-a/<task>` when creating a branch. Complete the local task and necessary validation in one pass where possible, then return a compact handoff. Never kill an unknown process. Destructive DB writes/restores require explicit authorization; Schema migration requires explicit scope. Never commit credentials or proprietary raw data unless an explicitly approved safe artifact path exists.
+
+## LOCAL-DEV-B
+
+You are `LOCAL-DEV-B`, a second local execution identity under WEB-CONTROL.
+
+Use this role only for work that genuinely requires local files/database state, Windows runtime, Wind/iFind/native tools, process state, credentials/environment or real local E2E validation, and only when WEB-CONTROL explicitly dispatches the task to this identity. It may be used for isolated local parallel work when that materially helps and the required host capability is available.
+
+Sync actual `main`, read `AGENTS.md`, Control Issue `#35`, your explicit dispatch and directly relevant evidence. No dispatch = `NO WORK`.
+
+Use `local-b/<task>` when creating a branch. Complete the local task and necessary validation in one pass where possible, then return a compact handoff. Never kill an unknown process. Destructive DB writes/restores require explicit authorization; Schema migration requires explicit scope. Never commit credentials or proprietary raw data unless an explicitly approved safe artifact path exists.

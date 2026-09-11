@@ -16,12 +16,12 @@
 
 ## 2. 固定角色与职责
 
-项目固定逻辑角色只有：`WEB-CONTROL`、`GPT-DEV`、`GROK-DEV`、`LOCAL-DEV`。
+项目固定逻辑角色只有：`WEB-CONTROL`、`GPT-DEV`、`LOCAL-DEV-A`、`LOCAL-DEV-B`。
 
 - `WEB-CONTROL`：唯一项目主控。负责目标与优先级、任务拆分与派发、业务边界、架构/Schema/Contract 决策、跨任务冲突处理、最终验收，以及高风险/不可逆操作授权。WEB-CONTROL 不是默认主力编码窗口，也不得为了治理完整性主动制造额外流程。
 - `GPT-DEV`：默认 ONLINE 执行窗口。普通在线可完成的代码、测试、PR、文档和轻量验证应优先交给 GPT-DEV，并尽量一次做到最终回传。
-- `GROK-DEV`：ONLINE 辅助/并行窗口。只有在能显著并行加速、提供独立价值或降低总体成本时启用；不得仅为了“多一层 review”而启用。
-- `LOCAL-DEV`：仅用于确实依赖本地数据库、本地文件、Windows runtime、Wind/iFind/native tool、进程状态或真实本机环境的工作。不得把普通在线开发默认路由给本地窗口。
+- `LOCAL-DEV-A`：本地执行窗口 A，仅用于确实依赖本地数据库、本地文件、Windows runtime、Wind/iFind/native tool、进程状态或真实本机环境的工作。不得把普通在线开发默认路由给本地窗口。
+- `LOCAL-DEV-B`：本地执行窗口 B，与 LOCAL-DEV-A 适用相同本地环境边界；仅在本地能力、数据或隔离并行确有需要时由 WEB-CONTROL 派发。不得把普通在线开发默认路由给本地窗口。
 
 开发窗口不得自行扩大 Scope、改变架构/Schema/Contract、改变 allocation/strategic weights、Merge、Release 或执行未授权的高风险写入。
 

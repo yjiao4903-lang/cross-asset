@@ -9,7 +9,7 @@ assignees: ""
 ## One-shot dispatch
 
 - Task / workstream:
-- Owner: <!-- GPT-DEV | GROK-DEV | LOCAL-DEV -->
+- Owner: <!-- GPT-DEV | LOCAL-DEV-A | LOCAL-DEV-B -->
 - Goal:
 - Scope:
 - Business boundaries / must-not-change:
