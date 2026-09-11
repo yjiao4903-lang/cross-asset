@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 import requests
@@ -73,6 +74,14 @@ def test_client_cache_hash_and_raw_archive_are_secret_free(tmp_path):
     assert first.raw_sha256 == second.raw_sha256
     assert first.request_fingerprint == second.request_fingerprint
     assert first.raw_archive_path is not None
+    # Cache-hit payloads must keep the every-payload-has-immutable-raw-archive
+    # invariant (regression for the full-vintage PIT admission path).
+    assert second.raw_archive_path is not None
+    assert Path(second.raw_archive_path).is_file()
+    assert (
+        Path(second.raw_archive_path).read_bytes()
+        == Path(first.raw_archive_path).read_bytes()
+    )
     assert len(session.calls) == 1
     assert not any(
         "secret-key" in path.read_text(encoding="utf-8")
@@ -169,3 +178,20 @@ def test_request_modes_bind_official_vintage_parameters():
     assert second_params["output_type"] == 4
     assert third_params["realtime_start"] == "1776-07-04"
     assert third_params["realtime_end"] == "9999-12-31"
+
+
+def test_fetch_all_realtime_periods_sends_bounded_realtime_window():
+    session = Session([Response({"observations": []})])
+    client = FredAlfredClient(api_key="secret", session=session)
+    client.fetch_all_realtime_periods(
+        "DGS10",
+        observation_start="2018-01-01",
+        observation_end="2020-12-31",
+        realtime_start="2017-11-21",
+        realtime_end="2019-06-12",
+        use_cache=False,
+    )
+    params = session.calls[0][1]["params"]
+    assert params["realtime_start"] == "2017-11-21"
+    assert params["realtime_end"] == "2019-06-12"
+    assert params["output_type"] == 1

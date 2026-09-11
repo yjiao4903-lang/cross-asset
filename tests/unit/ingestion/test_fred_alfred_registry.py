@@ -41,6 +41,7 @@ def test_registry_uses_audited_provider_ids_not_derived_spread_ids():
     assert registry.series["US_TSY_30Y"].provider_series_id == "DGS30"
     assert registry.series["US_NFCI"].provider_series_id == "NFCI"
     assert registry.series["USD_BROAD_INDEX"].provider_series_id == "DTWEXBGS"
+    assert registry.series["US_REAL_10Y"].provider_series_id == "DFII10"
     assert "US_10Y_2Y_SPREAD" not in registry.series
     assert "US_10Y_3M_SPREAD" not in registry.series
 
