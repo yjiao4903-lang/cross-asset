@@ -3,8 +3,71 @@
 from __future__ import annotations
 
 import json
+from functools import wraps
 
 import typer
+
+_RESERVED_TOP_LEVEL_COMMANDS = frozenset(
+    {
+        "build-features",
+        "score-market",
+        "score-macro",
+        "score-style",
+        "score-assets",
+        "allocate",
+        "replay",
+    }
+)
+_FIXTURE_ONLY_TOP_LEVEL_COMMANDS = frozenset({"data-health", "report-daily", "backtest"})
+
+
+def _install_cli_truthfulness_guards(app: typer.Typer) -> None:
+    """Make subsequently registered reserved/fixture commands truthful.
+
+    The top-level CLI imports and registers PERSONAL_WEEKLY commands before the
+    legacy placeholder commands are declared. Wrapping ``app.command`` here
+    keeps that existing registration order intact while ensuring those later
+    commands cannot report success for work they do not implement.
+    """
+
+    original_command = app.command
+
+    def truthful_command(name=None, *args, **kwargs):
+        decorator = original_command(name, *args, **kwargs)
+
+        def register(func):
+            command_name = name or func.__name__.replace("_", "-")
+            if command_name in _RESERVED_TOP_LEVEL_COMMANDS:
+                @wraps(func)
+                def reserved(*func_args, **func_kwargs):
+                    del func_args, func_kwargs
+                    typer.echo(
+                        f"{command_name}: NOT_IMPLEMENTED / RESERVED; "
+                        "interface only, no pipeline work was executed."
+                    )
+                    raise typer.Exit(1)
+
+                reserved.__doc__ = (
+                    "NOT_IMPLEMENTED / RESERVED interface. Invoking this command "
+                    "exits non-zero; the underlying pipeline stage is not implemented."
+                )
+                return decorator(reserved)
+
+            if command_name in _FIXTURE_ONLY_TOP_LEVEL_COMMANDS:
+                @wraps(func)
+                def fixture_only(*func_args, **func_kwargs):
+                    return func(*func_args, **func_kwargs)
+
+                fixture_only.__doc__ = (
+                    "FIXTURE_ONLY / offline research command. Research validity is not claimed."
+                )
+                return decorator(fixture_only)
+
+            return decorator(func)
+
+        return register
+
+    app.command = truthful_command
 
 
 def register_weekly_commands(app: typer.Typer) -> None:
@@ -192,3 +255,5 @@ def register_weekly_commands(app: typer.Typer) -> None:
                 ensure_ascii=False,
             )
         )
+
+    _install_cli_truthfulness_guards(app)
