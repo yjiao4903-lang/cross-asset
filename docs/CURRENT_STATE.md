@@ -41,13 +41,31 @@ Do not repeat full-history scans or re-check unchanged facts.
 ## Default workflow
 
 ```text
-one complete dispatch
--> implementation + necessary tests/regression/smoke
+WEB-CONTROL decides the task is worth doing
+-> one complete dispatch
+-> executor implementation + necessary tests/regression/smoke + PR/fixes where useful
 -> one final handoff
--> WEB-CONTROL acceptance / concrete fixes / merge
+-> WEB-CONTROL acceptance / concrete defect return / merge
 ```
 
+For ordinary work, WEB-CONTROL should normally appear only at the beginning and end of this loop.
+
 The historical `WG0-WG9` collaboration pipeline is not required for ordinary new work. Domain/research Gates remain applicable only where their underlying business/data risk is relevant.
+
+## Default routing
+
+```text
+online-capable work -> GPT-DEV
+local environment/data/files/Windows/native tooling/real local E2E required -> LOCAL-DEV-A or LOCAL-DEV-B
+```
+
+Do not route work locally merely for parallelism if the online executor can finish it more cheaply and simply.
+
+## When extra control is allowed
+
+Extra approval/checking is justified only by a direct material risk such as destructive DB write/restore, Schema migration, irreversible external write, credential/funds handling, unknown-process termination, material public-network exposure, material concurrent overlap, or evidence failure that could materially misstate research conclusions.
+
+Use the smallest control that addresses the actual risk; do not propagate it to unrelated tasks.
 
 ## Dispatch rule
 
