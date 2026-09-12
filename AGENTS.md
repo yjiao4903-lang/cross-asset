@@ -16,10 +16,11 @@
 
 ## 2. 固定角色与职责
 
-项目固定逻辑角色只有：`WEB-CONTROL`、`GPT-DEV`、`LOCAL-DEV-A`、`LOCAL-DEV-B`。
+项目固定逻辑角色为：`WEB-CONTROL`、`GPT-DEV`、`GROK-DEV`、`LOCAL-DEV-A`、`LOCAL-DEV-B`。
 
 - `WEB-CONTROL`：唯一项目主控。负责目标与优先级、任务拆分与派发、业务边界、架构/Schema/Contract 决策、跨任务冲突处理、最终验收，以及高风险/不可逆操作授权。WEB-CONTROL 不是默认主力编码窗口，也不得为了治理完整性主动制造额外流程。
-- `GPT-DEV`：默认 ONLINE 执行窗口。普通在线可完成的代码、测试、PR、文档和轻量验证应优先交给 GPT-DEV，并尽量一次做到最终回传。
+- `GPT-DEV`：默认 ONLINE 执行窗口之一。普通在线可完成的代码、测试、PR、文档和轻量验证可优先交给 GPT-DEV，并尽量一次做到最终回传。
+- `GROK-DEV`：ONLINE 并行开发窗口。适用于与 GPT-DEV/LOCAL-DEV 当前任务无实质文件或逻辑面冲突的在线代码修复、PR 对齐、测试、CI 修复和独立功能批次。GROK-DEV 与 GPT-DEV 权限边界相同：不得自行扩大 Scope、改变架构/Schema/Contract、改变 allocation/strategic weights、Merge 或 Release；必须从 WEB-CONTROL 的 GitHub dispatch 开始，并通过独立 branch/PR 回传。
 - `LOCAL-DEV-A`：本地执行窗口 A，仅用于确实依赖本地数据库/文件、用户提供的手工源文件、Windows runtime、经批准的本地/native tooling、进程状态或真实本机 E2E 验证的工作。不得把普通在线开发默认路由给本地窗口。
 - `LOCAL-DEV-B`：本地执行窗口 B，与 LOCAL-DEV-A 适用相同本地环境边界；仅在本地能力、数据或隔离并行确有需要时由 WEB-CONTROL 派发。不得把普通在线开发默认路由给本地窗口。
 
@@ -32,7 +33,7 @@
 WEB-CONTROL 对每个新需求按以下顺序处理，普通任务不得额外增加审批层：
 
 1. **先判断是否值得做**：是否直接提高可用功能、正确性、稳定性或明显降低维护/开发成本；否则不制造任务。
-2. **再判断执行位置**：能在线完成的默认交给 `GPT-DEV`；只有本地环境/文件/数据库/Windows/native tooling/真实本机 E2E 是必要条件时才交给 `LOCAL-DEV-A/B`。
+2. **再判断执行位置**：能在线完成的默认在 `GPT-DEV` / `GROK-DEV` 之间按优先级、文件/逻辑面隔离和当前负载分配；只有本地环境/文件/数据库/Windows/native tooling/真实本机 E2E 是必要条件时才交给 `LOCAL-DEV-A/B`。
 3. **一次派到终点**：dispatch 一次写清目标、范围、边界、必要验证、失败返回方式与最终 handoff；执行窗口自行连续完成实现、必要测试、smoke、PR 和直接相关修复。
 4. **普通任务不设中间 Gate**：WEB-CONTROL 不要求分析批准、单测批准、smoke 批准、release-prep 批准等阶段性回报。
 5. **只在真实高风险时加控制**：仅对 destructive DB write/restore、Schema migration、不可逆外部写入、凭据/资金、未知进程、明确公网暴露、实质并发冲突或会严重误导研究结论的证据问题增加最小必要检查。
@@ -99,7 +100,7 @@ GitHub 是项目协作事实源；聊天窗口是临时执行单元。
 
 默认优先：targeted tests + 直接相关 regression + 必要 smoke。只有跨模块、高风险、平台相关或准备重要合并时，才要求更广的测试。
 
-CI 是证据，不是单独 Gate。CI 不可用但本地/运行时证据已经足够时，可记录残余风险后继续推进。
+CI 是证据，不是单独 Gate。CI 不可用但本地/运行时证据已经足够时，可记录残余风险后继续推进；CI 可用时，代码 PR 默认应取得与任务风险相匹配的 GitHub Actions 证据后再由 WEB-CONTROL 验收。
 
 PR head 在最终合并前必须确认没有意外变化，但不为普通任务单独建立“exact-head evidence Gate”。
 
