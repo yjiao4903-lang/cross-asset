@@ -18,7 +18,10 @@ _RESERVED_TOP_LEVEL_COMMANDS = frozenset(
         "replay",
     }
 )
-_FIXTURE_ONLY_TOP_LEVEL_COMMANDS = frozenset({"data-health", "report-daily", "backtest"})
+_FIXTURE_ONLY_TOP_LEVEL_COMMANDS = frozenset({"backtest"})
+_WORKBENCH_COMMANDS = frozenset(
+    {"shadow-run", "explain-run", "data-health", "report-daily"}
+)
 
 
 def _install_cli_truthfulness_guards(app: typer.Typer) -> None:
@@ -37,6 +40,36 @@ def _install_cli_truthfulness_guards(app: typer.Typer) -> None:
 
         def register(func):
             command_name = name or func.__name__.replace("_", "-")
+            if command_name in _WORKBENCH_COMMANDS:
+                from .operations.workbench_cli import (
+                    data_health_command,
+                    explain_run_command,
+                    report_daily_command,
+                    shadow_run_command,
+                )
+
+                replacement = {
+                    "shadow-run": shadow_run_command,
+                    "explain-run": explain_run_command,
+                    "data-health": data_health_command,
+                    "report-daily": report_daily_command,
+                }[command_name]
+                replacement.__name__ = func.__name__
+                return decorator(replacement)
+            if command_name == "run-daily":
+
+                @wraps(func)
+                def run_daily_guard(*func_args, **func_kwargs):
+                    source = func_kwargs.get("macro_source", "legacy")
+                    if str(source).strip().lower() == "legacy":
+                        typer.echo(
+                            "run-daily: interface reserved; NOT_IMPLEMENTED / RESERVED; "
+                            "no pipeline work was executed."
+                        )
+                        raise typer.Exit(1)
+                    return func(*func_args, **func_kwargs)
+
+                return decorator(run_daily_guard)
             if command_name in _RESERVED_TOP_LEVEL_COMMANDS:
                 @wraps(func)
                 def reserved(*func_args, **func_kwargs):
