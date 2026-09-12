@@ -412,5 +412,6 @@ def test_cli_legacy_behavior_remains_reserved():
         app,
         ["run-daily", "--macro-source", "legacy"],
     )
-    assert result.exit_code == 0
+    assert result.exit_code != 0
     assert "interface reserved" in result.output
+    assert "NOT_IMPLEMENTED" in result.output
