@@ -26,6 +26,12 @@ def _live_success(run_id="wb-live-1") -> WorkbenchRun:
         allocation_status="ACTIVE",
         weights={"CN_EQ": 0.4, "CASH": 0.6},
         components={"allocation": {"status": "AVAILABLE", "value": {"CN_EQ": 0.4}}},
+        provenance={
+            "formal_gate": True,
+            "formal_query": "latest_formal_observations_asof",
+            "required_usage_status": "LIVE_VERIFIED",
+            "macro_source": "marco",
+        },
     )
 
 
@@ -116,18 +122,8 @@ def test_missing_component_is_data_gap_not_zero():
     assert view["value"] is None
 
 
-def test_persist_from_cli_payload_records_only_live_success(tmp_path: Path):
-    blocked = persist_from_cli_payload(
-        {"status": "DATA_BLOCKED", "allocation_status": "DATA_BLOCKED", "warnings": ["stale"]},
-        run_kind="daily",
-        source_mode="LIVE",
-        root=tmp_path,
-    )
-    assert blocked.status == "DATA_BLOCKED"
-    assert load_formal_previous_valid(tmp_path) is None
-    loaded = load_run(blocked.run_id, tmp_path)
-    assert loaded.blockers
-    success = persist_from_cli_payload(
+def test_persist_from_cli_payload_records_only_formal_marco_success(tmp_path: Path):
+    unlabeled_live = persist_from_cli_payload(
         {
             "status": "SUCCESS",
             "allocation_status": "ACTIVE",
@@ -138,8 +134,51 @@ def test_persist_from_cli_payload_records_only_live_success(tmp_path: Path):
         source_mode="LIVE",
         root=tmp_path,
     )
+    assert unlabeled_live.status == "SUCCESS"
+    assert load_formal_previous_valid(tmp_path) is None
+    blocked = persist_from_cli_payload(
+        {
+            "status": "DATA_BLOCKED",
+            "allocation_status": "DATA_BLOCKED",
+            "macro_source": "marco",
+            "warnings": ["stale"],
+        },
+        run_kind="daily",
+        source_mode="LIVE",
+        root=tmp_path,
+    )
+    assert blocked.status == "DATA_BLOCKED"
+    assert "previous_valid_formal_allocation_missing" in blocked.blockers
+    assert load_formal_previous_valid(tmp_path) is None
+    success = persist_from_cli_payload(
+        {
+            "status": "SUCCESS",
+            "allocation_status": "ACTIVE",
+            "weights": {"CASH": 1.0},
+            "data_cutoff": "2026-09-12",
+            "macro_source": "marco",
+        },
+        run_kind="daily",
+        source_mode="LIVE",
+        root=tmp_path,
+    )
     assert success.status == "SUCCESS"
+    assert success.provenance["formal_gate"] is True
     assert load_formal_previous_valid(tmp_path)["run_id"] == success.run_id
+    frozen = persist_from_cli_payload(
+        {
+            "status": "DATA_BLOCKED",
+            "allocation_status": "DATA_BLOCKED",
+            "macro_source": "marco",
+            "warnings": ["stale_source"],
+        },
+        run_kind="daily",
+        source_mode="LIVE",
+        root=tmp_path,
+    )
+    assert frozen.allocation_status == "FROZEN"
+    assert frozen.previous_valid_run_id == success.run_id
+    assert frozen.weights == {"CASH": 1.0}
 
 
 def test_from_pipeline_payload_maps_degraded_and_keeps_source_mode():
