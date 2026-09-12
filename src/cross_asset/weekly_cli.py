@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from functools import wraps
 
 import typer
@@ -18,7 +19,10 @@ _RESERVED_TOP_LEVEL_COMMANDS = frozenset(
         "replay",
     }
 )
-_FIXTURE_ONLY_TOP_LEVEL_COMMANDS = frozenset({"data-health", "report-daily", "backtest"})
+_FIXTURE_ONLY_TOP_LEVEL_COMMANDS = frozenset({"backtest"})
+_WORKBENCH_COMMANDS = frozenset(
+    {"shadow-run", "explain-run", "data-health", "report-daily"}
+)
 
 
 def _install_cli_truthfulness_guards(app: typer.Typer) -> None:
@@ -37,6 +41,77 @@ def _install_cli_truthfulness_guards(app: typer.Typer) -> None:
 
         def register(func):
             command_name = name or func.__name__.replace("_", "-")
+            if command_name in _WORKBENCH_COMMANDS:
+                from .operations.workbench_cli import (
+                    data_health_command,
+                    explain_run_command,
+                    report_daily_command,
+                    shadow_run_command,
+                )
+
+                replacement = {
+                    "shadow-run": shadow_run_command,
+                    "explain-run": explain_run_command,
+                    "data-health": data_health_command,
+                    "report-daily": report_daily_command,
+                }[command_name]
+                replacement.__name__ = func.__name__
+                return decorator(replacement)
+            if command_name == "run-daily":
+
+                @wraps(func)
+                def run_daily_guard(*func_args, **func_kwargs):
+                    source = func_kwargs.get("macro_source", "legacy")
+                    if str(source).strip().lower() == "legacy":
+                        typer.echo(
+                            "run-daily: interface reserved; NOT_IMPLEMENTED / RESERVED; "
+                            "no pipeline work was executed."
+                        )
+                        raise typer.Exit(1)
+
+                    captured: list[str] = []
+                    real_echo = typer.echo
+
+                    def _capture(message: object = "", *echo_args, **echo_kwargs):
+                        captured.append(str(message))
+                        return real_echo(message, *echo_args, **echo_kwargs)
+
+                    def _persist_captured() -> None:
+                        from .operations.workbench_run import persist_from_cli_payload
+
+                        root = os.environ.get(
+                            "CROSS_ASSET_WORKBENCH_ROOT", "artifacts/workbench"
+                        )
+                        for message in reversed(captured):
+                            text = message.strip()
+                            if not text.startswith("{"):
+                                continue
+                            try:
+                                payload = json.loads(text)
+                            except json.JSONDecodeError:
+                                continue
+                            if not isinstance(payload, dict) or "status" not in payload:
+                                continue
+                            persist_from_cli_payload(
+                                payload,
+                                run_kind="daily",
+                                source_mode="LIVE",
+                                root=root,
+                            )
+                            break
+
+                    typer.echo = _capture  # type: ignore[method-assign]
+                    try:
+                        result = func(*func_args, **func_kwargs)
+                        _persist_captured()
+                        return result
+                    except typer.Exit:
+                        _persist_captured()
+                        raise
+                    finally:
+                        typer.echo = real_echo  # type: ignore[method-assign]
+
+                return decorator(run_daily_guard)
             if command_name in _RESERVED_TOP_LEVEL_COMMANDS:
                 @wraps(func)
                 def reserved(*func_args, **func_kwargs):
