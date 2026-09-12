@@ -8,6 +8,7 @@ from cross_asset.operations.workbench_run import (
     from_pipeline_payload,
     load_formal_previous_valid,
     load_run,
+    persist_from_cli_payload,
     persist_run,
     record_formal_previous_valid,
 )
@@ -113,6 +114,32 @@ def test_missing_component_is_data_gap_not_zero():
     assert view["status"] == "UNAVAILABLE"
     assert view["reason"] == "data_gap"
     assert view["value"] is None
+
+
+def test_persist_from_cli_payload_records_only_live_success(tmp_path: Path):
+    blocked = persist_from_cli_payload(
+        {"status": "DATA_BLOCKED", "allocation_status": "DATA_BLOCKED", "warnings": ["stale"]},
+        run_kind="daily",
+        source_mode="LIVE",
+        root=tmp_path,
+    )
+    assert blocked.status == "DATA_BLOCKED"
+    assert load_formal_previous_valid(tmp_path) is None
+    loaded = load_run(blocked.run_id, tmp_path)
+    assert loaded.blockers
+    success = persist_from_cli_payload(
+        {
+            "status": "SUCCESS",
+            "allocation_status": "ACTIVE",
+            "weights": {"CASH": 1.0},
+            "data_cutoff": "2026-09-12",
+        },
+        run_kind="daily",
+        source_mode="LIVE",
+        root=tmp_path,
+    )
+    assert success.status == "SUCCESS"
+    assert load_formal_previous_valid(tmp_path)["run_id"] == success.run_id
 
 
 def test_from_pipeline_payload_maps_degraded_and_keeps_source_mode():

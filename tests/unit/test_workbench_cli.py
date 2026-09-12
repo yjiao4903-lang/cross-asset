@@ -130,3 +130,24 @@ def test_run_daily_legacy_is_nonzero_reserved():
     assert "interface reserved" in result.stdout
     assert "NOT_IMPLEMENTED" in result.stdout
     assert "RESERVED" in result.stdout
+
+
+def test_launch_scripts_call_live_shadow_and_block_without_fetcher(tmp_path: Path):
+    script_sh = Path("scripts/run_live_daily.sh").read_text(encoding="utf-8")
+    script_ps = Path("scripts/run_live_daily.ps1").read_text(encoding="utf-8")
+    assert "shadow-run" in script_sh and "--source-mode LIVE" in script_sh
+    assert "shadow-run" in script_ps and "--source-mode LIVE" in script_ps
+    assert "--workbench-root" in script_sh and "--workbench-root" in script_ps
+    result = RUNNER.invoke(
+        app,
+        ["shadow-run", "--source-mode", "LIVE", "--workbench-root", str(tmp_path)],
+    )
+    assert result.exit_code == 2, result.stdout
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "DATA_BLOCKED"
+    assert payload["source_mode"] == "LIVE"
+    assert (
+        "live_fetcher_not_configured" in payload["blockers"]
+        or "store_required" in payload["blockers"]
+    )
+    assert Path(payload["artifact_path"]).exists()
