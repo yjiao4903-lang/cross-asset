@@ -1,8 +1,9 @@
 """Canonical workbench run object for daily/shadow/replay surfaces.
 
 Persists JSON artifacts only. Does not migrate storage schema, change
-allocation economics, or admit sources. LIVE previous-valid state is
-isolated from FIXTURE/SIMULATED runs.
+allocation economics, or admit sources. Formal previous-valid allocation
+is derived only from persisted WorkbenchRun objects that passed the #18
+formal query gate. There is no parallel state file.
 """
 
 from __future__ import annotations
@@ -16,7 +17,10 @@ from uuid import uuid4
 TERMINAL_STATUSES = ("SUCCESS", "PARTIAL", "DATA_BLOCKED", "FAILED")
 SOURCE_MODES = ("LIVE", "FIXTURE", "SIMULATED")
 FORMAL_SOURCE_MODE = "LIVE"
+FORMAL_QUERY = "latest_formal_observations_asof"
+FORMAL_USAGE_STATUS = "LIVE_VERIFIED"
 _EXIT_BY_STATUS = {"SUCCESS": 0, "PARTIAL": 0, "DATA_BLOCKED": 2, "FAILED": 1}
+_UNHEALTHY_ALLOCATION = {"DATA_BLOCKED", "FAIL", "FAILED", "FROZEN", "DEGRADED"}
 
 
 @dataclass
@@ -71,12 +75,6 @@ def runs_dir(root: str | Path | None = None) -> Path:
     return path
 
 
-def state_path(root: str | Path | None = None) -> Path:
-    path = default_runs_root(root) / "state"
-    path.mkdir(parents=True, exist_ok=True)
-    return path / "formal_previous_valid.json"
-
-
 def persist_run(run: WorkbenchRun, root: str | Path | None = None) -> WorkbenchRun:
     run.validate()
     if not run.created_at:
@@ -100,44 +98,71 @@ def load_run(run_id: str, root: str | Path | None = None) -> WorkbenchRun:
     return run
 
 
+def list_runs(root: str | Path | None = None) -> list[WorkbenchRun]:
+    """Load every canonical persisted run. Invalid files are skipped."""
+
+    items: list[WorkbenchRun] = []
+    directory = runs_dir(root)
+    for path in sorted(directory.glob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            run = WorkbenchRun(**payload)
+            run.validate()
+        except (OSError, TypeError, ValueError, json.JSONDecodeError):
+            continue
+        items.append(run)
+    return items
+
+
+def is_formal_previous_valid_eligible(run: WorkbenchRun) -> bool:
+    """LIVE label is not enough; eligibility requires the #18 formal query gate."""
+
+    run.validate()
+    provenance = run.provenance if isinstance(run.provenance, dict) else {}
+    return (
+        run.source_mode == FORMAL_SOURCE_MODE
+        and run.status == "SUCCESS"
+        and run.allocation_status == "ACTIVE"
+        and bool(run.weights)
+        and provenance.get("formal_gate") is True
+        and provenance.get("formal_query") == FORMAL_QUERY
+        and provenance.get("required_usage_status") == FORMAL_USAGE_STATUS
+    )
+
+
 def load_formal_previous_valid(root: str | Path | None = None) -> dict | None:
-    path = state_path(root)
-    if not path.exists():
+    """Latest eligible formal ACTIVE run from persisted WorkbenchRun objects."""
+
+    eligible = [run for run in list_runs(root) if is_formal_previous_valid_eligible(run)]
+    if not eligible:
         return None
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if payload.get("source_mode") != FORMAL_SOURCE_MODE:
-        return None
-    if payload.get("allocation_status") != "ACTIVE":
-        return None
-    if payload.get("status") != "SUCCESS":
-        return None
-    return payload
+    eligible.sort(key=lambda run: (run.created_at or "", run.run_id))
+    chosen = eligible[-1]
+    return {
+        "run_id": chosen.run_id,
+        "source_mode": chosen.source_mode,
+        "status": chosen.status,
+        "allocation_status": chosen.allocation_status,
+        "weights": dict(chosen.weights or {}),
+        "source": "formal",
+        "formal_query": (chosen.provenance or {}).get("formal_query"),
+        "required_usage_status": (chosen.provenance or {}).get("required_usage_status"),
+    }
 
 
 def record_formal_previous_valid(run: WorkbenchRun, root: str | Path | None = None) -> bool:
-    """Persist previous-valid weights only from a successful formal LIVE run."""
+    """Keep the run in the canonical lineage. Do not write a parallel state file."""
 
-    run.validate()
+    persist_run(run, root)
+    return is_formal_previous_valid_eligible(run)
+
+
+def needs_frozen_restore(run: WorkbenchRun) -> bool:
     if run.source_mode != FORMAL_SOURCE_MODE:
         return False
-    if run.status != "SUCCESS" or run.allocation_status != "ACTIVE":
-        return False
-    if not run.weights:
-        return False
-    payload = {
-        "run_id": run.run_id,
-        "source_mode": run.source_mode,
-        "status": run.status,
-        "allocation_status": run.allocation_status,
-        "weights": dict(run.weights),
-        "recorded_at": datetime.now(UTC).isoformat(),
-        "source": "formal",
-    }
-    state_path(root).write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2, default=str),
-        encoding="utf-8",
-    )
-    return True
+    if run.status in {"DATA_BLOCKED", "FAILED"}:
+        return True
+    return str(run.allocation_status or "").upper() in _UNHEALTHY_ALLOCATION
 
 
 def apply_frozen_from_previous_valid(
@@ -258,10 +283,24 @@ def from_pipeline_payload(
     )
 
 
-def persist_and_maybe_record(run: WorkbenchRun, root: str | Path | None = None) -> WorkbenchRun:
-    persist_run(run, root)
-    record_formal_previous_valid(run, root)
+def stamp_formal_gate_from_payload(run: WorkbenchRun, payload: dict) -> WorkbenchRun:
+    """Mark #18 formal-query identity when the daily Marco path produced the payload."""
+
+    if str(payload.get("macro_source") or "").strip().lower() != "marco":
+        return run
+    provenance = dict(run.provenance or {})
+    provenance["macro_source"] = "marco"
+    provenance["formal_query"] = FORMAL_QUERY
+    provenance["required_usage_status"] = FORMAL_USAGE_STATUS
+    provenance["formal_gate"] = True
+    run.provenance = provenance
     return run
+
+
+def persist_and_maybe_record(run: WorkbenchRun, root: str | Path | None = None) -> WorkbenchRun:
+    """Persist the canonical run only. Eligibility is derived from that lineage."""
+
+    return persist_run(run, root)
 
 
 def persist_from_cli_payload(
@@ -274,14 +313,20 @@ def persist_from_cli_payload(
     """Persist a pipeline CLI JSON payload as the canonical workbench run."""
 
     run = from_pipeline_payload(payload, run_kind=run_kind, source_mode=source_mode)
+    stamp_formal_gate_from_payload(run, payload)
     if payload.get("status") in {"DATA_BLOCKED", "BLOCKED", "UNAVAILABLE"} and not run.blockers:
         run.blockers = ["pipeline_data_blocked"]
         run.status = "DATA_BLOCKED"
-    return persist_and_maybe_record(run, root)
+    if needs_frozen_restore(run):
+        reason = run.blockers[0] if run.blockers else str(run.allocation_status or run.status)
+        apply_frozen_from_previous_valid(run, root, reason=reason)
+    return persist_run(run, root)
 
 
 __all__ = [
+    "FORMAL_QUERY",
     "FORMAL_SOURCE_MODE",
+    "FORMAL_USAGE_STATUS",
     "SOURCE_MODES",
     "TERMINAL_STATUSES",
     "WorkbenchRun",
@@ -289,12 +334,16 @@ __all__ = [
     "blocked_run",
     "component_view",
     "from_pipeline_payload",
+    "is_formal_previous_valid_eligible",
+    "list_runs",
     "load_formal_previous_valid",
     "load_run",
+    "needs_frozen_restore",
     "new_run_id",
     "normalize_terminal_status",
     "persist_and_maybe_record",
     "persist_from_cli_payload",
     "persist_run",
     "record_formal_previous_valid",
+    "stamp_formal_gate_from_payload",
 ]
