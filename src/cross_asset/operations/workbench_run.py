@@ -264,6 +264,22 @@ def persist_and_maybe_record(run: WorkbenchRun, root: str | Path | None = None) 
     return run
 
 
+def persist_from_cli_payload(
+    payload: dict,
+    *,
+    run_kind: str,
+    source_mode: str,
+    root: str | Path | None = None,
+) -> WorkbenchRun:
+    """Persist a pipeline CLI JSON payload as the canonical workbench run."""
+
+    run = from_pipeline_payload(payload, run_kind=run_kind, source_mode=source_mode)
+    if payload.get("status") in {"DATA_BLOCKED", "BLOCKED", "UNAVAILABLE"} and not run.blockers:
+        run.blockers = ["pipeline_data_blocked"]
+        run.status = "DATA_BLOCKED"
+    return persist_and_maybe_record(run, root)
+
+
 __all__ = [
     "FORMAL_SOURCE_MODE",
     "SOURCE_MODES",
@@ -278,6 +294,7 @@ __all__ = [
     "new_run_id",
     "normalize_terminal_status",
     "persist_and_maybe_record",
+    "persist_from_cli_payload",
     "persist_run",
     "record_formal_previous_valid",
 ]
