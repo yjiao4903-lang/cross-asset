@@ -1,0 +1,132 @@
+"""Command-level regressions for Issue #20 run/trace CLI."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from typer.testing import CliRunner
+
+from cross_asset.cli import app
+from cross_asset.operations.workbench_run import (
+    WorkbenchRun,
+    persist_run,
+    record_formal_previous_valid,
+)
+
+RUNNER = CliRunner()
+
+
+def _persist_live(tmp_path: Path, run_id: str = "wb-cli-live") -> WorkbenchRun:
+    run = WorkbenchRun(
+        run_id=run_id,
+        run_kind="daily",
+        source_mode="LIVE",
+        status="SUCCESS",
+        model_version="workbench_v0.1",
+        config_identity="cli-test",
+        data_cutoff="2026-09-12",
+        allocation_status="ACTIVE",
+        weights={"CN_EQ": 0.4, "CASH": 0.6},
+        components={
+            "market": {"status": "AVAILABLE", "value": {"regime": "neutral"}},
+            "allocation": {"status": "AVAILABLE", "value": {"CN_EQ": 0.4, "CASH": 0.6}},
+            "data_health": {"status": "AVAILABLE", "value": {"CN_EQ": "OK"}},
+        },
+        provenance={"test": True},
+    )
+    persist_run(run, tmp_path)
+    record_formal_previous_valid(run, tmp_path)
+    return run
+
+
+def test_shadow_run_without_store_is_data_blocked_not_keyerror(tmp_path: Path):
+    result = RUNNER.invoke(
+        app,
+        ["shadow-run", "--workbench-root", str(tmp_path), "--output-root", str(tmp_path / "shadow")],
+    )
+    assert result.exit_code == 2, result.stdout
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "DATA_BLOCKED"
+    assert "store_required" in payload["blockers"]
+    assert payload["source_mode"] == "SIMULATED"
+    assert "KeyError" not in result.stdout
+
+
+def test_shadow_run_live_without_fetcher_is_data_blocked(tmp_path: Path):
+    result = RUNNER.invoke(
+        app,
+        [
+            "shadow-run",
+            "--source-mode",
+            "LIVE",
+            "--database",
+            str(tmp_path / "db.duckdb"),
+            "--workbench-root",
+            str(tmp_path),
+        ],
+    )
+    assert result.exit_code == 2, result.stdout
+    payload = json.loads(result.stdout)
+    assert payload["source_mode"] == "LIVE"
+    assert payload["status"] == "DATA_BLOCKED"
+    assert "live_fetcher_not_configured" in payload["blockers"]
+
+
+def test_same_run_id_cross_traces_explain_report_and_data_health(tmp_path: Path):
+    run = _persist_live(tmp_path)
+    explained = RUNNER.invoke(app, ["explain-run", run.run_id, "--workbench-root", str(tmp_path)])
+    reported = RUNNER.invoke(
+        app,
+        [
+            "report-daily",
+            "--run-id",
+            run.run_id,
+            "--workbench-root",
+            str(tmp_path),
+            "--output",
+            str(tmp_path / "daily.md"),
+        ],
+    )
+    health = RUNNER.invoke(
+        app,
+        [
+            "data-health",
+            "--run-id",
+            run.run_id,
+            "--workbench-root",
+            str(tmp_path),
+            "--output",
+            str(tmp_path / "health.json"),
+        ],
+    )
+    assert explained.exit_code == 0, explained.stdout
+    assert reported.exit_code == 0, reported.stdout
+    assert health.exit_code == 0, health.stdout
+    explain_payload = json.loads(explained.stdout)
+    report_payload = json.loads(reported.stdout)
+    health_payload = json.loads(health.stdout)
+    assert explain_payload["run_id"] == run.run_id
+    assert report_payload["run_id"] == run.run_id
+    assert health_payload["run_id"] == run.run_id
+    assert explain_payload["source_mode"] == report_payload["source_mode"] == health_payload["source_mode"]
+    assert explain_payload["components"]["style"]["status"] == "UNAVAILABLE"
+    assert explain_payload["components"]["style"]["value"] is None
+    report_text = Path(report_payload["output"]).read_text(encoding="utf-8")
+    assert f"run_id: {run.run_id}" in report_text
+    assert "source_mode: LIVE" in report_text
+    assert "status: UNAVAILABLE" in report_text
+
+
+def test_missing_run_id_is_failed_not_synthetic_success(tmp_path: Path):
+    result = RUNNER.invoke(app, ["explain-run", "does-not-exist", "--workbench-root", str(tmp_path)])
+    assert result.exit_code != 0
+    assert "run_not_found" in result.stdout or "FAILED" in result.stdout
+
+
+def test_run_daily_legacy_is_nonzero_reserved():
+    result = RUNNER.invoke(app, ["run-daily", "--macro-source", "legacy"])
+    assert result.exit_code != 0
+    assert "interface reserved" in result.stdout
+    assert "NOT_IMPLEMENTED" in result.stdout
+    assert "RESERVED" in result.stdout
