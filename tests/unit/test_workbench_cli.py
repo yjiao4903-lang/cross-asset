@@ -10,8 +10,8 @@ from typer.testing import CliRunner
 from cross_asset.cli import app
 from cross_asset.operations.workbench_run import (
     WorkbenchRun,
+    persist_from_cli_payload,
     persist_run,
-    record_formal_previous_valid,
 )
 
 RUNNER = CliRunner()
@@ -36,7 +36,6 @@ def _persist_live(tmp_path: Path, run_id: str = "wb-cli-live") -> WorkbenchRun:
         provenance={"test": True},
     )
     persist_run(run, tmp_path)
-    record_formal_previous_valid(run, tmp_path)
     return run
 
 
@@ -151,3 +150,63 @@ def test_launch_scripts_call_live_shadow_and_block_without_fetcher(tmp_path: Pat
         or "store_required" in payload["blockers"]
     )
     assert Path(payload["artifact_path"]).exists()
+
+
+def test_shadow_live_restores_prior_formal_active_and_ignores_fixture(tmp_path: Path):
+    formal = persist_from_cli_payload(
+        {
+            "run_id": "wb-formal-active",
+            "status": "SUCCESS",
+            "allocation_status": "ACTIVE",
+            "weights": {"CN_EQ": 0.4, "CASH": 0.6},
+            "macro_source": "marco",
+            "data_cutoff": "2026-09-12",
+        },
+        run_kind="daily",
+        source_mode="LIVE",
+        root=tmp_path,
+    )
+    persist_from_cli_payload(
+        {
+            "run_id": "wb-fixture-noise",
+            "status": "SUCCESS",
+            "allocation_status": "ACTIVE",
+            "weights": {"CN_EQ": 1.0},
+            "data_cutoff": "2026-09-12",
+        },
+        run_kind="shadow",
+        source_mode="FIXTURE",
+        root=tmp_path,
+    )
+    persist_from_cli_payload(
+        {
+            "run_id": "wb-sim-noise",
+            "status": "SUCCESS",
+            "allocation_status": "ACTIVE",
+            "weights": {"CASH": 1.0},
+        },
+        run_kind="shadow",
+        source_mode="SIMULATED",
+        root=tmp_path,
+    )
+    result = RUNNER.invoke(
+        app,
+        ["shadow-run", "--source-mode", "LIVE", "--workbench-root", str(tmp_path)],
+    )
+    assert result.exit_code == 2, result.stdout
+    payload = json.loads(result.stdout)
+    assert payload["source_mode"] == "LIVE"
+    assert payload["allocation_status"] == "FROZEN"
+    assert payload["previous_valid_run_id"] == formal.run_id
+    assert payload["previous_valid_source"] == "formal"
+    assert payload["weights"] == {"CN_EQ": 0.4, "CASH": 0.6}
+    assert payload["status"] == "DATA_BLOCKED"
+    empty = RUNNER.invoke(
+        app,
+        ["shadow-run", "--source-mode", "LIVE", "--workbench-root", str(tmp_path / "empty")],
+    )
+    assert empty.exit_code == 2, empty.stdout
+    empty_payload = json.loads(empty.stdout)
+    assert empty_payload["allocation_status"] == "FROZEN"
+    assert empty_payload["weights"] is None
+    assert "previous_valid_formal_allocation_missing" in empty_payload["blockers"]
