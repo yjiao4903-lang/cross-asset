@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from functools import wraps
 
 import typer
@@ -67,7 +68,48 @@ def _install_cli_truthfulness_guards(app: typer.Typer) -> None:
                             "no pipeline work was executed."
                         )
                         raise typer.Exit(1)
-                    return func(*func_args, **func_kwargs)
+
+                    captured: list[str] = []
+                    real_echo = typer.echo
+
+                    def _capture(message: object = "", *echo_args, **echo_kwargs):
+                        captured.append(str(message))
+                        return real_echo(message, *echo_args, **echo_kwargs)
+
+                    def _persist_captured() -> None:
+                        from .operations.workbench_run import persist_from_cli_payload
+
+                        root = os.environ.get(
+                            "CROSS_ASSET_WORKBENCH_ROOT", "artifacts/workbench"
+                        )
+                        for message in reversed(captured):
+                            text = message.strip()
+                            if not text.startswith("{"):
+                                continue
+                            try:
+                                payload = json.loads(text)
+                            except json.JSONDecodeError:
+                                continue
+                            if not isinstance(payload, dict) or "status" not in payload:
+                                continue
+                            persist_from_cli_payload(
+                                payload,
+                                run_kind="daily",
+                                source_mode="LIVE",
+                                root=root,
+                            )
+                            break
+
+                    typer.echo = _capture  # type: ignore[method-assign]
+                    try:
+                        result = func(*func_args, **func_kwargs)
+                        _persist_captured()
+                        return result
+                    except typer.Exit:
+                        _persist_captured()
+                        raise
+                    finally:
+                        typer.echo = real_echo  # type: ignore[method-assign]
 
                 return decorator(run_daily_guard)
             if command_name in _RESERVED_TOP_LEVEL_COMMANDS:
