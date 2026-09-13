@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, CalendarClock, CircleSlash, RefreshCw } from 'lucide-react'
-import { SCENARIOS, DEFAULT_SCENARIO_ID, loadSnapshot } from './snapshot/fixtures/index.js'
+import { SCENARIOS, DEFAULT_SCENARIO_ID, loadSnapshot, loadRawSnapshot } from './snapshot/fixtures/index.js'
 import { validateSnapshot } from './snapshot/schema.js'
-import { confidenceLabel, shortDate } from './lib/format.js'
+import { shortDate } from './lib/format.js'
 import { LaneBadge } from './components/primitives.jsx'
 import OverviewPage from './pages/OverviewPage.jsx'
 import WeeklyPulsePage from './pages/WeeklyPulsePage.jsx'
@@ -26,7 +26,8 @@ export default function App() {
   const [selectedCluster, setSelectedCluster] = useState(null)
 
   const snapshot = useMemo(() => loadSnapshot(scenarioId), [scenarioId, reloadNonce])
-  const problems = useMemo(() => validateSnapshot(snapshot), [snapshot])
+  // contract validation runs against the authoritative producer payload, not the adapted view model
+  const problems = useMemo(() => validateSnapshot(loadRawSnapshot(scenarioId)), [scenarioId, reloadNonce])
 
   // Keyboard: `1`..`5` page navigation, `r` reload snapshot/fixture.
   useEffect(() => {
@@ -45,12 +46,14 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const counts = snapshot.data_health_summary?.counts ?? {}
+  const dh = snapshot.data_health_summary ?? {}
+  const noNewInfoCount = Object.values(dh.family_information_status ?? {})
+    .filter((s) => s === 'NO_NEW_INFORMATION').length
   const rollup = [
-    { label: 'stale', value: counts.stale ?? 0, Icon: AlertTriangle },
-    { label: 'missing', value: counts.missing ?? 0, Icon: CircleSlash },
-    { label: 'blocked', value: counts.blocked ?? 0, Icon: AlertTriangle },
-    { label: 'no new info', value: counts.no_new_information ?? 0, Icon: CalendarClock },
+    { label: 'stale', value: dh.stale_components?.length ?? 0, Icon: AlertTriangle },
+    { label: 'missing', value: dh.missing_components?.length ?? 0, Icon: CircleSlash },
+    { label: 'blocked', value: dh.blockers?.length ?? 0, Icon: AlertTriangle },
+    { label: 'no new info', value: noNewInfoCount, Icon: CalendarClock },
   ]
 
   const PageComponent = PAGES.find((p) => p.id === page)?.component ?? OverviewPage
@@ -70,13 +73,15 @@ export default function App() {
           <span className="text-ink-500">·</span>
           <span title="run / model identity">{snapshot.metadata.run_id}</span>
         </div>
-        <span data-testid="overall-confidence"
-          className={`rounded border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
-            confidenceLabel(snapshot.metadata.overall_confidence) === 'LOW'
-              ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
-              : 'border-sky-500/30 bg-sky-500/10 text-sky-300'
+        {/* backend-owned overall data-health; the producer emits no overall confidence */}
+        <span data-testid="data-overall"
+          title="Producer-owned overall data health (no overall confidence is emitted by DashboardSnapshotV0)"
+          className={`rounded border px-2 py-0.5 text-[11px] font-semibold tracking-wide ${
+            dh.overall === 'OK' || dh.overall === 'COMPLETE'
+              ? 'border-sky-500/30 bg-sky-500/10 text-sky-300'
+              : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
           }`}>
-          CONFIDENCE {Math.round(snapshot.metadata.overall_confidence * 100)}%
+          DATA {dh.overall ?? 'N/A'}
         </span>
         <div data-testid="stale-blocked-summary" className="flex items-center gap-2 text-[11px]">
           {rollup.map(({ label, value, Icon }) => (

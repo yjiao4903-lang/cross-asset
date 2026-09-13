@@ -36,6 +36,7 @@ export function StanceChip({ stance, label, className = '' }) {
 
 const FRESHNESS_CLASSES = {
   FRESH: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
+  UPDATED: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
   NO_NEW_INFORMATION: 'bg-zinc-500/10 text-zinc-400 border-zinc-600/40 border-dashed',
   STALE: 'bg-amber-500/10 text-amber-300 border-amber-500/40',
   MISSING: 'bg-amber-500/5 text-amber-400/90 border-amber-500/30 border-dashed',
@@ -44,6 +45,7 @@ const FRESHNESS_CLASSES = {
 
 const FRESHNESS_ICONS = {
   FRESH: null,
+  UPDATED: null,
   NO_NEW_INFORMATION: CalendarClock,
   STALE: AlertTriangle,
   MISSING: CircleSlash,
@@ -52,6 +54,7 @@ const FRESHNESS_ICONS = {
 
 const FRESHNESS_LABELS = {
   FRESH: 'FRESH',
+  UPDATED: 'UPDATED',
   NO_NEW_INFORMATION: 'NO NEW INFO',
   STALE: 'STALE',
   MISSING: 'MISSING',
@@ -98,13 +101,15 @@ const CONFIRMATION_CLASSES = {
   CONFIRMED: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10',
   DIVERGENT: 'text-sky-300 border-sky-500/30 bg-sky-500/10',
   COUNTER_TREND: 'text-amber-300 border-amber-500/40 bg-amber-500/10',
+  /* UNKNOWN is a data-state, never a market direction (#117 R1 vocabulary) */
+  UNKNOWN: 'text-zinc-400 border-zinc-600/40 bg-zinc-500/5 border-dashed',
 }
 
 export function ConfirmationChip({ value, className = '' }) {
   return (
     <span data-testid="confirmation-chip" data-confirmation={value}
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ${CONFIRMATION_CLASSES[value] ?? CONFIRMATION_CLASSES.DIVERGENT} ${className}`}>
-      {value.replace('_', ' ')}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ${CONFIRMATION_CLASSES[value] ?? CONFIRMATION_CLASSES.UNKNOWN} ${className}`}>
+      {value.replace(/_/g, ' ')}
     </span>
   )
 }

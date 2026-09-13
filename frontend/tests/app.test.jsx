@@ -8,15 +8,16 @@ function openApp() {
 }
 
 describe('App shell', () => {
-  it('renders the status ribbon with lane, confidence and stale/blocked rollup', () => {
+  it('renders the status ribbon with lane, producer data-overall and stale/blocked rollup', () => {
     openApp()
     expect(screen.getByTestId('status-ribbon')).toHaveTextContent('MACRO WORKBENCH')
     expect(screen.getByTestId('lane-badge')).toHaveTextContent('MONITORING')
-    expect(screen.getByTestId('overall-confidence')).toHaveTextContent('CONFIDENCE')
+    // producer emits no overall confidence; header shows backend data_health overall
+    expect(screen.getByTestId('data-overall')).toHaveTextContent('DATA PARTIAL')
     expect(screen.getByTestId('stale-blocked-summary')).toHaveTextContent('stale')
   })
 
-  it('shows no snapshot contract violations for the built-in fixtures', () => {
+  it('shows no snapshot contract violations for the authoritative golden payloads', () => {
     openApp()
     expect(screen.queryByTestId('snapshot-contract-errors')).not.toBeInTheDocument()
   })
@@ -26,25 +27,49 @@ describe('App shell', () => {
     expect(screen.getAllByTestId('climate-pill')).toHaveLength(4)
     expect(screen.getByTestId('overview-page')).toBeInTheDocument()
     const board = screen.getByTestId('asset-board')
-    const snap = loadSnapshot('stress')
+    const snap = loadSnapshot('tightening')
     for (const v of snap.asset_views) {
       expect(within(board).getByText(v.label)).toBeInTheDocument()
     }
   })
 
-  it('renders climate pills from their own cluster fields, without cross-lens derivation', () => {
+  it('renders climate pills from backend climate_components for both golden scenarios', () => {
+    const { unmount } = openApp()
+    // default scenario = tightening: FINANCIAL_CONDITIONS must show TIGHTENING
+    let pills = screen.getAllByTestId('climate-pill')
+    expect(pills[1]).toHaveTextContent('TIGHTENING')
+    unmount()
+
     openApp()
-    const pills = screen.getAllByTestId('climate-pill')
-    const snap = loadSnapshot('stress')
-    const policy = snap.clusters.find((c) => c.id === 'policy_liquidity')
-    const market = snap.clusters.find((c) => c.id === 'market_confirmation')
-    // pill 2 shows the policy/liquidity cluster's own direction+confidence
-    expect(pills[1]).toHaveTextContent(policy.state.replace(/_/g, ' '))
-    expect(pills[1].textContent).toContain(`${Math.round(policy.confidence * 100)}%`)
-    // pill 3 shows the market-confirmation cluster's own confidence, not macro_climate's
-    expect(pills[2].textContent).toContain(`${Math.round(market.confidence * 100)}%`)
-    expect(`${Math.round(snap.macro_climate.confidence * 100)}%`).not.toBe(`${Math.round(market.confidence * 100)}%`)
+    const select = screen.getByLabelText('fixture scenario')
+    fireEvent.change(select, { target: { value: 'benign' } })
+    // benign: FINANCIAL_CONDITIONS must show EASING, POLICY_LIQUIDITY shows NEUTRAL —
+    // a growth-derived inference (growth RISING ⇒ "EASING") could not produce "NEUTRAL / EASING"
+    pills = screen.getAllByTestId('climate-pill')
+    expect(pills[1]).toHaveTextContent('NEUTRAL / EASING')
+    expect(pills[2]).toHaveTextContent('TRENDING UP')
+    expect(pills[3]).toHaveTextContent('RISK ON')
   })
+})
+
+describe('golden regression — all five pages render for both scenarios', () => {
+  for (const scenario of ['tightening', 'benign']) {
+    it(`navigates pages 1-5 without contract errors or runtime exceptions (${scenario})`, () => {
+      openApp()
+      fireEvent.change(screen.getByLabelText('fixture scenario'), { target: { value: scenario } })
+      fireEvent.keyDown(window, { key: '2' })
+      expect(screen.getByTestId('weekly-pulse-page')).toBeInTheDocument()
+      fireEvent.keyDown(window, { key: '3' })
+      expect(screen.getByTestId('heatmap-page')).toBeInTheDocument()
+      fireEvent.keyDown(window, { key: '4' })
+      expect(screen.getByTestId('asset-lens-page')).toBeInTheDocument()
+      fireEvent.keyDown(window, { key: '5' })
+      expect(screen.getByTestId('data-health-page')).toBeInTheDocument()
+      fireEvent.keyDown(window, { key: '1' })
+      expect(screen.getByTestId('overview-page')).toBeInTheDocument()
+      expect(screen.queryByTestId('snapshot-contract-errors')).not.toBeInTheDocument()
+    })
+  }
 })
 
 describe('keyboard interaction (V1 contract: 1-5 navigate, r reload)', () => {
@@ -64,12 +89,9 @@ describe('keyboard interaction (V1 contract: 1-5 navigate, r reload)', () => {
 
   it('reloads the fixture with the r key (state resets deterministically)', () => {
     openApp()
-    const select = screen.getByLabelText('fixture scenario')
-    fireEvent.change(select, { value: 'benign' })
-    fireEvent.change(select, { target: { value: 'benign' } })
-    const before = screen.getByTestId('overall-confidence').textContent
+    const before = screen.getByTestId('data-overall').textContent
     fireEvent.keyDown(window, { key: 'r' })
-    expect(screen.getByTestId('overall-confidence').textContent).toBe(before)
+    expect(screen.getByTestId('data-overall').textContent).toBe(before)
   })
 })
 
@@ -79,26 +101,28 @@ describe('drill-down interaction', () => {
     fireEvent.click(within(screen.getByTestId('asset-board')).getByText('US Equity'))
     fireEvent.keyDown(window, { key: '4' })
     const page = screen.getByTestId('asset-lens-page')
-    // the lens defaults to the selected asset (US Equity)
     expect(within(page).getAllByText('US Equity').length).toBeGreaterThan(0)
   })
 
   it('clicking a heatmap cell exposes the drill-down panel', () => {
     openApp()
     fireEvent.keyDown(window, { key: '3' })
-    const cell = screen.getAllByTestId('heatmap-page')[0]
-    fireEvent.click(within(cell).getByTitle(/Inflation & Cost Pressure — GLOBAL/))
-    expect(screen.getByTestId('heatmap-drilldown')).toHaveTextContent('Inflation')
+    const page = screen.getByTestId('heatmap-page')
+    fireEvent.click(within(page).getAllByTestId('heatmap-cell')[0])
+    expect(screen.getByTestId('heatmap-drilldown')).toHaveTextContent('weekly_delta')
   })
 })
 
 describe('scenario switching', () => {
-  it('switches between the two fixture states via the scenario selector', () => {
+  it('switches between the two authoritative golden states via the selector', () => {
     openApp()
     const select = screen.getByLabelText('fixture scenario')
+    // default tightening: first board row is CN_EQ at -1 (changed from prior 0)
+    let board = screen.getByTestId('asset-board')
+    expect(within(board).getAllByTestId('stance-chip')[0].getAttribute('data-stance')).toBe('-1')
     fireEvent.change(select, { target: { value: 'benign' } })
-    const board = screen.getByTestId('asset-board')
-    // benign fixture: first board row is CN_EQ at NEUTRAL (0), changed from prior -1
+    // benign golden: CN_EQ at 0
+    board = screen.getByTestId('asset-board')
     expect(within(board).getAllByTestId('stance-chip')[0].getAttribute('data-stance')).toBe('0')
   })
 })

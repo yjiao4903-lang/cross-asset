@@ -1,20 +1,21 @@
 /**
  * DashboardSnapshotV0 — frontend render contract.
  *
- * #114 (PRODUCT-DEV) owns the Python source of truth and the contract identity:
- * version identity lives in `metadata.snapshot_version` (frozen by #114). The
- * frontend consumes that contract and invents no competing top-level fields.
- * Until a #114 fixture lands on main, the JSON objects under
- * src/snapshot/fixtures are an ISOLATED, clearly-labelled frontend mirror used
- * for UI development only. Reconciliation expectations are documented in
- * src/snapshot/RECONCILIATION.md.
+ * The authoritative producer is the #117 decision-support core (accepted at
+ * commit c64ae88d4851dc5ee1847a20e24a6cce00b5942f). Contract/version identity
+ * is owned by the producer: `metadata.snapshot_version === "DashboardSnapshotV0"`.
+ * The frontend consumes backend field shapes via a presentation-only adapter
+ * (src/snapshot/adapt.js) and invents no competing fields.
+ * The authoritative golden payloads are byte-equivalent copies under
+ * src/snapshot/golden/ (see golden/manifest.json and RECONCILIATION.md).
  */
-export const SNAPSHOT_VERSION_V0 = '0'
+export const SNAPSHOT_VERSION_V0 = 'DashboardSnapshotV0'
 
 export const REQUIRED_SECTIONS = [
   'metadata',
   'macro_climate',
   'investment_climate',
+  'climate_components',
   'clusters',
   'weekly_change',
   'regime',
@@ -26,15 +27,12 @@ export const REQUIRED_SECTIONS = [
 
 export const OPTIONAL_SECTIONS = ['details']
 
-export const DATA_STATUSES = ['FRESH', 'NO_NEW_INFORMATION', 'STALE', 'MISSING', 'BLOCKED']
-
-export const MARKET_CONFIRMATIONS = ['CONFIRMED', 'DIVERGENT', 'COUNTER_TREND']
+export const MARKET_CONFIRMATIONS = ['CONFIRMED', 'DIVERGENT', 'COUNTER_TREND', 'UNKNOWN']
 
 /**
- * Structural validation of a snapshot object against the frozen V0 render
- * contract. Returns a list of human-readable problems; empty list = valid.
- * The frontend renders only the sections listed above; everything else in a
- * future #114 payload must live under `details`.
+ * Structural validation of a producer payload against the frozen V0 render
+ * contract. Returns human-readable problems; empty list = valid.
+ * Everything the UI does not render must live under `details`.
  */
 export function validateSnapshot(snapshot) {
   const problems = []
@@ -42,7 +40,7 @@ export function validateSnapshot(snapshot) {
     return ['snapshot is not an object']
   }
   if (snapshot.contract !== undefined) {
-    problems.push('top-level "contract" is not part of the frozen contract; version identity is metadata.snapshot_version')
+    problems.push('top-level "contract" is not part of the producer contract; version identity is metadata.snapshot_version')
   }
   for (const section of REQUIRED_SECTIONS) {
     if (!(section in snapshot)) problems.push(`missing required section: ${section}`)
@@ -53,11 +51,11 @@ export function validateSnapshot(snapshot) {
     }
   }
   const meta = snapshot.metadata ?? {}
-  for (const field of ['snapshot_version', 'as_of', 'decision_time', 'lane', 'run_id']) {
+  for (const field of ['snapshot_version', 'snapshot_id', 'as_of', 'decision_time', 'lane', 'run_id', 'model_version']) {
     if (!meta[field]) problems.push(`metadata.${field} is required`)
   }
-  if (meta.snapshot_version && String(meta.snapshot_version) !== SNAPSHOT_VERSION_V0) {
-    problems.push(`frontend renders DashboardSnapshotV0 only (metadata.snapshot_version must be "${SNAPSHOT_VERSION_V0}")`)
+  if (meta.snapshot_version && meta.snapshot_version !== SNAPSHOT_VERSION_V0) {
+    problems.push(`metadata.snapshot_version must be "${SNAPSHOT_VERSION_V0}" (producer-owned), got "${meta.snapshot_version}"`)
   }
   if (meta.lane && !['MONITORING', 'RESEARCH', 'FORMAL_OOS'].includes(meta.lane)) {
     problems.push(`metadata.lane "${meta.lane}" is not a known evidence lane`)
@@ -70,13 +68,26 @@ export function validateSnapshot(snapshot) {
       problems.push(`asset_views[${view.asset}].market_confirmation "${view.market_confirmation}" invalid`)
     }
   }
-  const checkItems = (items, where) => {
-    for (const item of items ?? []) {
-      if (item.status && !DATA_STATUSES.includes(item.status)) {
-        problems.push(`${where}: unknown data status "${item.status}"`)
-      }
+  const cc = snapshot.climate_components ?? []
+  for (const component of ['POLICY_LIQUIDITY', 'FINANCIAL_CONDITIONS', 'MARKET_CONFIRMATION', 'RISK_APPETITE', 'INVESTMENT_CLIMATE']) {
+    const entry = cc.find((c) => c.component === component)
+    if (!entry) problems.push(`climate_components: missing ${component}`)
+    else if (typeof entry.confidence !== 'number') {
+      problems.push(`climate_components.${component}.confidence must be numeric`)
     }
   }
-  checkItems(snapshot.data_health_summary?.items, 'data_health_summary.items')
+  const wc = snapshot.weekly_change ?? {}
+  if (!wc.information_set_delta || typeof wc.information_set_delta !== 'object' || Array.isArray(wc.information_set_delta)) {
+    problems.push('weekly_change.information_set_delta must be an object {status, events, stale_factors}')
+  }
+  for (const key of ['macro_state_delta', 'market_condition_delta', 'asset_view_delta']) {
+    if (!wc[key] || typeof wc[key] !== 'object' || !Array.isArray(wc[key].entries ?? wc[key].moves)) {
+      problems.push(`weekly_change.${key} must be an object with an entries/moves list`)
+    }
+  }
+  const regime = snapshot.regime ?? {}
+  for (const field of ['quadrant_label', 'growth_state', 'growth_direction', 'inflation_state', 'inflation_direction', 'dwell_weeks', 'transition_flag', 'confidence', 'coverage']) {
+    if (!(field in regime)) problems.push(`regime.${field} is required (producer-owned shape)`)
+  }
   return problems
 }

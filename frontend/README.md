@@ -32,16 +32,16 @@ npm run test
 
 ## Fixture mode (current state)
 
-- No #114 backend fixture has landed on `main` yet, so the app runs in
-  **fixture mode only**: `src/snapshot/fixtures/` holds two deterministic
-  hand-built scenarios:
-  - **A — Benign / Mixed Confirmation** (`benign`)
-  - **B — Deteriorating / Stagflation Risk** (`stress`, default)
-- Switch scenarios with the selector in the header; `r` reloads the fixture
-  deterministically. These fixtures are synthetic — no live data, no DB access.
-- Reconciliation contract with #114 is documented in
-  `src/snapshot/RECONCILIATION.md`; structural validation lives in
-  `src/snapshot/schema.js` and runs on every snapshot load.
+- The app renders the **authoritative #117 producer golden fixtures**
+  (byte-equivalent copies in `src/snapshot/golden/`, sha256-pinned in
+  `golden/manifest.json`, source commit `c64ae88d4851dc5ee1847a20e24a6cce00b5942f`):
+  - **A — Benign** (`benign`)
+  - **B — Tightening** (`tightening`, default)
+- The UI consumes producer field shapes through a presentation-only adapter
+  (`src/snapshot/adapt.js`): no economic/signal inference, no invented fields.
+- Reconciliation mapping is documented in `src/snapshot/RECONCILIATION.md`;
+  structural validation lives in `src/snapshot/schema.js` and runs against the
+  raw producer payload on every load.
 
 ## Keyboard / interaction (V1)
 
@@ -64,8 +64,9 @@ npm run test
 1. **Overview** — status ribbon, four climate pills, regime quadrant +
    hysteresis, 8-asset stance board (60%), what-changed split into macro
    information vs genuine market moves + executive brief (40%). No scroll.
-2. **Weekly Pulse** — releases/revisions, weekly market moves, cluster deltas,
-   cross-asset 1W/1M/3M/YTD matrix, stance/confidence changes.
+2. **Weekly Pulse** — releases/revisions, weekly market moves (PCT/BPS/POINT),
+   cluster weekly-delta chart, cross-asset 1W/1M/3M + momentum matrix (producer
+   V0 emits no YTD), stance/confidence changes, cause-tagged macro state delta.
 3. **Heatmap** — factor families × region cells with state/direction/freshness,
    contributor drill-down.
 4. **Asset Lens** — stance/prior, macro bias, confirmation gate, valuation,

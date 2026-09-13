@@ -1,0 +1,14 @@
+{
+  "source_repository": "yjiao4903-lang/cross-asset",
+  "source_ref": "feature/decision-support-v2-core-c0",
+  "source_commit": "c64ae88d4851dc5ee1847a20e24a6cce00b5942f",
+  "source_paths": {
+    "benign": "tests/fixtures/decision_support/snapshot_benign.json",
+    "tightening": "tests/fixtures/decision_support/snapshot_tightening.json"
+  },
+  "sha256": {
+    "snapshot_benign.json": "d79fe0b580837d3dce943260cd6c36c0197fdbfd23c1c5cf35e049c5b5ea14c2",
+    "snapshot_tightening.json": "d5cd0f7894aed8d67f8f50a5e3cc638f9439f5ad13ad3b607a9d78747f8be608"
+  },
+  "note": "Byte-equivalent copies of the authoritative #117 producer golden fixtures (accepted per WEB-CONTROL PR #116 comment 5654314322 / #117 comment 5654310388). sha256 values are computed over the exact producer blobs (LF)."
+}

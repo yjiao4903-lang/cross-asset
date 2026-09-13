@@ -15,6 +15,16 @@ export function fmtMove(item) {
   return item.unit === 'bps' ? fmtBps(item.move) : fmtPct(item.move)
 }
 
+/* Backend market_condition_delta.moves unit vocabulary: PCT | BPS | POINT */
+export function fmtBackendMove(move) {
+  if (!move || move.weekly_change === null || move.weekly_change === undefined) return '—'
+  const v = move.weekly_change
+  const s = v > 0 ? '+' : ''
+  if (move.unit === 'BPS') return `${s}${v.toFixed(0)}bps`
+  if (move.unit === 'POINT') return `${s}${v.toFixed(1)}pt`
+  return `${s}${v.toFixed(2)}%`
+}
+
 export function stanceLabel(stance) {
   return { 2: 'STRONG BUY', 1: 'OVERWEIGHT', 0: 'NEUTRAL', [-1]: 'UNDERWEIGHT', [-2]: 'STRONG SELL' }[stance]
 }
@@ -30,8 +40,8 @@ export function confidenceLabel(confidence) {
 }
 
 export function directionSign(direction) {
-  if (['UP', 'IMPROVING', 'EASING', 'ACCELERATING'].includes(direction)) return 'UP'
-  if (['DOWN', 'DETERIORATING', 'TIGHTENING', 'DECELERATING'].includes(direction)) return 'DOWN'
+  if (['UP', 'IMPROVING', 'EASING', 'ACCELERATING', 'RISING'].includes(direction)) return 'UP'
+  if (['DOWN', 'DETERIORATING', 'TIGHTENING', 'DECELERATING', 'FALLING'].includes(direction)) return 'DOWN'
   return 'FLAT'
 }
 

@@ -60,4 +60,22 @@ describe('stance direction semantics', () => {
     expect(el.className).toContain('amber')
     expect(el.className).not.toContain('rose')
   })
+
+  it('UNKNOWN market confirmation is gray dashed data-state — never a direction', () => {
+    render(<ConfirmationChip value="UNKNOWN" />)
+    const el = screen.getByTestId('confirmation-chip')
+    expect(el.getAttribute('data-confirmation')).toBe('UNKNOWN')
+    expect(el.className).toContain('zinc')
+    expect(el.className).not.toContain('rose')
+    expect(el.className).not.toContain('emerald')
+    expect(el.className).not.toContain('amber')
+  })
+
+  it('UPDATED information events render as informational blue, not directional', () => {
+    render(<FreshnessChip status="UPDATED" />)
+    const el = screen.getByTestId('freshness-chip')
+    expect(el).toHaveTextContent('UPDATED')
+    expect(el.className).toContain('sky')
+    expect(el.className).not.toContain('emerald')
+  })
 })
