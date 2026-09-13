@@ -183,3 +183,28 @@ def test_snapshot_metadata_shape():
     assert metadata.as_of == date(2026, 9, 4)
     assert isinstance(metadata.decision_time, datetime)
     assert metadata.run_id and metadata.model_version
+
+
+def test_usd_broad_momentum_sign_is_dollar_pressure():
+    """R2: stronger USD must be tightening pressure, never an easing
+    contribution; the taxonomy sign encodes this and the scored boundary
+    applies it exactly once."""
+    from cross_asset.decision_support.taxonomy import load_taxonomy, signed_score
+
+    config = load_taxonomy()
+    spec = config.subfactor("USD_BROAD_MOMENTUM")
+    assert spec.sign == -1
+    assert "pressure" in spec.description
+    # Native +0.7 (USD strengthening) -> scored -0.7 (tightening pressure).
+    assert signed_score(spec, 0.7) == -0.7
+
+
+def test_signed_score_is_the_single_sign_boundary():
+    from cross_asset.decision_support.taxonomy import load_taxonomy, signed_score
+
+    config = load_taxonomy()
+    hy = config.subfactor("US_HY_SPREAD")
+    assert signed_score(hy, 0.8) == -0.8  # widening spread -> stress score
+    assert signed_score(hy, -0.6) == 0.6  # tightening spread -> easier score
+    fed = config.subfactor("FED_POLICY_STANCE")
+    assert signed_score(fed, 0.7) == 0.7  # sign +1: native == scored

@@ -112,6 +112,20 @@ class DecisionSupportConfig(BaseModel):
         raise KeyError(f"unknown factor_id: {factor_id}")
 
 
+def signed_score(spec: SubfactorSpec, native_score: float) -> float:
+    """Normalize one native-orientation raw score at the single scored boundary.
+
+    Frozen convention (R2): a ``SubfactorScore`` value is always in *economic
+    orientation*. For the POLICY_LIQUIDITY and FINANCIAL_CONDITIONS lenses a
+    positive score means easier / more supportive conditions and a negative
+    score means tighter / stress. Native inputs are oriented "higher = more of
+    the raw quantity" (higher spread, stronger USD, higher DR007, higher vol,
+    higher real yield); the taxonomy ``sign`` is applied exactly once, here.
+    No downstream consumer may re-apply or ignore the sign.
+    """
+    return round(spec.sign * native_score, 6)
+
+
 def load_taxonomy(path: str | Path | None = None) -> DecisionSupportConfig:
     """Load and validate the V2 decision-support config surface."""
     config_path = Path(path) if path is not None else DEFAULT_CONFIG_PATH

@@ -10,8 +10,15 @@ engine paths (horizon aggregation, weekly deltas, regime, asset gates):
 
 Both include ``NO_NEW_INFORMATION`` semantics, one overdue/stale component,
 stance changes and data-health badges, and are fully deterministic. All
-fixtures run on the ``MONITORING`` lane; they can never be labelled
-``FORMAL_OOS`` without explicit external evidence.
+fixtures run on the ``MONITORING`` lane; synthetic fixture builders can never
+emit ``FORMAL_OOS`` (hard-denied, no evidence escape path).
+
+Fixture series below are stored in *native* orientation ("higher = more of the
+raw quantity": higher spread, stronger USD, higher DR007, higher vol, higher
+real yield, tighter NFCI-style index). The taxonomy ``sign`` is applied exactly
+once at the ``taxonomy.signed_score`` boundary, producing scored subfactor
+values in economic orientation (positive = easier/supportive for the
+policy/liquidity and financial-conditions lenses).
 """
 
 from collections.abc import Mapping
@@ -52,7 +59,7 @@ from .snapshot import (
     SnapshotMetadata,
     WeeklyChange,
 )
-from .taxonomy import DecisionSupportConfig, load_taxonomy
+from .taxonomy import DecisionSupportConfig, load_taxonomy, signed_score
 from .weekly import (
     AssetStanceChange,
     AssetViewDelta,
@@ -164,26 +171,30 @@ _BENIGN_CYCLICAL = {
     "CN_CREDIT_IMPULSE": [-0.4, -0.35],
     "CN_M1_M2_GAP": [-0.5, -0.45],
     "CN_NEW_LOANS_TREND": [-0.3, -0.3],
-    "US_FIN_COND_TREND": [0.2, 0.4],
+    # native NFCI-style orientation: lower index = easier; sign -1 applied at boundary
+    "US_FIN_COND_TREND": [-0.2, -0.4],
 }
+# Native orientation: DR007 higher = tighter; HY spread higher = stress;
+# USD stronger = pressure; real yield higher = restrictive; VIX higher = fear.
 _BENIGN_TACTICAL = {
     "BREAKEVEN_5Y5Y": [0.1, 0.15],
-    "CN_DR007": [-0.2, -0.25],
-    "US_HY_SPREAD": [-0.1, 0.2],
-    "US_10Y_REAL_YIELD": [-0.4, -0.35],
-    "USD_BROAD_MOMENTUM": [-0.2, -0.3],
+    "CN_DR007": [0.2, 0.05],
+    "US_HY_SPREAD": [0.1, -0.6],
+    "US_10Y_REAL_YIELD": [0.3, 0.2],
+    "USD_BROAD_MOMENTUM": [0.3, -0.5],
     "US_EQ_TREND_63D": [0.7, 0.9],
     "CN_EQ_TREND_63D": [0.2, 0.4],
     "CN_BOND_TREND_63D": [0.3, 0.25],
     "GOLD_TREND_63D": [0.4, 0.6],
     "COPPER_TREND_63D": [0.3, 0.6],
-    "VIX_LEVEL": [-0.2, -0.4],
+    "VIX_LEVEL": [0.0, -0.2],
     "CFTC_RISK_POSITIONING": [0.1, 0.1],
 }
 _BENIGN_STRUCTURAL = {
     "US_EQ_ERP_PROXY": [-0.8, -0.8],
     "CN_EQ_VALUATION": [0.9, 1.1],
-    "GOLD_REAL_RATE_OVERLAY": [-0.5, -0.5],
+    # native real-yield pressure (higher = more expensive gold backdrop); sign -1
+    "GOLD_REAL_RATE_OVERLAY": [0.5, 0.5],
 }
 _BENIGN_MARKET_SPEC: dict[str, tuple[str, list[float]]] = {
     "SPX": (MarketMetricClass.PRICE.value, [6450.0, 6528.0]),
@@ -218,7 +229,12 @@ def _benign_weeks(config: DecisionSupportConfig) -> list[_Week]:
                 scores.append(_missing(spec.factor_id, HorizonClass(spec.horizon).value))
             else:
                 scores.append(
-                    _score(spec.factor_id, HorizonClass(spec.horizon).value, value, confidence=0.85)
+                    _score(
+                        spec.factor_id,
+                        HorizonClass(spec.horizon).value,
+                        signed_score(spec, value),
+                        confidence=0.85,
+                    )
                 )
         events: list[ReleaseEvent] = []
         market_levels = {
@@ -342,20 +358,23 @@ _TIGHTENING_CYCLICAL = {
     "CN_CREDIT_IMPULSE": [-0.3, -0.4, -0.4, -0.5],
     "CN_M1_M2_GAP": [-0.3, -0.4, -0.5, -0.6],
     "CN_NEW_LOANS_TREND": [-0.2, -0.3, -0.3, -0.3],
-    "US_FIN_COND_TREND": [0.0, -0.3, -0.4, -0.4],
+    # native NFCI-style orientation: rising index = tightening; sign -1 applied at boundary
+    "US_FIN_COND_TREND": [0.0, 0.3, 0.4, 0.4],
 }
+# Native orientation: HY spread / USD / real yield / VIX / DR007 all rise into
+# the stress week; their taxonomy signs flip them to economic orientation.
 _TIGHTENING_TACTICAL = {
     "BREAKEVEN_5Y5Y": [0.2, 0.3, 0.4, 0.5],
-    "CN_DR007": [-0.1, 0.0, 0.1, 0.3],
+    "CN_DR007": [0.1, 0.1, 0.2, 0.3],
     "US_HY_SPREAD": [-0.2, 0.2, 0.5, 0.8],
-    "US_10Y_REAL_YIELD": [-0.3, -0.4, -0.5, -0.6],
+    "US_10Y_REAL_YIELD": [0.3, 0.4, 0.5, 0.6],
     "USD_BROAD_MOMENTUM": [0.1, 0.3, 0.5, 0.7],
     "US_EQ_TREND_63D": [0.5, 0.2, -0.2, -0.5],
     "CN_EQ_TREND_63D": [0.3, 0.1, -0.1, -0.4],
     "CN_BOND_TREND_63D": [0.2, 0.2, 0.2, 0.2],
     "GOLD_TREND_63D": [0.1, 0.2, 0.2, 0.3],
     "COPPER_TREND_63D": [0.3, 0.1, -0.2, -0.6],
-    "VIX_LEVEL": [-0.2, -0.5, -0.7, -0.9],
+    "VIX_LEVEL": [0.2, 0.5, 0.7, 0.9],
     "CFTC_RISK_POSITIONING": [0.1, 0.0, -0.2, -0.3],
 }
 _TIGHTENING_STRUCTURAL = {
@@ -392,7 +411,12 @@ def _tightening_weeks(config: DecisionSupportConfig) -> list[_Week]:
                 scores.append(_missing(spec.factor_id, HorizonClass(spec.horizon).value))
             else:
                 scores.append(
-                    _score(spec.factor_id, HorizonClass(spec.horizon).value, value, confidence=0.85)
+                    _score(
+                        spec.factor_id,
+                        HorizonClass(spec.horizon).value,
+                        signed_score(spec, value),
+                        confidence=0.85,
+                    )
                 )
         events: list[ReleaseEvent] = []
         market_levels = {

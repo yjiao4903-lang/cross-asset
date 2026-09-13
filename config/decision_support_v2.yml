@@ -125,7 +125,7 @@ families:
         horizon: TACTICAL
         native_frequency: daily
         sign: -1
-        description: "US high-yield spread stress (negative sign: tighter=easier)"
+        description: "US high-yield spread (native: higher spread = tighter/stress; scored: positive = easier)"
         source_route: "PLANNED: FRED BAMLH0A0HYM2"
       - factor_id: US_10Y_REAL_YIELD
         family: FINANCIAL_CONDITIONS
@@ -138,8 +138,8 @@ families:
         family: FINANCIAL_CONDITIONS
         horizon: TACTICAL
         native_frequency: daily
-        sign: 1
-        description: "Broad USD momentum (dollar pressure lens)"
+        sign: -1
+        description: "Broad USD momentum (native: stronger USD = more dollar pressure; scored: positive = supportive/easier)"
         source_route: "PLANNED: broad dollar index proxy"
       - factor_id: US_FIN_COND_TREND
         family: FINANCIAL_CONDITIONS

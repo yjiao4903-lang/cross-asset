@@ -230,3 +230,77 @@ def test_fixture_lane_param_only_accepts_non_formal_lanes():
 
     research = build_benign_snapshot(lane=EvidenceLane.RESEARCH)
     assert research.metadata.resolved_lane() is EvidenceLane.RESEARCH
+
+
+# ---------------------------------------------------------------------------
+# R2 regressions: financial-conditions sign / semantic consistency
+# ---------------------------------------------------------------------------
+
+
+def _component(snapshot, name):
+    return {c.component: c for c in snapshot.climate_components}[name]
+
+
+def test_score_sign_to_state_convention_is_enforced(benign, tightening):
+    """Rendered state must follow the frozen score-sign convention, not merely
+    belong to the allowed label set: positive financial-conditions score =
+    EASING, negative = TIGHTENING."""
+    benign_fincond = _component(benign, "FINANCIAL_CONDITIONS")
+    assert benign_fincond.score is not None and benign_fincond.score > 0.25
+    assert benign_fincond.state == "EASING"
+    tightening_fincond = _component(tightening, "FINANCIAL_CONDITIONS")
+    assert tightening_fincond.score is not None and tightening_fincond.score < -0.25
+    assert tightening_fincond.state == "TIGHTENING"
+
+
+def test_tightening_financial_conditions_not_easing(tightening, benign):
+    assert _component(tightening, "FINANCIAL_CONDITIONS").state != "EASING"
+    # The stress week's genuine market surface (HY spread widens in bps) must
+    # agree with the rendered lens state.
+    hy_move = next(
+        m
+        for m in tightening.weekly_change.market_condition_delta.moves
+        if m.instrument == "US_HY_OAS"
+    )
+    assert hy_move.resolved_unit().value == "BPS"
+    assert hy_move.weekly_change > 0, "stress week widens HY spread in bps"
+    assert _component(tightening, "FINANCIAL_CONDITIONS").state == "TIGHTENING"
+    # Benign must not contradict its own easing narrative either.
+    benign_hy = next(
+        m
+        for m in benign.weekly_change.market_condition_delta.moves
+        if m.instrument == "US_HY_OAS"
+    )
+    assert benign_hy.weekly_change < 0
+    assert _component(benign, "FINANCIAL_CONDITIONS").state == "EASING"
+
+
+def test_investment_climate_consistent_with_components(tightening, benign):
+    for snapshot, expected in ((tightening, "RISK_OFF"), (benign, "RISK_ON")):
+        components = {c.component: c for c in snapshot.climate_components}
+        inputs = [
+            components[k].score
+            for k in ("FINANCIAL_CONDITIONS", "RISK_APPETITE", "MARKET_CONFIRMATION")
+        ]
+        assert all(s is not None for s in inputs)
+        mean = round(sum(inputs) / len(inputs), 4)
+        climate = snapshot.investment_climate
+        assert climate.score == mean, "investment climate must derive from its components"
+        assert climate.state == expected
+        component = components["INVESTMENT_CLIMATE"]
+        assert component.state == expected
+        assert component.score == climate.score
+        # Risk-off narrative must agree with risk-appetite lens, not invert it.
+        assert (
+            components["RISK_APPETITE"].state == "RISK_OFF"
+            if expected == "RISK_OFF"
+            else components["RISK_APPETITE"].state == "RISK_ON"
+            or components["RISK_APPETITE"].state == "NEUTRAL"
+        )
+
+
+def test_tightening_policy_and_risk_lenses_coherent(tightening):
+    components = {c.component: c for c in tightening.climate_components}
+    assert components["POLICY_LIQUIDITY"].state == "TIGHTENING"
+    assert components["RISK_APPETITE"].state == "RISK_OFF"
+    assert components["MARKET_CONFIRMATION"].state in {"NEUTRAL", "TRENDING_DOWN"}
