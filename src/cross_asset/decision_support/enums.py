@@ -62,11 +62,18 @@ class MarketDeltaUnit(StrEnum):
 
 
 class MarketConfirmation(StrEnum):
-    """Market confirmation state for an asset view (Scope F)."""
+    """Market confirmation state for an asset view (Scope F).
+
+    ``UNKNOWN`` is an explicit data-availability state: the confirmation
+    input could not be observed. It must never be conflated with an observed
+    ``DIVERGENT`` (flat/neutral vs bias) or ``COUNTER_TREND`` (opposite to
+    bias) reading.
+    """
 
     CONFIRMED = "CONFIRMED"
     DIVERGENT = "DIVERGENT"
     COUNTER_TREND = "COUNTER_TREND"
+    UNKNOWN = "UNKNOWN"
 
 
 class AxisDirection(StrEnum):

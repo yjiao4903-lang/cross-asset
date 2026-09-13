@@ -1,7 +1,13 @@
 """Issue #114 Scope E tests: interpretable regime with deterministic hysteresis."""
 
+import pytest
+
 from cross_asset.decision_support.enums import QuadrantLabel
-from cross_asset.decision_support.regime import RegimeEngine, evaluate_lens_disagreement
+from cross_asset.decision_support.regime import (
+    RegimeEngine,
+    RegimeInsufficientDataError,
+    evaluate_lens_disagreement,
+)
 from cross_asset.decision_support.snapshot import RegimeState
 
 
@@ -98,3 +104,41 @@ def test_lens_disagreement_flag():
     split = evaluate_lens_disagreement({"survey": -0.8, "market": 0.8}, threshold=1.0)
     assert split.flag is True
     assert "survey" in split.summary and "market" in split.summary
+
+
+def test_missing_growth_axis_fails_closed():
+    engine = RegimeEngine(min_dwell_weeks=3)
+    with pytest.raises(RegimeInsufficientDataError, match="growth"):
+        engine.update(
+            growth_score=None,
+            growth_direction="FLAT",
+            inflation_score=0.5,
+            inflation_direction="RISING",
+            inflation_state="HIGH",
+        )
+
+
+def test_missing_inflation_axis_fails_closed():
+    engine = RegimeEngine(min_dwell_weeks=3)
+    with pytest.raises(RegimeInsufficientDataError, match="inflation"):
+        engine.update(
+            growth_score=0.5,
+            growth_direction="RISING",
+            inflation_score=None,
+            inflation_direction="FLAT",
+            inflation_state="MODERATE",
+        )
+
+
+def test_missing_axis_never_yields_a_quadrant():
+    """MISSING != ZERO: a fabricated 0.0 must not produce a normal quadrant."""
+    engine = RegimeEngine(min_dwell_weeks=3)
+    for growth, inflation in [(None, None), (None, 0.5), (0.5, None)]:
+        with pytest.raises(RegimeInsufficientDataError):
+            engine.update(
+                growth_score=growth,
+                growth_direction="FLAT",
+                inflation_score=inflation,
+                inflation_direction="FLAT",
+                inflation_state="MODERATE",
+            )

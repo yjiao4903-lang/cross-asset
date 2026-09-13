@@ -20,6 +20,14 @@ def _axis_up_down(score: float, threshold: float) -> tuple[bool, bool]:
     return score > threshold, score < -threshold
 
 
+class RegimeInsufficientDataError(ValueError):
+    """Raised when a regime update would require fabricating a missing axis.
+
+    MISSING != ZERO: a missing growth or inflation axis must never be
+    substituted with 0.0 to produce a normal quadrant.
+    """
+
+
 class RegimeEngine:
     """Deterministic regime engine with deadband hysteresis and dwell.
 
@@ -88,6 +96,16 @@ class RegimeEngine:
         coverage: float = 0.0,
         lens_disagreement: LensDisagreement | None = None,
     ) -> RegimeState:
+        missing_axes = [
+            name
+            for name, score in (("growth", growth_score), ("inflation", inflation_score))
+            if score is None
+        ]
+        if missing_axes:
+            raise RegimeInsufficientDataError(
+                f"regime axis unavailable: {', '.join(missing_axes)}; MISSING != ZERO, "
+                "refusing to synthesize a quadrant from a missing axis"
+            )
         candidate = self.candidate_quadrant(growth_score, inflation_score, prior)
 
         growth_resolved_state = self._state_with_stickiness(

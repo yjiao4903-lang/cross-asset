@@ -24,6 +24,48 @@
     "coverage": 1.0,
     "summary": "risk-off tilt; financial conditions tightening, volatility elevated"
   },
+  "climate_components": [
+    {
+      "component": "POLICY_LIQUIDITY",
+      "state": "TIGHTENING",
+      "direction": "FALLING",
+      "score": -0.3667,
+      "confidence": 0.85,
+      "coverage": 1.0
+    },
+    {
+      "component": "FINANCIAL_CONDITIONS",
+      "state": "EASING",
+      "direction": "RISING",
+      "score": 0.3,
+      "confidence": 0.85,
+      "coverage": 1.0
+    },
+    {
+      "component": "MARKET_CONFIRMATION",
+      "state": "NEUTRAL",
+      "direction": "FALLING",
+      "score": -0.2,
+      "confidence": 0.85,
+      "coverage": 1.0
+    },
+    {
+      "component": "RISK_APPETITE",
+      "state": "RISK_OFF",
+      "direction": "FALLING",
+      "score": -0.6,
+      "confidence": 0.85,
+      "coverage": 1.0
+    },
+    {
+      "component": "INVESTMENT_CLIMATE",
+      "state": "NEUTRAL",
+      "direction": "FLAT",
+      "score": -0.1667,
+      "confidence": 0.85,
+      "coverage": 1.0
+    }
+  ],
   "clusters": [
     {
       "cluster_id": "CHINA_CYCLE@CYCLICAL",

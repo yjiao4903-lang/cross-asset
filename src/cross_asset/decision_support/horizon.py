@@ -30,7 +30,7 @@ class SubfactorScore(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     factor_id: str
-    horizon: HorizonClass | str
+    horizon: HorizonClass
     score: float | None = None
     confidence: float = 1.0
     coverage: float = 1.0

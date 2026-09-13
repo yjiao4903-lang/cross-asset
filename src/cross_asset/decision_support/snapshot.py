@@ -33,12 +33,31 @@ class SnapshotMetadata(BaseModel):
     snapshot_id: str
     as_of: date
     decision_time: datetime
-    lane: EvidenceLane | str
+    lane: EvidenceLane
     run_id: str
     model_version: str
 
     def resolved_lane(self) -> EvidenceLane:
         return EvidenceLane(self.lane)
+
+
+class ClimateComponent(BaseModel):
+    """Render-ready climate lens for one Overview pill (#114 R1 blocker 4).
+
+    Each component carries an explicit economic state label, direction,
+    confidence and coverage so the frontend never composes economics itself.
+    ``state`` uses per-lens controlled labels (e.g. EASING/NEUTRAL/TIGHTENING);
+    ``UNAVAILABLE`` means the lens input was missing — never silently zero.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    component: str
+    state: str
+    direction: AxisDirection = AxisDirection.FLAT
+    score: float | None = None
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    coverage: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class ClimateState(BaseModel):
@@ -47,7 +66,7 @@ class ClimateState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     state: str
-    direction: AxisDirection | str = AxisDirection.FLAT
+    direction: AxisDirection = AxisDirection.FLAT
     score: float | None = None
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     coverage: float = Field(default=0.0, ge=0.0, le=1.0)
@@ -68,17 +87,17 @@ class ClusterView(BaseModel):
 
     cluster_id: str  # e.g. "GROWTH_ACTIVITY@CYCLICAL"
     family: str
-    horizon: HorizonClass | str
+    horizon: HorizonClass
     score: float | None = None
     weekly_delta: float | None = None
-    direction: AxisDirection | str = AxisDirection.FLAT
+    direction: AxisDirection = AxisDirection.FLAT
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     coverage: float = Field(default=0.0, ge=0.0, le=1.0)
     top_positive: list[Contributor] = Field(default_factory=list)
     top_negative: list[Contributor] = Field(default_factory=list)
     missing_factors: list[str] = Field(default_factory=list)
     stale_factors: list[str] = Field(default_factory=list)
-    freshness_status: DataHealthStatus | str = DataHealthStatus.OK
+    freshness_status: DataHealthStatus = DataHealthStatus.OK
 
     def resolved_horizon(self) -> HorizonClass:
         return HorizonClass(self.horizon)
@@ -99,11 +118,11 @@ class RegimeState(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    quadrant_label: QuadrantLabel | str
-    growth_state: GrowthState | str
-    growth_direction: AxisDirection | str
-    inflation_state: InflationState | str
-    inflation_direction: AxisDirection | str
+    quadrant_label: QuadrantLabel
+    growth_state: GrowthState
+    growth_direction: AxisDirection
+    inflation_state: InflationState
+    inflation_direction: AxisDirection
     dwell_weeks: int = Field(default=0, ge=0)
     transition_flag: bool = False
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
@@ -119,9 +138,9 @@ class AssetViewV0(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    asset: AssetTarget | str
+    asset: AssetTarget
     macro_bias: int = Field(ge=-2, le=2)
-    market_confirmation: MarketConfirmation | str
+    market_confirmation: MarketConfirmation
     valuation_tag: str = ""
     stance: int = Field(ge=-2, le=2)
     prior_stance: int = Field(ge=-2, le=2)
@@ -129,7 +148,7 @@ class AssetViewV0(BaseModel):
     drivers: list[str] = Field(default_factory=list)
     counter_signals: list[str] = Field(default_factory=list)
     invalidator: str = ""
-    data_health: DataHealthStatus | str = DataHealthStatus.OK
+    data_health: DataHealthStatus = DataHealthStatus.OK
 
     def resolved_asset(self) -> AssetTarget:
         return AssetTarget(self.asset)
@@ -144,7 +163,7 @@ class AssetViewV0(BaseModel):
 class PulseEntry(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    asset: AssetTarget | str
+    asset: AssetTarget
     ret_1w: float | None = None
     ret_1m: float | None = None
     ret_3m: float | None = None
@@ -169,7 +188,7 @@ class ExecutiveBrief(BaseModel):
 class DataHealthSummary(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    overall: DataHealthStatus | str = DataHealthStatus.OK
+    overall: DataHealthStatus = DataHealthStatus.OK
     stale_components: list[str] = Field(default_factory=list)
     missing_components: list[str] = Field(default_factory=list)
     blockers: list[str] = Field(default_factory=list)
@@ -195,6 +214,7 @@ class DashboardSnapshotV0(BaseModel):
     metadata: SnapshotMetadata
     macro_climate: ClimateState
     investment_climate: ClimateState
+    climate_components: list[ClimateComponent]
     clusters: list[ClusterView]
     weekly_change: WeeklyChange
     regime: RegimeState

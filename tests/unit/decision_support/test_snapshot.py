@@ -120,16 +120,50 @@ def test_snapshot_weekly_change_has_four_surfaces():
     assert isinstance(snapshot.weekly_change.asset_view_delta, AssetViewDelta)
 
 
-def test_monitoring_fixture_cannot_be_labelled_formal_oos():
+def test_fixture_cannot_be_labelled_formal_oos():
     from cross_asset.decision_support.fixtures import build_benign_snapshot
 
+    # R1 blocker 6: synthetic fixtures are hard-barred from FORMAL_OOS; there
+    # is no evidence-string escape path any more.
     with pytest.raises(ValueError, match="FIXTURE_MONITORING_ONLY"):
         build_benign_snapshot(lane=EvidenceLane.FORMAL_OOS)
-    # Explicit external evidence is required to escape the guard.
-    snapshot = build_benign_snapshot(
-        lane=EvidenceLane.FORMAL_OOS, formal_oos_evidence="sanctioned-run-123"
+    with pytest.raises(TypeError):
+        build_benign_snapshot(lane=EvidenceLane.FORMAL_OOS, formal_oos_evidence="anything")
+
+
+def test_controlled_vocabulary_rejects_invalid_values():
+    from datetime import UTC, date, datetime
+
+    from pydantic import ValidationError
+
+    from cross_asset.decision_support.horizon import SubfactorScore
+    from cross_asset.decision_support.snapshot import (
+        AssetViewV0,
+        DataHealthSummary,
+        SnapshotMetadata,
     )
-    assert snapshot.metadata.resolved_lane() is EvidenceLane.FORMAL_OOS
+
+    base_meta = {
+        "snapshot_id": "s1",
+        "as_of": date(2026, 9, 4),
+        "decision_time": datetime(2026, 9, 5, tzinfo=UTC),
+        "run_id": "r1",
+        "model_version": "m1",
+    }
+    with pytest.raises(ValidationError, match="lane"):
+        SnapshotMetadata(**base_meta, lane="STAGING_LANE")
+    with pytest.raises(ValidationError, match="horizon"):
+        SubfactorScore(factor_id="x", horizon="QUARTERLY", score=0.1)
+    base_view = {
+        "asset": "US_EQ",
+        "macro_bias": 0,
+        "stance": 0,
+        "prior_stance": 0,
+    }
+    with pytest.raises(ValidationError, match="market_confirmation"):
+        AssetViewV0(**base_view, market_confirmation="MAYBE_CONFIRMED")
+    with pytest.raises(ValidationError, match="overall"):
+        DataHealthSummary(overall="BROKEN_HEALTH")
 
 
 def test_asset_view_stances_are_bounded():

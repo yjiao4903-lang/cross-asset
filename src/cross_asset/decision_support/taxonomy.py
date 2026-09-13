@@ -35,7 +35,7 @@ class SubfactorSpec(BaseModel):
 
     factor_id: str
     family: str
-    horizon: HorizonClass | str
+    horizon: HorizonClass
     native_frequency: str
     sign: int = 1
     description: str = ""

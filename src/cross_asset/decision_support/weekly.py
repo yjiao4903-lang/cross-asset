@@ -42,7 +42,7 @@ class SurpriseMetadata(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    method: SurpriseMethod | str
+    method: SurpriseMethod
     value: float
     baseline: str = ""
     note: str = ""
@@ -56,7 +56,7 @@ class ReleaseEvent(BaseModel):
 
     factor_id: str
     series_id: str = ""
-    event_type: ReleaseEventType | str
+    event_type: ReleaseEventType
     observation_date: date | None = None
     note: str = ""
     surprise: SurpriseMetadata | None = None
@@ -68,7 +68,7 @@ class ReleaseEvent(BaseModel):
 class InformationSetDelta(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: InformationSetStatus | str
+    status: InformationSetStatus
     events: list[ReleaseEvent] = Field(default_factory=list)
     stale_factors: list[str] = Field(default_factory=list)
 
@@ -119,7 +119,7 @@ class FactorStateChange(BaseModel):
     previous: float
     current: float
     delta: float
-    cause: CauseTag | str
+    cause: CauseTag
 
     def resolved_cause(self) -> CauseTag:
         return CauseTag(self.cause)
@@ -142,7 +142,7 @@ def build_macro_state_delta(
     previous: dict[str, float],
     current: dict[str, float],
     *,
-    information_status: InformationSetStatus | str,
+    information_status: InformationSetStatus,
     changed_by_release: set[str] | None = None,
 ) -> MacroStateDelta:
     """Compute cyclical macro state change strictly caused by new information.
@@ -192,8 +192,8 @@ class MarketMove(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     instrument: str
-    metric_class: MarketMetricClass | str
-    unit: MarketDeltaUnit | str
+    metric_class: MarketMetricClass
+    unit: MarketDeltaUnit
     weekly_change: float
     prior_value: float
     current_value: float
@@ -215,7 +215,7 @@ _RATIO_CLASSES = {
 
 def build_market_move(
     instrument: str,
-    metric_class: MarketMetricClass | str,
+    metric_class: MarketMetricClass,
     prior_value: float,
     current_value: float,
     *,

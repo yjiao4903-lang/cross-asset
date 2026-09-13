@@ -149,3 +149,84 @@ def test_golden_fixture_files_match_generation():
         assert committed == regenerated, f"{name} does not match regenerated output"
         parsed = json.loads(committed)
         assert parsed["metadata"]["snapshot_version"] == "DashboardSnapshotV0"
+
+
+def test_fixture_missing_regime_axis_fails_closed(benign):
+    """R1 blocker 3: no None -> 0.0 substitution anywhere in snapshot assembly."""
+    import copy
+
+    from cross_asset.decision_support.fixtures import (
+        _benign_scenario,
+        _build_snapshot,
+    )
+    from cross_asset.decision_support.horizon import SubfactorScore
+    from cross_asset.decision_support.regime import RegimeInsufficientDataError
+    from cross_asset.decision_support.taxonomy import load_taxonomy
+
+    config = load_taxonomy()
+    scenario = _benign_scenario(config)
+    growth_factors = [
+        sub.factor_id
+        for sub in config.subfactors()
+        if sub.family == "GROWTH_ACTIVITY" and sub.horizon == "CYCLICAL"
+    ]
+    weeks = []
+    for week in scenario.weeks:
+        scores = dict(week.scores)
+        for factor_id in growth_factors:
+            scores[factor_id] = SubfactorScore(
+                factor_id=factor_id,
+                horizon="CYCLICAL",
+                missing=True,
+            )
+        weeks.append(
+            type(week)(as_of=week.as_of, scores=list(scores.values()),
+                       market_levels=week.market_levels, events=week.events)
+        )
+    broken = copy.copy(scenario)
+    broken.weeks = weeks
+    with pytest.raises(RegimeInsufficientDataError, match="growth"):
+        _build_snapshot(broken, config)
+
+
+def test_fixture_climate_components_render_ready(benign, tightening):
+    """R1 blocker 4: Overview pills come fully typed from the backend."""
+    expected = {
+        "POLICY_LIQUIDITY",
+        "FINANCIAL_CONDITIONS",
+        "MARKET_CONFIRMATION",
+        "RISK_APPETITE",
+        "INVESTMENT_CLIMATE",
+    }
+    for snapshot in (benign, tightening):
+        components = {c.component: c for c in snapshot.climate_components}
+        assert set(components) == expected
+        for component in components.values():
+            assert component.state, component.component
+            assert component.state != ""
+            assert 0.0 <= component.confidence <= 1.0
+            assert 0.0 <= component.coverage <= 1.0
+            if component.score is not None:
+                assert -2.0 <= component.score <= 2.0
+        # A missing lens must surface UNAVAILABLE, never a fabricated state.
+    tightening_components = {c.component: c for c in tightening.climate_components}
+    assert tightening_components["POLICY_LIQUIDITY"].state in {
+        "EASING",
+        "NEUTRAL",
+        "TIGHTENING",
+    }
+    benign_components = {c.component: c for c in benign.climate_components}
+    assert benign_components["MARKET_CONFIRMATION"].state == "TRENDING_UP"
+
+
+def test_fixture_snapshot_version_is_authoritative(benign):
+    # Preserve the exact authoritative value consumed by #115/#116.
+    assert benign.metadata.snapshot_version == "DashboardSnapshotV0"
+
+
+def test_fixture_lane_param_only_accepts_non_formal_lanes():
+    from cross_asset.decision_support.enums import EvidenceLane
+    from cross_asset.decision_support.fixtures import build_benign_snapshot
+
+    research = build_benign_snapshot(lane=EvidenceLane.RESEARCH)
+    assert research.metadata.resolved_lane() is EvidenceLane.RESEARCH

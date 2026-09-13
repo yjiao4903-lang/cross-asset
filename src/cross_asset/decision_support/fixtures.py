@@ -19,7 +19,11 @@ from datetime import UTC, date, datetime
 from typing import Any
 
 from .asset_rules import AssetGateResult, build_asset_gate
-from .climate import derive_investment_climate, derive_macro_climate
+from .climate import (
+    derive_climate_components,
+    derive_investment_climate,
+    derive_macro_climate,
+)
 from .enums import (
     AssetTarget,
     AxisDirection,
@@ -687,13 +691,13 @@ def _build_snapshot(
     config: DecisionSupportConfig,
     *,
     lane: EvidenceLane | str = EvidenceLane.MONITORING,
-    formal_oos_evidence: str | None = None,
 ) -> DashboardSnapshotV0:
     resolved_lane = EvidenceLane(lane)
-    if resolved_lane is EvidenceLane.FORMAL_OOS and formal_oos_evidence is None:
+    if resolved_lane is EvidenceLane.FORMAL_OOS:
         raise ValueError(
-            "FIXTURE_MONITORING_ONLY: a fixture-built snapshot cannot be labelled "
-            "FORMAL_OOS without explicit external evidence"
+            "FIXTURE_MONITORING_ONLY: synthetic/demo fixture builders can never "
+            "emit FORMAL_OOS; formal snapshots only come from the future "
+            "sanctioned production path (no evidence-string escape exists)"
         )
     current_week = scenario.weeks[-1]
     prior_week = scenario.weeks[-2]
@@ -726,9 +730,9 @@ def _build_snapshot(
             else round(inflation.score - prior_inflation_score, 4)
         )
         regime_state = engine.update(
-            growth_score=growth.score if growth.score is not None else 0.0,
+            growth_score=growth.score,
             growth_direction=_direction(growth_delta),
-            inflation_score=inflation.score if inflation.score is not None else 0.0,
+            inflation_score=inflation.score,
             inflation_direction=_direction(inflation_delta),
             inflation_state=_inflation_state(inflation.score),
             prior=regime_state,
@@ -828,6 +832,11 @@ def _build_snapshot(
         ),
         macro_climate=macro_climate,
         investment_climate=investment_climate,
+        climate_components=derive_climate_components(
+            current_aggregates,
+            prior_aggregates,
+            investment_climate,
+        ),
         clusters=clusters,
         weekly_change=WeeklyChange(
             information_set_delta=info_delta,

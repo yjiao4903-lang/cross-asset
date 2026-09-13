@@ -5,8 +5,17 @@ DashboardSnapshotV0 contract, horizon model, four-surface weekly semantics,
 V1 factor taxonomy, interpretable regime V0, and rule-driven asset gates.
 """
 
-from .asset_rules import AssetGateResult, GateBlocker, build_asset_gate
-from .climate import derive_investment_climate, derive_macro_climate
+from .asset_rules import (
+    AssetGateResult,
+    GateBlocker,
+    MacroBasis,
+    build_asset_gate,
+)
+from .climate import (
+    derive_climate_components,
+    derive_investment_climate,
+    derive_macro_climate,
+)
 from .enums import (
     AssetTarget,
     CauseTag,
@@ -32,9 +41,14 @@ from .horizon import (
     aggregate_horizon,
     separate_by_horizon,
 )
-from .regime import RegimeEngine, evaluate_lens_disagreement
+from .regime import (
+    RegimeEngine,
+    RegimeInsufficientDataError,
+    evaluate_lens_disagreement,
+)
 from .snapshot import (
     AssetViewV0,
+    ClimateComponent,
     ClimateState,
     ClusterView,
     CrossAssetPulse,
@@ -79,6 +93,7 @@ __all__ = [
     "AssetViewDelta",
     "AssetViewV0",
     "CauseTag",
+    "ClimateComponent",
     "ClimateState",
     "ClusterView",
     "CrossAssetPulse",
@@ -97,6 +112,7 @@ __all__ = [
     "InflationState",
     "InformationSetDelta",
     "InformationSetStatus",
+    "MacroBasis",
     "MacroStateDelta",
     "MarketConditionDelta",
     "MarketConfirmation",
@@ -105,6 +121,7 @@ __all__ = [
     "MarketMove",
     "QuadrantLabel",
     "RegimeEngine",
+    "RegimeInsufficientDataError",
     "RegimeState",
     "ReleaseEvent",
     "ReleaseEventType",
@@ -124,6 +141,7 @@ __all__ = [
     "build_market_condition_delta",
     "build_market_move",
     "build_tightening_snapshot",
+    "derive_climate_components",
     "derive_investment_climate",
     "derive_macro_climate",
     "evaluate_lens_disagreement",

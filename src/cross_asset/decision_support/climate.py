@@ -1,14 +1,19 @@
-"""Climate derivation helpers (Issue #114 Scope A).
+"""Climate derivation helpers (Issue #114 Scope A + R1 blocker 4).
 
 Two top-level concepts instead of one misleading number: Macro Climate
 (growth/inflation state + direction) and Investment Climate
 (liquidity/financial conditions/risk appetite/market confirmation overlay).
 Both derive only from horizon-separated aggregates.
+
+``derive_climate_components`` additionally emits the render-ready per-lens
+components the frozen Overview needs (policy/liquidity, financial conditions,
+market confirmation, risk appetite, investment climate) so the frontend never
+composes economic meaning itself.
 """
 
-from .enums import AxisDirection
+from .enums import AxisDirection, HorizonClass
 from .horizon import HorizonAggregate
-from .snapshot import ClimateState
+from .snapshot import ClimateComponent, ClimateState
 
 
 def _direction_from_delta(delta: float | None, *, deadband: float = 0.05) -> AxisDirection:
@@ -89,3 +94,103 @@ def derive_investment_climate(
         coverage=coverage,
         summary=summary,
     )
+
+
+def _three_state(
+    score: float | None,
+    *,
+    positive: str,
+    negative: str,
+    threshold: float = 0.25,
+) -> str:
+    if score is None:
+        return "UNAVAILABLE"
+    if score > threshold:
+        return positive
+    if score < -threshold:
+        return negative
+    return "NEUTRAL"
+
+
+def derive_climate_components(
+    current: dict[tuple[str, HorizonClass], HorizonAggregate],
+    previous: dict[tuple[str, HorizonClass], HorizonAggregate],
+    investment_climate: ClimateState,
+) -> list[ClimateComponent]:
+    """Build render-ready Overview lens components from typed aggregates.
+
+    Sign conventions follow the subfactor signs in the taxonomy: positive
+    policy/financial-conditions scores mean easing, positive market
+    confirmation means trend support, positive risk appetite means risk-on.
+    """
+    def component(
+        name: str,
+        family: str,
+        horizon: HorizonClass,
+        *,
+        positive: str,
+        negative: str,
+    ) -> ClimateComponent:
+        aggregate = current.get((family, horizon))
+        if aggregate is None or aggregate.score is None:
+            return ClimateComponent(
+                component=name,
+                state="UNAVAILABLE",
+                direction=AxisDirection.FLAT,
+                score=None,
+                confidence=aggregate.confidence if aggregate else 0.0,
+                coverage=aggregate.coverage if aggregate else 0.0,
+            )
+        prior = previous.get((family, horizon))
+        delta = (
+            round(aggregate.score - prior.score, 4)
+            if prior is not None and prior.score is not None
+            else None
+        )
+        return ClimateComponent(
+            component=name,
+            state=_three_state(aggregate.score, positive=positive, negative=negative),
+            direction=_direction_from_delta(delta),
+            score=aggregate.score,
+            confidence=aggregate.confidence,
+            coverage=aggregate.coverage,
+        )
+
+    return [
+        component(
+            "POLICY_LIQUIDITY",
+            "POLICY_LIQUIDITY",
+            HorizonClass.CYCLICAL,
+            positive="EASING",
+            negative="TIGHTENING",
+        ),
+        component(
+            "FINANCIAL_CONDITIONS",
+            "FINANCIAL_CONDITIONS",
+            HorizonClass.TACTICAL,
+            positive="EASING",
+            negative="TIGHTENING",
+        ),
+        component(
+            "MARKET_CONFIRMATION",
+            "MARKET_CONFIRMATION",
+            HorizonClass.TACTICAL,
+            positive="TRENDING_UP",
+            negative="TRENDING_DOWN",
+        ),
+        component(
+            "RISK_APPETITE",
+            "RISK_APPETITE",
+            HorizonClass.TACTICAL,
+            positive="RISK_ON",
+            negative="RISK_OFF",
+        ),
+        ClimateComponent(
+            component="INVESTMENT_CLIMATE",
+            state=investment_climate.state,
+            direction=AxisDirection(investment_climate.direction),
+            score=investment_climate.score,
+            confidence=investment_climate.confidence,
+            coverage=investment_climate.coverage,
+        ),
+    ]
