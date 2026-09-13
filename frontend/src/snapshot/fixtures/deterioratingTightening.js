@@ -5,7 +5,6 @@
  * one stance change, one counter-trend asset, one low-confidence view.
  */
 export const deterioratingTightening = {
-  contract: 'DashboardSnapshotV0',
   metadata: {
     snapshot_version: '0',
     snapshot_id: 'fixture-stress-2026-09-04',
@@ -235,7 +234,7 @@ export const deterioratingTightening = {
     formal_eligibility: 'NOT_ELIGIBLE',
     counts: { fresh: 12, stale: 3, missing: 2, blocked: 1, no_new_information: 4 },
     unresolved_contracts: [
-      { id: 'DXY_EXACT', severity: 'HIGH', note: 'Exact DXY blocked; USD views use a disclosed proxy basket only.' },
+      { id: 'DXY_EXACT', severity: 'HIGH', note: 'Exact DXY series blocked and remains unavailable — no proxy substitution. USD exposure is monitored via the independent USD/CNY spot identity, never as a DXY replacement.' },
       { id: 'CN_PROP_DEMAND_SERIES', severity: 'HIGH', note: 'Property demand proxy definition unresolved; excluded from scores, never zero-filled.' },
       { id: 'VALUATION_CN_ERP', severity: 'MEDIUM', note: 'CN equity risk-premium series missing; valuation cluster confidence reduced.' },
     ],
@@ -248,7 +247,7 @@ export const deterioratingTightening = {
       { series: 'VALUATION_CN_ERP', source: 'WIND_MANUAL', status: 'MISSING', last_observation: null, available_at: null, note: 'Series unavailable; lowers cluster confidence.' },
       { series: 'CN_PROP_DEMAND', source: 'WIND_MANUAL', status: 'MISSING', last_observation: null, available_at: null, note: 'Definition unresolved; excluded.' },
       { series: 'LME_CU_INVENTORY', source: 'LME_MANUAL', status: 'BLOCKED', last_observation: null, available_at: null, note: 'Export entitlement unavailable; driver shown as BLOCKED, not bearish.' },
-      { series: 'DXY_EXACT', source: 'BLOCKED', status: 'BLOCKED', last_observation: null, available_at: null, note: 'Entitlement unavailable; proxy disclosed instead.' },
+      { series: 'DXY_EXACT', source: 'BLOCKED', status: 'BLOCKED', last_observation: null, available_at: null, note: 'Entitlement unavailable; series remains BLOCKED — no proxy substitution.' },
     ],
   },
   details: {

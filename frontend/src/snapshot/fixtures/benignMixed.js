@@ -4,7 +4,6 @@
  * tactical market confirmation. Deterministic; do not derive from live data.
  */
 export const benignMixed = {
-  contract: 'DashboardSnapshotV0',
   metadata: {
     snapshot_version: '0',
     snapshot_id: 'fixture-benign-2026-09-04',
@@ -54,7 +53,7 @@ export const benignMixed = {
     },
     {
       id: 'policy_liquidity', label: 'Policy & Liquidity', horizon: 'CYCLICAL', region: 'GLOBAL',
-      state: 'EASING', direction: 'UP', score: 0.5, weekly_delta: 0.1, confidence: 0.62,
+      state: 'EASING', direction: 'FLAT', score: 0.5, weekly_delta: 0.1, confidence: 0.62,
       freshness: 'FRESH',
       contributors: [
         { label: 'Rate-cut expectations', contribution: 0.3 },
@@ -231,7 +230,7 @@ export const benignMixed = {
     formal_eligibility: 'NOT_ELIGIBLE',
     counts: { fresh: 14, stale: 2, missing: 1, blocked: 1, no_new_information: 4 },
     unresolved_contracts: [
-      { id: 'DXY_EXACT', severity: 'HIGH', note: 'Exact DXY blocked; USD views use a disclosed proxy basket only.' },
+      { id: 'DXY_EXACT', severity: 'HIGH', note: 'Exact DXY series blocked and remains unavailable — no proxy substitution. USD exposure is monitored via the independent USD/CNY spot identity, never as a DXY replacement.' },
       { id: 'GOLD_RETURN_TYPE', severity: 'MEDIUM', note: 'Spot vs total-return semantics for GOLD not yet frozen.' },
     ],
     items: [
@@ -241,7 +240,7 @@ export const benignMixed = {
       { series: 'CFTC_POSITIONING', source: 'CFTC', status: 'STALE', last_observation: '2026-08-26', available_at: '2026-08-29T15:30:00Z', note: 'Friday release lag; refresh due Monday.' },
       { series: 'LME_CU_INVENTORY', source: 'LME_MANUAL', status: 'STALE', last_observation: '2026-08-29', available_at: '2026-08-29T17:00:00Z', note: 'Manual export older than 5 sessions.' },
       { series: 'CN_PROP_DEMAND', source: 'WIND_MANUAL', status: 'MISSING', last_observation: null, available_at: null, note: 'Series definition unresolved; excluded from scores.' },
-      { series: 'DXY_EXACT', source: 'BLOCKED', status: 'BLOCKED', last_observation: null, available_at: null, note: 'Entitlement unavailable; proxy disclosed instead.' },
+      { series: 'DXY_EXACT', source: 'BLOCKED', status: 'BLOCKED', last_observation: null, available_at: null, note: 'Entitlement unavailable; series remains BLOCKED — no proxy substitution.' },
     ],
   },
   details: {

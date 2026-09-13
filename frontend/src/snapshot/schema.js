@@ -1,12 +1,15 @@
 /**
  * DashboardSnapshotV0 — frontend render contract.
  *
- * #114 (PRODUCT-DEV) owns the Python source of truth. Until that fixture lands
- * on main, the JSON objects under src/snapshot/fixtures are an ISOLATED,
- * clearly-labelled frontend mirror used for UI development only.
- * Reconciliation expectations are documented in src/snapshot/RECONCILIATION.md.
+ * #114 (PRODUCT-DEV) owns the Python source of truth and the contract identity:
+ * version identity lives in `metadata.snapshot_version` (frozen by #114). The
+ * frontend consumes that contract and invents no competing top-level fields.
+ * Until a #114 fixture lands on main, the JSON objects under
+ * src/snapshot/fixtures are an ISOLATED, clearly-labelled frontend mirror used
+ * for UI development only. Reconciliation expectations are documented in
+ * src/snapshot/RECONCILIATION.md.
  */
-export const SNAPSHOT_CONTRACT = 'DashboardSnapshotV0'
+export const SNAPSHOT_VERSION_V0 = '0'
 
 export const REQUIRED_SECTIONS = [
   'metadata',
@@ -23,9 +26,6 @@ export const REQUIRED_SECTIONS = [
 
 export const OPTIONAL_SECTIONS = ['details']
 
-// contract marker rides at top level to identify the payload version
-const META_SECTIONS = ['contract']
-
 export const DATA_STATUSES = ['FRESH', 'NO_NEW_INFORMATION', 'STALE', 'MISSING', 'BLOCKED']
 
 export const MARKET_CONFIRMATIONS = ['CONFIRMED', 'DIVERGENT', 'COUNTER_TREND']
@@ -41,20 +41,23 @@ export function validateSnapshot(snapshot) {
   if (!snapshot || typeof snapshot !== 'object') {
     return ['snapshot is not an object']
   }
-  if (snapshot.contract !== SNAPSHOT_CONTRACT) {
-    problems.push(`snapshot.contract must be "${SNAPSHOT_CONTRACT}"`)
+  if (snapshot.contract !== undefined) {
+    problems.push('top-level "contract" is not part of the frozen contract; version identity is metadata.snapshot_version')
   }
   for (const section of REQUIRED_SECTIONS) {
     if (!(section in snapshot)) problems.push(`missing required section: ${section}`)
   }
   for (const key of Object.keys(snapshot)) {
-    if (![...REQUIRED_SECTIONS, ...OPTIONAL_SECTIONS, ...META_SECTIONS].includes(key)) {
+    if (![...REQUIRED_SECTIONS, ...OPTIONAL_SECTIONS].includes(key)) {
       problems.push(`unexpected top-level section (belongs under \`details\`): ${key}`)
     }
   }
   const meta = snapshot.metadata ?? {}
   for (const field of ['snapshot_version', 'as_of', 'decision_time', 'lane', 'run_id']) {
     if (!meta[field]) problems.push(`metadata.${field} is required`)
+  }
+  if (meta.snapshot_version && String(meta.snapshot_version) !== SNAPSHOT_VERSION_V0) {
+    problems.push(`frontend renders DashboardSnapshotV0 only (metadata.snapshot_version must be "${SNAPSHOT_VERSION_V0}")`)
   }
   if (meta.lane && !['MONITORING', 'RESEARCH', 'FORMAL_OOS'].includes(meta.lane)) {
     problems.push(`metadata.lane "${meta.lane}" is not a known evidence lane`)

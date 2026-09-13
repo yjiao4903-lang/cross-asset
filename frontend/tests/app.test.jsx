@@ -31,6 +31,20 @@ describe('App shell', () => {
       expect(within(board).getByText(v.label)).toBeInTheDocument()
     }
   })
+
+  it('renders climate pills from their own cluster fields, without cross-lens derivation', () => {
+    openApp()
+    const pills = screen.getAllByTestId('climate-pill')
+    const snap = loadSnapshot('stress')
+    const policy = snap.clusters.find((c) => c.id === 'policy_liquidity')
+    const market = snap.clusters.find((c) => c.id === 'market_confirmation')
+    // pill 2 shows the policy/liquidity cluster's own direction+confidence
+    expect(pills[1]).toHaveTextContent(policy.state.replace(/_/g, ' '))
+    expect(pills[1].textContent).toContain(`${Math.round(policy.confidence * 100)}%`)
+    // pill 3 shows the market-confirmation cluster's own confidence, not macro_climate's
+    expect(pills[2].textContent).toContain(`${Math.round(market.confidence * 100)}%`)
+    expect(`${Math.round(snap.macro_climate.confidence * 100)}%`).not.toBe(`${Math.round(market.confidence * 100)}%`)
+  })
 })
 
 describe('keyboard interaction (V1 contract: 1-5 navigate, r reload)', () => {

@@ -181,14 +181,20 @@ function ExecutiveBrief({ brief }) {
 
 export default function OverviewPage({ snapshot, setSelectedAsset }) {
   const { macro_climate, investment_climate, regime } = snapshot
+  /* Climate pills render snapshot-provided fields only.
+   * Policy/liquidity and market-confirmation state/direction/confidence come
+   * from their own factor clusters (#114 owns them) — React never derives a
+   * policy direction from growth or reuses another lens' confidence. */
+  const policyCluster = snapshot.clusters.find((c) => c.id === 'policy_liquidity')
+  const marketCluster = snapshot.clusters.find((c) => c.id === 'market_confirmation')
   return (
     /* 1440×900 zero-scroll cockpit: fixed column layout, page never scrolls */
     <div data-testid="overview-page" className="flex h-full flex-col gap-2 p-2">
       {/* Four climate pills */}
       <div className="grid shrink-0 grid-cols-4 gap-2">
         <ClimatePill title="1 · Cyclical Macro" state={macro_climate.state} direction={macro_climate.direction} confidence={macro_climate.confidence} />
-        <ClimatePill title="2 · Policy / Liquidity + Fin. Cond." state={investment_climate.financial_conditions} direction={regime.quadrant.growth === 'IMPROVING' ? 'EASING' : 'TIGHTENING'} confidence={investment_climate.confidence} />
-        <ClimatePill title="3 · Market Confirmation / Risk Appetite" state={investment_climate.market_confirmation} direction={investment_climate.direction} confidence={macro_climate.confidence} />
+        <ClimatePill title="2 · Policy / Liquidity + Fin. Cond." state={policyCluster.state} direction={policyCluster.direction} confidence={policyCluster.confidence} />
+        <ClimatePill title="3 · Market Confirmation / Risk Appetite" state={investment_climate.market_confirmation} direction={marketCluster.direction} confidence={marketCluster.confidence} />
         <ClimatePill title="4 · Investment Climate" state={investment_climate.state} direction={investment_climate.direction} confidence={investment_climate.confidence} />
       </div>
 
