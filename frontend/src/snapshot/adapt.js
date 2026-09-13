@@ -37,10 +37,12 @@ export function familyLabel(family) {
   return FAMILY_LABELS[family] ?? family
 }
 
-/* freshness_status → display data-state. Pure vocabulary mapping. */
+/* freshness_status → display data-state. Pure vocabulary mapping.
+ * PARTIAL is a producer-owned coverage state and stays PARTIAL — it must not
+ * collapse into STALE (WEB-CONTROL R3, #116 comment 5654468573). */
 const FRESHNESS_MAP = {
   OK: 'FRESH',
-  PARTIAL: 'STALE',
+  PARTIAL: 'PARTIAL',
   STALE: 'STALE',
   NO_NEW_INFORMATION: 'NO_NEW_INFORMATION',
   MISSING: 'MISSING',
@@ -53,7 +55,7 @@ export function mapFreshness(status) {
 
 const DATA_HEALTH_MAP = {
   OK: 'FRESH',
-  PARTIAL: 'STALE',
+  PARTIAL: 'PARTIAL',
   STALE: 'STALE',
   MISSING: 'MISSING',
   BLOCKED: 'BLOCKED',

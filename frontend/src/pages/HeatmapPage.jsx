@@ -7,7 +7,7 @@ const HORIZONS = ['CYCLICAL', 'TACTICAL', 'STRUCTURAL_CONTEXT']
  * Cell renders backend direction/score/freshness — no client-side inference.
  * freshness OK→FRESH, PARTIAL→amber, MISSING stays dashed-amber. */
 function HeatCell({ cluster, onClick }) {
-  const isPartial = cluster.freshness === 'STALE' || cluster.freshness === 'MISSING'
+  const isPartial = cluster.freshness === 'PARTIAL' || cluster.freshness === 'STALE' || cluster.freshness === 'MISSING'
   return (
     <button type="button"
       onClick={onClick}

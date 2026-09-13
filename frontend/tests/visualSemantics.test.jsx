@@ -35,6 +35,16 @@ describe('data-health visual semantics', () => {
     expect(el.className).not.toContain('emerald')
   })
 
+  it('renders producer PARTIAL as its own amber state — visible label stays PARTIAL, never STALE', () => {
+    render(<FreshnessChip status="PARTIAL" />)
+    const el = screen.getByTestId('freshness-chip')
+    expect(el.getAttribute('data-status')).toBe('PARTIAL')
+    expect(el).toHaveTextContent('PARTIAL')
+    expect(el).not.toHaveTextContent('STALE')
+    // same amber warning treatment as STALE, but a distinct data-status
+    expect(el.className).toContain('amber')
+  })
+
   it('low confidence is an amber warning, not a bearish signal', () => {
     render(<ConfidenceBadge confidence={0.35} />)
     const el = screen.getByTestId('confidence-badge')

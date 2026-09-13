@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { GOLDEN_MANIFEST, SCENARIOS, loadRawSnapshot, loadSnapshot } from '../src/snapshot/fixtures/index.js'
 import { validateSnapshot } from '../src/snapshot/schema.js'
-import { mapConfirmation } from '../src/snapshot/adapt.js'
+import { mapConfirmation, mapFreshness } from '../src/snapshot/adapt.js'
 
 function sha256(text) {
   return createHash('sha256').update(text, 'utf8').digest('hex')
@@ -105,10 +105,39 @@ describe('presentation adapter (adapt.js)', () => {
 
   it('adapts freshness and data-health vocabulary to display states', () => {
     const tightening = loadSnapshot('tightening')
-    // GOLD has data_health PARTIAL in the producer payload → amber STALE display state
+    // GOLD has data_health PARTIAL in the producer payload → amber PARTIAL display state
     const gold = tightening.asset_views.find((v) => v.asset === 'GOLD')
     expect(gold.data_health_status).toBe('PARTIAL')
-    expect(gold.data_health).toBe('STALE')
+    expect(gold.data_health).toBe('PARTIAL')
+    // benign has no PARTIAL assets — freshness stays OK → FRESH
+    const benign = loadSnapshot('benign')
+    for (const v of benign.asset_views) {
+      expect(v.data_health_status).toBe('OK')
+      expect(v.data_health).toBe('FRESH')
+    }
+  })
+
+  it('keeps PARTIAL distinct from STALE (R3: PARTIAL != STALE)', () => {
+    // full vocabulary separation in both maps
+    expect(mapFreshness('OK')).toBe('FRESH')
+    expect(mapFreshness('PARTIAL')).toBe('PARTIAL')
+    expect(mapFreshness('STALE')).toBe('STALE')
+    expect(mapFreshness('NO_NEW_INFORMATION')).toBe('NO_NEW_INFORMATION')
+    expect(mapFreshness('MISSING')).toBe('MISSING')
+    expect(mapFreshness('BLOCKED')).toBe('BLOCKED')
+    expect(mapFreshness('PARTIAL')).not.toBe(mapFreshness('STALE'))
+    expect(mapFreshness('NO_NEW_INFORMATION')).not.toBe(mapFreshness('STALE'))
+    expect(mapFreshness('MISSING')).not.toBe('FRESH')
+
+    // tightening golden: GROWTH_ACTIVITY@CYCLICAL cluster is producer-PARTIAL and
+    // must surface as PARTIAL, while CN_MFG_PMI overdue event is genuinely STALE
+    const tightening = loadSnapshot('tightening')
+    const partialCluster = tightening.clusters.find((c) => c.id === 'GROWTH_ACTIVITY@CYCLICAL')
+    expect(partialCluster.freshness_status).toBe('PARTIAL')
+    expect(partialCluster.freshness).toBe('PARTIAL')
+    const overdueEvent = tightening.weekly_change.events.find((e) => e.event_type === 'OVERDUE')
+    expect(overdueEvent.status).toBe('STALE')
+    expect(overdueEvent.status).not.toBe('PARTIAL')
   })
 
   it('loader returns deterministic fresh adaptations', () => {

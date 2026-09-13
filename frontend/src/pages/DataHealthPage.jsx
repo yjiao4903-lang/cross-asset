@@ -25,7 +25,7 @@ function FamilyStatusTable({ familyInformationStatus }) {
           <tr key={family} className="border-t border-ink-800">
             <td className="py-1 text-zinc-200">{family.replaceAll('_', ' ').toLowerCase()}</td>
             <td className="py-1">
-              <FreshnessChip status={status === 'NO_NEW_INFORMATION' ? 'NO_NEW_INFORMATION' : status === 'UPDATED' ? 'UPDATED' : 'STALE'} />
+              <FreshnessChip status={status === 'NO_NEW_INFORMATION' ? 'NO_NEW_INFORMATION' : status === 'UPDATED' ? 'UPDATED' : status === 'PARTIAL' ? 'PARTIAL' : 'STALE'} />
             </td>
           </tr>
         ))}
