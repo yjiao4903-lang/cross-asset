@@ -1,0 +1,794 @@
+{
+  "metadata": {
+    "snapshot_version": "DashboardSnapshotV0",
+    "snapshot_id": "dsv0-monitoring-tightening-20260904",
+    "as_of": "2026-09-04",
+    "decision_time": "2026-09-05T06:00:00Z",
+    "lane": "MONITORING",
+    "run_id": "fixture-run-tightening-20260904",
+    "model_version": "decision-support-v2-core-v0"
+  },
+  "macro_climate": {
+    "state": "GROWTH=-0.4|INFLATION=0.4667",
+    "direction": "FALLING",
+    "score": 0.0333,
+    "confidence": 0.2833,
+    "coverage": 0.3333,
+    "summary": "stagflation-risk: growth deteriorating while inflation re-accelerates"
+  },
+  "investment_climate": {
+    "state": "NEUTRAL",
+    "direction": "FLAT",
+    "score": -0.1667,
+    "confidence": 0.85,
+    "coverage": 1.0,
+    "summary": "risk-off tilt; financial conditions tightening, volatility elevated"
+  },
+  "clusters": [
+    {
+      "cluster_id": "CHINA_CYCLE@CYCLICAL",
+      "family": "CHINA_CYCLE",
+      "horizon": "CYCLICAL",
+      "score": -0.45,
+      "weekly_delta": -0.05,
+      "direction": "FLAT",
+      "confidence": 0.85,
+      "coverage": 1.0,
+      "top_positive": [],
+      "top_negative": [],
+      "missing_factors": [],
+      "stale_factors": [],
+      "freshness_status": "OK"
+    },
+    {
+      "cluster_id": "FINANCIAL_CONDITIONS@CYCLICAL",
+      "family": "FINANCIAL_CONDITIONS",
+      "horizon": "CYCLICAL",
+      "score": -0.4,
+      "weekly_delta": 0.0,
+      "direction": "FLAT",
+      "confidence": 0.85,
+      "coverage": 1.0,
+      "top_positive": [],
+      "top_negative": [],
+      "missing_factors": [],
+      "stale_factors": [],
+      "freshness_status": "OK"
+    },
+    {
+      "cluster_id": "FINANCIAL_CONDITIONS@TACTICAL",
+      "family": "FINANCIAL_CONDITIONS",
+      "horizon": "TACTICAL",
+      "score": 0.3,
+      "weekly_delta": 0.1333,
+      "direction": "RISING",
+      "confidence": 0.85,
+      "coverage": 1.0,
+      "top_positive": [],
+      "top_negative": [],
+      "missing_factors": [],
+      "stale_factors": [],
+      "freshness_status": "OK"
+    },
+    {
+      "cluster_id": "GROWTH_ACTIVITY@CYCLICAL",
+      "family": "GROWTH_ACTIVITY",
+      "horizon": "CYCLICAL",
+      "score": -0.4,
+      "weekly_delta": -0.1,
+      "direction": "FALLING",
+      "confidence": 0.2833,
+      "coverage": 0.3333,
+      "top_positive": [],
+      "top_negative": [],
+      "missing_factors": [
+        "US_ISM_PMI",
+        "CN_MFG_PMI"
+      ],
+      "stale_factors": [
+        "US_ISM_PMI",
+        "CN_MFG_PMI"
+      ],
+      "freshness_status": "PARTIAL"
+    },
+    {
+      "cluster_id": "INFLATION_COST@CYCLICAL",
+      "family": "INFLATION_COST",
+      "horizon": "CYCLICAL",
+      "score": 0.4667,
+      "weekly_delta": 0.0667,
+      "direction": "RISING",
+      "confidence": 0.85,
+      "coverage": 1.0,
+      "top_positive": [],
+      "top_negative": [],
+      "missing_factors": [],
+      "stale_factors": [],
+      "freshness_status": "OK"
+    },
+    {
+      "cluster_id": "INFLATION_COST@TACTICAL",
+      "family": "INFLATION_COST",
+      "horizon": "TACTICAL",
+      "score": 0.5,
+      "weekly_delta": 0.1,
+      "direction": "RISING",
+      "confidence": 0.85,
+      "coverage": 1.0,
+      "top_positive": [],
+      "top_negative": [],
+      "missing_factors": [],
+      "stale_factors": [],
+      "freshness_status": "OK"
+    },
+    {
+      "cluster_id": "MARKET_CONFIRMATION@TACTICAL",
+      "family": "MARKET_CONFIRMATION",
+      "horizon": "TACTICAL",
+      "score": -0.2,
+      "weekly_delta": -0.18,
+      "direction": "FALLING",
+      "confidence": 0.85,
+      "coverage": 1.0,
+      "top_positive": [],
+      "top_negative": [],
+      "missing_factors": [],
+      "stale_factors": [],
+      "freshness_status": "OK"
+    },
+    {
+      "cluster_id": "POLICY_LIQUIDITY@CYCLICAL",
+      "family": "POLICY_LIQUIDITY",
+      "horizon": "CYCLICAL",
+      "score": -0.3667,
+      "weekly_delta": -0.0667,
+      "direction": "FALLING",
+      "confidence": 0.85,
+      "coverage": 1.0,
+      "top_positive": [],
+      "top_negative": [],
+      "missing_factors": [],
+      "stale_factors": [],
+      "freshness_status": "OK"
+    },
+    {
+      "cluster_id": "POLICY_LIQUIDITY@TACTICAL",
+      "family": "POLICY_LIQUIDITY",
+      "horizon": "TACTICAL",
+      "score": 0.3,
+      "weekly_delta": 0.2,
+      "direction": "RISING",
+      "confidence": 0.85,
+      "coverage": 1.0,
+      "top_positive": [],
+      "top_negative": [],
+      "missing_factors": [],
+      "stale_factors": [],
+      "freshness_status": "OK"
+    },
+    {
+      "cluster_id": "RISK_APPETITE@TACTICAL",
+      "family": "RISK_APPETITE",
+      "horizon": "TACTICAL",
+      "score": -0.6,
+      "weekly_delta": -0.15,
+      "direction": "FALLING",
+      "confidence": 0.85,
+      "coverage": 1.0,
+      "top_positive": [],
+      "top_negative": [],
+      "missing_factors": [],
+      "stale_factors": [],
+      "freshness_status": "OK"
+    },
+    {
+      "cluster_id": "VALUATION_RISK_PREMIUM@STRUCTURAL_CONTEXT",
+      "family": "VALUATION_RISK_PREMIUM",
+      "horizon": "STRUCTURAL_CONTEXT",
+      "score": 0.0,
+      "weekly_delta": 0.0,
+      "direction": "FLAT",
+      "confidence": 0.5667,
+      "coverage": 0.6667,
+      "top_positive": [],
+      "top_negative": [],
+      "missing_factors": [
+        "GOLD_REAL_RATE_OVERLAY"
+      ],
+      "stale_factors": [
+        "GOLD_REAL_RATE_OVERLAY"
+      ],
+      "freshness_status": "PARTIAL"
+    }
+  ],
+  "weekly_change": {
+    "information_set_delta": {
+      "status": "UPDATED",
+      "events": [
+        {
+          "factor_id": "US_CORE_CPI_TREND",
+          "series_id": "FIXTURE_CPILFESL",
+          "event_type": "NEW_OBSERVATION",
+          "observation_date": "2026-09-04",
+          "note": "fixture August core CPI re-acceleration",
+          "surprise": {
+            "method": "TREND_RELATIVE",
+            "value": 0.4,
+            "baseline": "6m trend",
+            "note": ""
+          }
+        },
+        {
+          "factor_id": "US_PAYROLLS_TREND",
+          "series_id": "FIXTURE_PAYEMS",
+          "event_type": "REVISION",
+          "observation_date": "2026-09-04",
+          "note": "fixture payroll benchmark revision downward",
+          "surprise": null
+        },
+        {
+          "factor_id": "US_PPI_TREND",
+          "series_id": "FIXTURE_PPI",
+          "event_type": "NEW_OBSERVATION",
+          "observation_date": "2026-09-04",
+          "note": "fixture August PPI",
+          "surprise": null
+        },
+        {
+          "factor_id": "CN_CREDIT_IMPULSE",
+          "series_id": "FIXTURE_TSF",
+          "event_type": "NEW_OBSERVATION",
+          "observation_date": "2026-09-01",
+          "note": "fixture August aggregate financing, softer",
+          "surprise": null
+        },
+        {
+          "factor_id": "CN_M1_M2_GAP",
+          "series_id": "FIXTURE_M1M2",
+          "event_type": "NEW_OBSERVATION",
+          "observation_date": "2026-09-01",
+          "note": "fixture August money supply, weaker activation",
+          "surprise": null
+        },
+        {
+          "factor_id": "FED_POLICY_STANCE",
+          "series_id": "FIXTURE_FOMC",
+          "event_type": "NEW_OBSERVATION",
+          "observation_date": "2026-09-02",
+          "note": "fixture FOMC decision: hawkish hold",
+          "surprise": null
+        },
+        {
+          "factor_id": "US_ISM_PMI",
+          "series_id": "FIXTURE_ISM",
+          "event_type": "OVERDUE",
+          "observation_date": null,
+          "note": "expected 2026-09-01 release not arrived; stale, not zero",
+          "surprise": null
+        }
+      ],
+      "stale_factors": [
+        "US_ISM_PMI"
+      ]
+    },
+    "macro_state_delta": {
+      "entries": [
+        {
+          "factor_id": "CN_CREDIT_IMPULSE",
+          "previous": -0.4,
+          "current": -0.5,
+          "delta": -0.1,
+          "cause": "NEW_INFORMATION"
+        },
+        {
+          "factor_id": "CN_M1_M2_GAP",
+          "previous": -0.5,
+          "current": -0.6,
+          "delta": -0.1,
+          "cause": "NEW_INFORMATION"
+        },
+        {
+          "factor_id": "CN_NEW_LOANS_TREND",
+          "previous": -0.3,
+          "current": -0.3,
+          "delta": 0.0,
+          "cause": "NO_NEW_INFORMATION"
+        },
+        {
+          "factor_id": "FED_POLICY_STANCE",
+          "previous": -0.3,
+          "current": -0.4,
+          "delta": -0.1,
+          "cause": "NEW_INFORMATION"
+        },
+        {
+          "factor_id": "US_CORE_CPI_TREND",
+          "previous": 0.45,
+          "current": 0.6,
+          "delta": 0.15,
+          "cause": "NEW_INFORMATION"
+        },
+        {
+          "factor_id": "US_FIN_COND_TREND",
+          "previous": -0.4,
+          "current": -0.4,
+          "delta": 0.0,
+          "cause": "NO_NEW_INFORMATION"
+        },
+        {
+          "factor_id": "US_PAYROLLS_TREND",
+          "previous": -0.3,
+          "current": -0.4,
+          "delta": -0.1,
+          "cause": "NEW_INFORMATION"
+        },
+        {
+          "factor_id": "US_PPI_TREND",
+          "previous": 0.35,
+          "current": 0.4,
+          "delta": 0.05,
+          "cause": "NEW_INFORMATION"
+        },
+        {
+          "factor_id": "US_WAGE_PRESSURE",
+          "previous": 0.4,
+          "current": 0.4,
+          "delta": 0.0,
+          "cause": "NO_NEW_INFORMATION"
+        },
+        {
+          "factor_id": "US_YIELD_CURVE_10Y2Y",
+          "previous": -0.2,
+          "current": -0.2,
+          "delta": 0.0,
+          "cause": "NO_NEW_INFORMATION"
+        }
+      ]
+    },
+    "market_condition_delta": {
+      "moves": [
+        {
+          "instrument": "SPX",
+          "metric_class": "PRICE",
+          "unit": "PCT",
+          "weekly_change": -2.037377,
+          "prior_value": 6528.0,
+          "current_value": 6395.0
+        },
+        {
+          "instrument": "CSI300",
+          "metric_class": "PRICE",
+          "unit": "PCT",
+          "weekly_change": -2.115159,
+          "prior_value": 4255.0,
+          "current_value": 4165.0
+        },
+        {
+          "instrument": "HSI",
+          "metric_class": "PRICE",
+          "unit": "PCT",
+          "weekly_change": -2.192175,
+          "prior_value": 24998.0,
+          "current_value": 24450.0
+        },
+        {
+          "instrument": "GOLD",
+          "metric_class": "COMMODITY",
+          "unit": "PCT",
+          "weekly_change": 0.792752,
+          "prior_value": 3532.0,
+          "current_value": 3560.0
+        },
+        {
+          "instrument": "COPPER",
+          "metric_class": "COMMODITY",
+          "unit": "PCT",
+          "weekly_change": -2.603037,
+          "prior_value": 4.61,
+          "current_value": 4.49
+        },
+        {
+          "instrument": "USD_CNY",
+          "metric_class": "FX",
+          "unit": "PCT",
+          "weekly_change": 0.703235,
+          "prior_value": 7.11,
+          "current_value": 7.16
+        },
+        {
+          "instrument": "US10Y",
+          "metric_class": "YIELD",
+          "unit": "BPS",
+          "weekly_change": 9.0,
+          "prior_value": 4.27,
+          "current_value": 4.36
+        },
+        {
+          "instrument": "CN10Y",
+          "metric_class": "YIELD",
+          "unit": "BPS",
+          "weekly_change": -4.0,
+          "prior_value": 1.76,
+          "current_value": 1.72
+        },
+        {
+          "instrument": "US_HY_OAS",
+          "metric_class": "SPREAD",
+          "unit": "BPS",
+          "weekly_change": 21.0,
+          "prior_value": 2.77,
+          "current_value": 2.98
+        },
+        {
+          "instrument": "VIX",
+          "metric_class": "VOLATILITY",
+          "unit": "POINT",
+          "weekly_change": 3.2,
+          "prior_value": 14.0,
+          "current_value": 17.2
+        }
+      ]
+    },
+    "asset_view_delta": {
+      "entries": [
+        {
+          "asset": "CN_EQ",
+          "previous_stance": 0,
+          "current_stance": -1,
+          "delta": -1,
+          "reason_tags": [
+            "STANCE_DOWN",
+            "CHINA_CYCLE_UPDATED",
+            "GROWTH_ACTIVITY_UPDATED",
+            "INFLATION_COST_UPDATED",
+            "POLICY_LIQUIDITY_UPDATED",
+            "MARKET_CONFIRMED"
+          ],
+          "confidence_delta": 0.1
+        },
+        {
+          "asset": "HK_EQ",
+          "previous_stance": 0,
+          "current_stance": -1,
+          "delta": -1,
+          "reason_tags": [
+            "STANCE_DOWN",
+            "CHINA_CYCLE_UPDATED",
+            "GROWTH_ACTIVITY_UPDATED",
+            "INFLATION_COST_UPDATED",
+            "POLICY_LIQUIDITY_UPDATED",
+            "MARKET_CONFIRMED"
+          ],
+          "confidence_delta": 0.1
+        },
+        {
+          "asset": "CASH",
+          "previous_stance": 0,
+          "current_stance": 1,
+          "delta": 1,
+          "reason_tags": [
+            "STANCE_UP",
+            "CHINA_CYCLE_UPDATED",
+            "GROWTH_ACTIVITY_UPDATED",
+            "INFLATION_COST_UPDATED",
+            "POLICY_LIQUIDITY_UPDATED",
+            "MARKET_COUNTER_TREND"
+          ],
+          "confidence_delta": 0.1
+        }
+      ]
+    }
+  },
+  "regime": {
+    "quadrant_label": "STAGFLATION_RISK",
+    "growth_state": "CONTRACTING",
+    "growth_direction": "FALLING",
+    "inflation_state": "HIGH",
+    "inflation_direction": "RISING",
+    "dwell_weeks": 1,
+    "transition_flag": true,
+    "confidence": 0.2833,
+    "coverage": 0.3333,
+    "lens_disagreement": {
+      "flag": false,
+      "summary": ""
+    }
+  },
+  "asset_views": [
+    {
+      "asset": "CN_EQ",
+      "macro_bias": -1,
+      "market_confirmation": "CONFIRMED",
+      "valuation_tag": "valuation cushion applied (cheap valuation)",
+      "stance": -1,
+      "prior_stance": 0,
+      "confidence": 1.0,
+      "drivers": [
+        "CHINA_CYCLE:-0.27",
+        "GROWTH_ACTIVITY:-0.12",
+        "POLICY_LIQUIDITY:-0.11",
+        "INFLATION_COST:-0.09",
+        "market_confirmed:CN_EQ_TREND_63D"
+      ],
+      "counter_signals": [],
+      "invalidator": "CN credit impulse turns decisively negative for 2 consecutive months",
+      "data_health": "OK"
+    },
+    {
+      "asset": "HK_EQ",
+      "macro_bias": -1,
+      "market_confirmation": "CONFIRMED",
+      "valuation_tag": "valuation overlay not bound",
+      "stance": -1,
+      "prior_stance": 0,
+      "confidence": 1.0,
+      "drivers": [
+        "CHINA_CYCLE:-0.23",
+        "FINANCIAL_CONDITIONS:-0.16",
+        "GROWTH_ACTIVITY:-0.12",
+        "market_confirmed:CN_EQ_TREND_63D"
+      ],
+      "counter_signals": [],
+      "invalidator": "USD funding stress (HY spread +30bps in 2 weeks)",
+      "data_health": "OK"
+    },
+    {
+      "asset": "US_EQ",
+      "macro_bias": -1,
+      "market_confirmation": "CONFIRMED",
+      "valuation_tag": "valuation overlay neutral",
+      "stance": -1,
+      "prior_stance": -1,
+      "confidence": 1.0,
+      "drivers": [
+        "GROWTH_ACTIVITY:-0.36",
+        "INFLATION_COST:-0.19",
+        "FINANCIAL_CONDITIONS:-0.16",
+        "POLICY_LIQUIDITY:-0.15",
+        "market_confirmed:US_EQ_TREND_63D"
+      ],
+      "counter_signals": [],
+      "invalidator": "10Y real yield rises above 2.5% and holds for 3 weeks",
+      "data_health": "OK"
+    },
+    {
+      "asset": "CN_BOND",
+      "macro_bias": 0,
+      "market_confirmation": "DIVERGENT",
+      "valuation_tag": "valuation overlay not bound",
+      "stance": 0,
+      "prior_stance": 0,
+      "confidence": 0.9,
+      "drivers": [
+        "INFLATION_COST:-0.28",
+        "GROWTH_ACTIVITY:+0.24",
+        "POLICY_LIQUIDITY:-0.18",
+        "CHINA_CYCLE:+0.18"
+      ],
+      "counter_signals": [
+        "market divergence attenuation applied"
+      ],
+      "invalidator": "CN credit impulse accelerates for 2 consecutive months",
+      "data_health": "OK"
+    },
+    {
+      "asset": "GOLD",
+      "macro_bias": 0,
+      "market_confirmation": "DIVERGENT",
+      "valuation_tag": "valuation overlay not bound",
+      "stance": 0,
+      "prior_stance": 0,
+      "confidence": 0.9,
+      "drivers": [
+        "POLICY_LIQUIDITY:-0.22",
+        "INFLATION_COST:+0.19",
+        "FINANCIAL_CONDITIONS:-0.12"
+      ],
+      "counter_signals": [
+        "market divergence attenuation applied"
+      ],
+      "invalidator": "10Y real yield rises above 2.5% while USD broad momentum stays positive",
+      "data_health": "PARTIAL"
+    },
+    {
+      "asset": "COPPER",
+      "macro_bias": 0,
+      "market_confirmation": "DIVERGENT",
+      "valuation_tag": "valuation overlay not bound",
+      "stance": 0,
+      "prior_stance": 0,
+      "confidence": 0.9,
+      "drivers": [
+        "GROWTH_ACTIVITY:-0.32",
+        "CHINA_CYCLE:-0.27",
+        "INFLATION_COST:+0.09"
+      ],
+      "counter_signals": [
+        "market divergence attenuation applied"
+      ],
+      "invalidator": "China new-loans trend turns negative for 2 consecutive months",
+      "data_health": "OK"
+    },
+    {
+      "asset": "USD_CNY",
+      "macro_bias": 0,
+      "market_confirmation": "DIVERGENT",
+      "valuation_tag": "valuation overlay not bound",
+      "stance": 0,
+      "prior_stance": 0,
+      "confidence": 0.9,
+      "drivers": [
+        "FINANCIAL_CONDITIONS:-0.24",
+        "POLICY_LIQUIDITY:+0.11"
+      ],
+      "counter_signals": [
+        "market divergence attenuation applied"
+      ],
+      "invalidator": "PBoC counter-cyclical fixing signals sustained CNY support",
+      "data_health": "OK"
+    },
+    {
+      "asset": "CASH",
+      "macro_bias": 1,
+      "market_confirmation": "COUNTER_TREND",
+      "valuation_tag": "valuation overlay not bound",
+      "stance": 1,
+      "prior_stance": 0,
+      "confidence": 1.0,
+      "drivers": [
+        "FINANCIAL_CONDITIONS:+0.20",
+        "POLICY_LIQUIDITY:+0.18"
+      ],
+      "counter_signals": [
+        "counter-trend conviction cap applied"
+      ],
+      "invalidator": "risk appetite improves while policy stance eases",
+      "data_health": "OK"
+    }
+  ],
+  "cross_asset_pulse": {
+    "entries": [
+      {
+        "asset": "US_EQ",
+        "ret_1w": -2.04,
+        "ret_1m": -3.8,
+        "ret_3m": 1.2,
+        "momentum_label": "DETERIORATING"
+      },
+      {
+        "asset": "CN_EQ",
+        "ret_1w": -2.11,
+        "ret_1m": -2.9,
+        "ret_3m": -4.5,
+        "momentum_label": "DETERIORATING"
+      },
+      {
+        "asset": "HK_EQ",
+        "ret_1w": -2.19,
+        "ret_1m": -3.3,
+        "ret_3m": -2.1,
+        "momentum_label": "DETERIORATING"
+      },
+      {
+        "asset": "CN_BOND",
+        "ret_1w": 0.11,
+        "ret_1m": 0.3,
+        "ret_3m": 0.9,
+        "momentum_label": "STABLE"
+      },
+      {
+        "asset": "GOLD",
+        "ret_1w": 0.79,
+        "ret_1m": 2.2,
+        "ret_3m": 7.0,
+        "momentum_label": "RESILIENT"
+      },
+      {
+        "asset": "COPPER",
+        "ret_1w": -2.6,
+        "ret_1m": -4.8,
+        "ret_3m": -3.2,
+        "momentum_label": "DETERIORATING"
+      },
+      {
+        "asset": "USD_CNY",
+        "ret_1w": 0.7,
+        "ret_1m": 1.4,
+        "ret_3m": 2.3,
+        "momentum_label": "USD FIRMING"
+      },
+      {
+        "asset": "CASH",
+        "ret_1w": 0.0,
+        "ret_1m": 0.1,
+        "ret_3m": 0.4,
+        "momentum_label": "DEFENSIVE"
+      }
+    ],
+    "summary": "risk-off tilt; financial conditions tightening, volatility elevated"
+  },
+  "executive_brief": {
+    "what_changed": "Core CPI re-accelerated on the August release while payroll revisions cut the growth picture; credit spreads widened and volatility jumped. The ISM release is overdue and the gold real-rate overlay is unavailable.",
+    "why_it_matters": "Growth deteriorating with inflation rising is a stagflation-risk mix: it caps pro-cyclical conviction, favors defensive stances and puts a premium on invalidator discipline rather than trend chasing.",
+    "what_to_watch": [
+      "overdue ISM release: confirmation or pushback on the growth deterioration",
+      "whether HY spread widening persists beyond +20bps/week",
+      "core CPI trend: two more accelerating prints would harden the stagflation quadrant"
+    ]
+  },
+  "data_health_summary": {
+    "overall": "PARTIAL",
+    "stale_components": [
+      "CN_MFG_PMI",
+      "GOLD_REAL_RATE_OVERLAY",
+      "US_ISM_PMI"
+    ],
+    "missing_components": [
+      "CN_MFG_PMI",
+      "GOLD_REAL_RATE_OVERLAY",
+      "US_ISM_PMI"
+    ],
+    "blockers": [
+      "GOLD: GOLD_REAL_RATE_OVERLAY — valuation overlay unavailable; cap/cushion not applied"
+    ]
+  },
+  "details": {
+    "lineage_note": "fixture lineage; real source binding comes later",
+    "taxonomy_version": 2,
+    "parameter_status": "DEVELOPMENT_PRIOR",
+    "family_information_status": {
+      "GROWTH_ACTIVITY": "UPDATED",
+      "INFLATION_COST": "UPDATED",
+      "POLICY_LIQUIDITY": "UPDATED",
+      "CHINA_CYCLE": "UPDATED",
+      "FINANCIAL_CONDITIONS": "NO_NEW_INFORMATION",
+      "MARKET_CONFIRMATION": "NO_NEW_INFORMATION",
+      "RISK_APPETITE": "NO_NEW_INFORMATION",
+      "VALUATION_RISK_PREMIUM": "NO_NEW_INFORMATION"
+    },
+    "released_factors": [
+      "CN_CREDIT_IMPULSE",
+      "CN_M1_M2_GAP",
+      "FED_POLICY_STANCE",
+      "US_CORE_CPI_TREND",
+      "US_PAYROLLS_TREND",
+      "US_PPI_TREND"
+    ],
+    "subfactor_scores_current": {
+      "BREAKEVEN_5Y5Y": 0.5,
+      "CFTC_RISK_POSITIONING": -0.3,
+      "CN_BOND_TREND_63D": 0.2,
+      "CN_CREDIT_IMPULSE": -0.5,
+      "CN_DR007": 0.3,
+      "CN_EQ_TREND_63D": -0.4,
+      "CN_EQ_VALUATION": 1.2,
+      "CN_M1_M2_GAP": -0.6,
+      "CN_NEW_LOANS_TREND": -0.3,
+      "COPPER_TREND_63D": -0.6,
+      "FED_POLICY_STANCE": -0.4,
+      "GOLD_REAL_RATE_OVERLAY": null,
+      "GOLD_TREND_63D": 0.3,
+      "USD_BROAD_MOMENTUM": 0.7,
+      "US_10Y_REAL_YIELD": -0.6,
+      "US_CORE_CPI_TREND": 0.6,
+      "US_EQ_ERP_PROXY": -1.2,
+      "US_EQ_TREND_63D": -0.5,
+      "US_FIN_COND_TREND": -0.4,
+      "US_HY_SPREAD": 0.8,
+      "US_ISM_PMI": null,
+      "US_PAYROLLS_TREND": -0.4,
+      "US_PPI_TREND": 0.4,
+      "US_WAGE_PRESSURE": 0.4,
+      "US_YIELD_CURVE_10Y2Y": -0.2,
+      "VIX_LEVEL": -0.9
+    },
+    "gate_blockers": {
+      "GOLD": [
+        {
+          "source": "GOLD_REAL_RATE_OVERLAY",
+          "reason": "valuation overlay unavailable; cap/cushion not applied"
+        }
+      ]
+    }
+  }
+}

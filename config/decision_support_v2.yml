@@ -1,0 +1,329 @@
+# Decision Support v2 config surface (Issue #114 Scope D).
+#
+# This is the V2 product lane config. It deliberately coexists with the legacy
+# config/factors.yml (untouched). The 42 research candidates from #113 are a
+# ceiling/backlog; V1 carries only a compact orthogonal representative set that
+# exercises each of the eight families. All subfactors are UNBOUND fixture
+# placeholders: real source binding comes later and must not be guessed.
+version: 2
+contract: DashboardSnapshotV0
+parameter_status: DEVELOPMENT_PRIOR
+
+families:
+  - family_id: GROWTH_ACTIVITY
+    name: Growth & Activity
+    subfactors:
+      - factor_id: US_PAYROLLS_TREND
+        family: GROWTH_ACTIVITY
+        horizon: CYCLICAL
+        native_frequency: monthly
+        sign: 1
+        description: "US labor trend (3m/6m smoothed payroll momentum proxy)"
+        source_route: "PLANNED: FRED payroll + smoothing"
+      - factor_id: US_ISM_PMI
+        family: GROWTH_ACTIVITY
+        horizon: CYCLICAL
+        native_frequency: monthly
+        sign: 1
+        description: "US ISM manufacturing/surveys cyclical pulse"
+        source_route: "PLANNED: official ISM releases"
+      - factor_id: CN_MFG_PMI
+        family: GROWTH_ACTIVITY
+        horizon: CYCLICAL
+        native_frequency: monthly
+        sign: 1
+        description: "China official manufacturing PMI cyclical pulse"
+        source_route: "PLANNED: NBS official release"
+
+  - family_id: INFLATION_COST
+    name: Inflation & Cost Pressure
+    subfactors:
+      - factor_id: US_CORE_CPI_TREND
+        family: INFLATION_COST
+        horizon: CYCLICAL
+        native_frequency: monthly
+        sign: 1
+        description: "US core CPI 3m/6m annualized trend"
+        source_route: "PLANNED: BLS releases"
+      - factor_id: US_PPI_TREND
+        family: INFLATION_COST
+        horizon: CYCLICAL
+        native_frequency: monthly
+        sign: 1
+        description: "US producer price pressure trend"
+        source_route: "PLANNED: BLS PPI"
+      - factor_id: US_WAGE_PRESSURE
+        family: INFLATION_COST
+        horizon: CYCLICAL
+        native_frequency: monthly
+        sign: 1
+        description: "Wage growth pressure (AHE trend proxy)"
+        source_route: "PLANNED: BLS AHE"
+      - factor_id: BREAKEVEN_5Y5Y
+        family: INFLATION_COST
+        horizon: TACTICAL
+        native_frequency: daily
+        sign: 1
+        description: "Market-implied long-horizon inflation expectations"
+        source_route: "PLANNED: FRED T5YIFR"
+
+  - family_id: POLICY_LIQUIDITY
+    name: Policy & Liquidity
+    subfactors:
+      - factor_id: FED_POLICY_STANCE
+        family: POLICY_LIQUIDITY
+        horizon: CYCLICAL
+        native_frequency: meeting-based
+        sign: 1
+        description: "Fed policy stance: easing(+)/tightening(-) bias score"
+        source_route: "PLANNED: FOMC decisions/manual stance mapping"
+      - factor_id: US_YIELD_CURVE_10Y2Y
+        family: POLICY_LIQUIDITY
+        horizon: CYCLICAL
+        native_frequency: daily
+        sign: 1
+        description: "10Y-2Y curve state as cyclical policy/liquidity signal"
+        source_route: "PLANNED: FRED T10Y2Y"
+      - factor_id: CN_DR007
+        family: POLICY_LIQUIDITY
+        horizon: TACTICAL
+        native_frequency: daily
+        sign: -1
+        description: "China money-market liquidity pulse (DR007, negative sign: lower=easier)"
+        source_route: "PLANNED: chinabond/official fixings"
+      - factor_id: CN_CREDIT_IMPULSE
+        family: POLICY_LIQUIDITY
+        horizon: CYCLICAL
+        native_frequency: monthly
+        sign: 1
+        description: "China credit impulse / aggregate financing momentum"
+        source_route: "PLANNED: PBoC TSF releases"
+
+  - family_id: CHINA_CYCLE
+    name: China Cycle / Domestic Credit-Demand
+    subfactors:
+      - factor_id: CN_M1_M2_GAP
+        family: CHINA_CYCLE
+        horizon: CYCLICAL
+        native_frequency: monthly
+        sign: 1
+        description: "M1-M2 growth gap as domestic demand/liquidity activation"
+        source_route: "PLANNED: PBoC money supply"
+      - factor_id: CN_NEW_LOANS_TREND
+        family: CHINA_CYCLE
+        horizon: CYCLICAL
+        native_frequency: monthly
+        sign: 1
+        description: "New RMB loans trend as credit-demand proxy"
+        source_route: "PLANNED: PBoC credit releases"
+
+  - family_id: FINANCIAL_CONDITIONS
+    name: Financial Conditions & Stress
+    subfactors:
+      - factor_id: US_HY_SPREAD
+        family: FINANCIAL_CONDITIONS
+        horizon: TACTICAL
+        native_frequency: daily
+        sign: -1
+        description: "US high-yield spread stress (negative sign: tighter=easier)"
+        source_route: "PLANNED: FRED BAMLH0A0HYM2"
+      - factor_id: US_10Y_REAL_YIELD
+        family: FINANCIAL_CONDITIONS
+        horizon: TACTICAL
+        native_frequency: daily
+        sign: -1
+        description: "10Y TIPS real yield pressure on risk assets"
+        source_route: "PLANNED: FRED DFII10"
+      - factor_id: USD_BROAD_MOMENTUM
+        family: FINANCIAL_CONDITIONS
+        horizon: TACTICAL
+        native_frequency: daily
+        sign: 1
+        description: "Broad USD momentum (dollar pressure lens)"
+        source_route: "PLANNED: broad dollar index proxy"
+      - factor_id: US_FIN_COND_TREND
+        family: FINANCIAL_CONDITIONS
+        horizon: CYCLICAL
+        native_frequency: weekly
+        sign: -1
+        description: "Broad US financial conditions trend (NFCI-style; negative sign: lower index=easier)"
+        source_route: "PLANNED: weekly broad financial conditions index"
+
+  - family_id: MARKET_CONFIRMATION
+    name: Market Confirmation & Momentum
+    subfactors:
+      - factor_id: US_EQ_TREND_63D
+        family: MARKET_CONFIRMATION
+        horizon: TACTICAL
+        native_frequency: daily
+        sign: 1
+        description: "US equity 63d trend confirmation"
+        source_route: "PLANNED: index close series"
+      - factor_id: CN_EQ_TREND_63D
+        family: MARKET_CONFIRMATION
+        horizon: TACTICAL
+        native_frequency: daily
+        sign: 1
+        description: "CN equity 63d trend confirmation"
+        source_route: "PLANNED: CSI300 close series"
+      - factor_id: CN_BOND_TREND_63D
+        family: MARKET_CONFIRMATION
+        horizon: TACTICAL
+        native_frequency: daily
+        sign: 1
+        description: "CN bond 63d trend confirmation"
+        source_route: "PLANNED: chinabond index proxy"
+      - factor_id: GOLD_TREND_63D
+        family: MARKET_CONFIRMATION
+        horizon: TACTICAL
+        native_frequency: daily
+        sign: 1
+        description: "Gold 63d trend confirmation"
+        source_route: "PLANNED: gold close series"
+      - factor_id: COPPER_TREND_63D
+        family: MARKET_CONFIRMATION
+        horizon: TACTICAL
+        native_frequency: daily
+        sign: 1
+        description: "Copper 63d trend confirmation (global cyclical demand)"
+        source_route: "PLANNED: copper close series"
+
+  - family_id: RISK_APPETITE
+    name: Risk Appetite / Positioning
+    subfactors:
+      - factor_id: VIX_LEVEL
+        family: RISK_APPETITE
+        horizon: TACTICAL
+        native_frequency: daily
+        sign: -1
+        description: "Equity volatility risk appetite (negative sign: higher vol=lower appetite)"
+        source_route: "PLANNED: VIX close"
+      - factor_id: CFTC_RISK_POSITIONING
+        family: RISK_APPETITE
+        horizon: TACTICAL
+        native_frequency: weekly
+        sign: 1
+        description: "CFTC speculative positioning pulse (only where robust)"
+        source_route: "PLANNED: existing CFTC C0 lane"
+
+  - family_id: VALUATION_RISK_PREMIUM
+    name: Valuation & Risk Premium
+    subfactors:
+      - factor_id: US_EQ_ERP_PROXY
+        family: VALUATION_RISK_PREMIUM
+        horizon: STRUCTURAL_CONTEXT
+        native_frequency: daily
+        sign: 1
+        description: "US equity risk-premium/valuation overlay (positive=cheap)"
+        source_route: "PLANNED: earnings yield minus real yield proxy"
+      - factor_id: CN_EQ_VALUATION
+        family: VALUATION_RISK_PREMIUM
+        horizon: STRUCTURAL_CONTEXT
+        native_frequency: daily
+        sign: 1
+        description: "CN equity valuation overlay (positive=cheap)"
+        source_route: "PLANNED: index-level percentile proxy"
+      - factor_id: GOLD_REAL_RATE_OVERLAY
+        family: VALUATION_RISK_PREMIUM
+        horizon: STRUCTURAL_CONTEXT
+        native_frequency: daily
+        sign: -1
+        description: "Gold vs real-rate valuation overlay (negative sign: high real yield=expensive gold backdrop)"
+        source_route: "PLANNED: real yield percentile proxy"
+
+# Interpretable regime V0 (Scope E). No HMM/Markov probabilities in P0.
+regime:
+  axis_threshold: 0.25
+  min_dwell_weeks: 3
+  lens_disagreement_threshold: 1.0
+
+market_delta:
+  volatility_style: POINT
+
+# Asset rules/gates V0 (Scope F). Economically interpretable, config-driven.
+# macro_weights apply to horizon-separated CYCLICAL cluster scores (already
+# sign-normalized). macro_scale normalizes the weighted sum onto [-2, 2].
+# valuation is an asymmetric cap/cushion, never short-term timing.
+asset_rules:
+  - asset: CN_EQ
+    macro_weights:
+      CHINA_CYCLE: 0.6
+      GROWTH_ACTIVITY: 0.3
+      POLICY_LIQUIDITY: 0.3
+      INFLATION_COST: -0.2
+    macro_scale: 1.0
+    confirmation_source: CN_EQ_TREND_63D
+    valuation_source: CN_EQ_VALUATION
+    valuation_cap_threshold: -1.0
+    valuation_cushion_threshold: 1.0
+    valuation_tag: "CN valuation percentile overlay"
+    invalidator: "CN credit impulse turns decisively negative for 2 consecutive months"
+  - asset: HK_EQ
+    macro_weights:
+      CHINA_CYCLE: 0.5
+      GROWTH_ACTIVITY: 0.3
+      FINANCIAL_CONDITIONS: 0.4
+    macro_scale: 1.0
+    confirmation_source: CN_EQ_TREND_63D
+    valuation_tag: "no valuation overlay bound in V0"
+    invalidator: "USD funding stress (HY spread +30bps in 2 weeks)"
+  - asset: US_EQ
+    macro_weights:
+      GROWTH_ACTIVITY: 0.9
+      INFLATION_COST: -0.4
+      POLICY_LIQUIDITY: 0.4
+      FINANCIAL_CONDITIONS: 0.4
+    macro_scale: 1.0
+    confirmation_source: US_EQ_TREND_63D
+    valuation_source: US_EQ_ERP_PROXY
+    valuation_cap_threshold: -1.0
+    valuation_cushion_threshold: 1.0
+    valuation_tag: "US ERP/valuation overlay"
+    invalidator: "10Y real yield rises above 2.5% and holds for 3 weeks"
+  - asset: CN_BOND
+    macro_weights:
+      GROWTH_ACTIVITY: -0.6
+      INFLATION_COST: -0.6
+      POLICY_LIQUIDITY: 0.5
+      CHINA_CYCLE: -0.4
+    macro_scale: 1.2
+    confirmation_source: CN_BOND_TREND_63D
+    valuation_tag: "no valuation overlay bound in V0"
+    invalidator: "CN credit impulse accelerates for 2 consecutive months"
+  - asset: GOLD
+    macro_weights:
+      POLICY_LIQUIDITY: 0.6
+      INFLATION_COST: 0.4
+      FINANCIAL_CONDITIONS: 0.3
+    macro_scale: 1.0
+    confirmation_source: GOLD_TREND_63D
+    valuation_source: GOLD_REAL_RATE_OVERLAY
+    valuation_cap_threshold: -1.0
+    valuation_cushion_threshold: 1.0
+    valuation_tag: "gold vs real-rate overlay"
+    invalidator: "10Y real yield rises above 2.5% while USD broad momentum stays positive"
+  - asset: COPPER
+    macro_weights:
+      GROWTH_ACTIVITY: 0.8
+      CHINA_CYCLE: 0.6
+      INFLATION_COST: 0.2
+    macro_scale: 1.0
+    confirmation_source: COPPER_TREND_63D
+    valuation_tag: "no valuation overlay bound in V0"
+    invalidator: "China new-loans trend turns negative for 2 consecutive months"
+  - asset: USD_CNY
+    macro_weights:
+      FINANCIAL_CONDITIONS: 0.6
+      POLICY_LIQUIDITY: -0.3
+    macro_scale: 1.0
+    confirmation_source: USD_BROAD_MOMENTUM
+    valuation_tag: "no valuation overlay bound in V0"
+    invalidator: "PBoC counter-cyclical fixing signals sustained CNY support"
+  - asset: CASH
+    macro_weights:
+      POLICY_LIQUIDITY: -0.5
+      FINANCIAL_CONDITIONS: -0.5
+    macro_scale: 0.7
+    confirmation_source: VIX_LEVEL
+    valuation_tag: "n/a"
+    invalidator: "risk appetite improves while policy stance eases"
