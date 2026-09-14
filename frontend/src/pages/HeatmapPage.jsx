@@ -3,61 +3,84 @@ import { directionSign } from '../lib/format.js'
 
 const HORIZONS = ['CYCLICAL', 'TACTICAL', 'STRUCTURAL_CONTEXT']
 
-/* Heatmap: rows = factor family, columns = horizon class (producer-owned).
- * Cell renders backend direction/score/freshness — no client-side inference.
- * freshness OK→FRESH, PARTIAL→amber, MISSING stays dashed-amber. */
-function HeatCell({ cluster, onClick }) {
-  const isPartial = cluster.freshness === 'PARTIAL' || cluster.freshness === 'STALE' || cluster.freshness === 'MISSING'
+/* Cell surface styling distinguishes every data state. The key invariant:
+ * NO_NEW_INFORMATION is a gray dashed no-change state, never the amber used
+ * for PARTIAL / STALE / MISSING — so NO_NEW_INFORMATION != STALE visually. */
+const CELL_STATE_CLASSES = {
+  FRESH: 'border-border-1 bg-surface-2/40 hover:bg-surface-hover text-txt-secondary',
+  UPDATED: 'border-status-info/25 bg-status-info/5 hover:bg-surface-hover text-txt-secondary',
+  NO_NEW_INFORMATION: 'border-dashed border-border-2 bg-surface-1 hover:bg-surface-hover text-txt-muted',
+  PARTIAL: 'border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-200/90',
+  STALE: 'border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/15 text-amber-200',
+  MISSING: 'border-dashed border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10 text-amber-200/80',
+  BLOCKED: 'border-amber-500/60 bg-amber-500/15 hover:bg-amber-500/20 text-amber-100',
+  UNKNOWN: 'border-dashed border-border-2 bg-surface-1 text-txt-muted',
+}
+
+function HeatCell({ cluster, selected, onClick }) {
+  const state = CELL_STATE_CLASSES[cluster.freshness] ?? CELL_STATE_CLASSES.FRESH
   return (
     <button type="button"
       onClick={onClick}
-      title={`${cluster.id} — score ${cluster.score}, ${cluster.direction}, freshness ${cluster.freshness_status}`}
+      aria-pressed={selected}
+      title={`${cluster.id} — score ${cluster.score}, direction ${cluster.direction}, ${cluster.freshness}`}
       data-testid="heatmap-cell"
-      className={`flex h-16 w-full flex-col items-start justify-between rounded border p-1.5 text-left ${
-        isPartial ? 'cursor-pointer border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10'
-        : 'cursor-pointer border-ink-700 bg-ink-850 hover:bg-ink-800'
-      }`}>
-      <span className="text-[10px] font-semibold text-zinc-200">
-        {cluster.direction.replaceAll('_', ' ')} <span className="text-ink-500">({cluster.score > 0 ? '+' : ''}{cluster.score.toFixed(2)})</span>
+      className={`flex h-14 w-full flex-col items-start justify-between rounded-md border p-1.5 text-left transition-colors duration-75 ${
+        selected ? 'ring-2 ring-status-accent ring-offset-1 ring-offset-surface-1 ' : ''
+      }${state}`}>
+      <span className="flex w-full items-center justify-between gap-1 text-[10.5px] font-semibold">
+        <span className="truncate">{cluster.direction.replaceAll('_', ' ')}</span>
+        <span className="tabular-nums text-txt-metadata">({cluster.score > 0 ? '+' : ''}{cluster.score.toFixed(2)})</span>
       </span>
-      <span className="flex items-center gap-1">
+      <span className="flex w-full items-center justify-between gap-1">
         <DirectionArrow sign={directionSign(cluster.direction)} />
-        <FreshnessChip status={cluster.freshness} />
+        <span className={`text-[10px] tabular-nums ${cluster.freshness === 'PARTIAL' || cluster.freshness === 'STALE' || cluster.freshness === 'MISSING' || cluster.freshness === 'BLOCKED' ? 'text-amber-300/80' : 'text-txt-metadata'}`}>
+          Δ{cluster.weekly_delta > 0 ? '+' : ''}{cluster.weekly_delta.toFixed(2)}
+        </span>
       </span>
     </button>
   )
 }
 
+function Field({ label, children, warn }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="cx-label pt-0.5">{label}</span>
+      <span className={`text-right text-[11.5px] ${warn ? 'text-amber-300' : 'text-txt-secondary'}`}>{children}</span>
+    </div>
+  )
+}
+
 function DrillDown({ cluster }) {
   if (!cluster) {
-    return (
-      <p className="text-[11px] text-ink-500">Select a family/horizon cell to inspect producer-owned cluster detail.</p>
-    )
+    return <p className="text-[11.5px] text-txt-muted">Select a family × horizon cell to inspect producer-owned cluster detail.</p>
   }
   return (
-    <div data-testid="heatmap-drilldown" className="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
-      <div className="col-span-2 mb-1 flex items-center gap-2">
-        <span className="text-xs font-semibold text-zinc-100">{cluster.familyLabel}</span>
-        <span className="text-[10px] uppercase tracking-wider text-ink-500">{cluster.horizon} · {cluster.id}</span>
+    <div data-testid="heatmap-drilldown" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-divider pb-2">
+        <span className="text-[13px] font-semibold text-txt-primary">{cluster.familyLabel}</span>
+        <span className="text-[10px] uppercase tracking-wider text-txt-metadata">{cluster.horizon} · {cluster.id}</span>
         <ConfidenceBadge confidence={cluster.confidence} />
         <FreshnessChip status={cluster.freshness} />
       </div>
-      <span className="text-ink-500">score</span><span className="tabular-nums text-zinc-200">{cluster.score.toFixed(3)}</span>
-      <span className="text-ink-500">weekly_delta</span><span className="tabular-nums text-zinc-200">{cluster.weekly_delta > 0 ? '+' : ''}{cluster.weekly_delta.toFixed(3)}</span>
-      <span className="text-ink-500">direction</span><span className="text-zinc-200">{cluster.direction}</span>
-      <span className="text-ink-500">coverage</span><span className="tabular-nums text-zinc-200">{Math.round(cluster.coverage * 100)}%</span>
-      <span className="text-ink-500">top_positive</span>
-      <span className="text-zinc-200">{cluster.top_positive.length ? cluster.top_positive.map((t) => t.replaceAll('_', ' ').toLowerCase()).join(', ') : '—'}</span>
-      <span className="text-ink-500">top_negative</span>
-      <span className="text-zinc-200">{cluster.top_negative.length ? cluster.top_negative.map((t) => t.replaceAll('_', ' ').toLowerCase()).join(', ') : '—'}</span>
-      <span className="text-ink-500">missing_factors</span>
-      <span className={cluster.missing_factors.length ? 'text-amber-300' : 'text-zinc-200'}>
-        {cluster.missing_factors.length ? cluster.missing_factors.join(', ') : '—'}
-      </span>
-      <span className="text-ink-500">stale_factors</span>
-      <span className={cluster.stale_factors.length ? 'text-amber-300' : 'text-zinc-200'}>
-        {cluster.stale_factors.length ? cluster.stale_factors.join(', ') : '—'}
-      </span>
+      <div className="flex flex-col gap-1.5">
+        <Field label="score"><span className="tabular-nums">{cluster.score.toFixed(3)}</span></Field>
+        <Field label="weekly_delta"><span className="tabular-nums">{cluster.weekly_delta > 0 ? '+' : ''}{cluster.weekly_delta.toFixed(3)}</span></Field>
+        <Field label="direction">{cluster.direction}</Field>
+        <Field label="coverage"><span className="tabular-nums">{Math.round(cluster.coverage * 100)}%</span></Field>
+        <Field label="top_positive">
+          {cluster.top_positive.length ? cluster.top_positive.map((t) => t.replaceAll('_', ' ').toLowerCase()).join(', ') : '—'}
+        </Field>
+        <Field label="top_negative">
+          {cluster.top_negative.length ? cluster.top_negative.map((t) => t.replaceAll('_', ' ').toLowerCase()).join(', ') : '—'}
+        </Field>
+        <Field label="missing_factors" warn={cluster.missing_factors.length > 0}>
+          {cluster.missing_factors.length ? cluster.missing_factors.join(', ') : '—'}
+        </Field>
+        <Field label="stale_factors" warn={cluster.stale_factors.length > 0}>
+          {cluster.stale_factors.length ? cluster.stale_factors.join(', ') : '—'}
+        </Field>
+      </div>
     </div>
   )
 }
@@ -67,21 +90,28 @@ export default function HeatmapPage({ snapshot, selectedCluster, setSelectedClus
   const families = [...new Set(snapshot.clusters.map((c) => c.family))]
   const byKey = new Map(snapshot.clusters.map((c) => [`${c.family}@${c.horizon}`, c]))
   return (
-    <div data-testid="heatmap-page" className="flex h-full flex-col gap-2 overflow-auto p-2">
-      <Card title="Macro factor heatmap — family × horizon (direction + score + freshness; click to drill down)">
+    <div data-testid="heatmap-page" className="flex h-full gap-2 overflow-hidden p-2">
+      {/* Dense matrix — the primary surface */}
+      <Card title="Macro factor heatmap — family × horizon"
+        right={<span className="cx-label">direction + score · Δ weekly · click to inspect</span>}
+        className="min-w-0 flex-1" bodyClassName="overflow-auto">
         <table className="w-full border-collapse">
-          <thead>
-            <tr className="text-left text-[9px] uppercase tracking-wider text-ink-500">
-              <th className="w-64 pb-1 font-medium">Factor family</th>
+          <thead className="sticky top-0 z-10">
+            <tr className="text-left text-[10px] uppercase tracking-wider text-txt-muted"
+              style={{ background: 'var(--color-surface-1)' }}>
+              <th className="sticky left-0 w-52 py-1 pr-2 font-semibold" style={{ background: 'var(--color-surface-1)' }}>
+                Factor family / horizon →
+              </th>
               {HORIZONS.map((h) => (
-                <th key={h} className="pb-1 font-medium">{h.replaceAll('_', ' ')}</th>
+                <th key={h} className="py-1 font-semibold">{h.replaceAll('_', ' ')}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {families.map((family) => (
-              <tr key={family} className="border-t border-ink-800">
-                <td className="py-1.5 pr-2 text-xs text-zinc-200">
+              <tr key={family} className="border-t border-divider">
+                <td className="sticky left-0 py-1.5 pr-2 text-[11.5px] font-medium text-txt-secondary"
+                  style={{ background: 'var(--color-surface-1)' }}>
                   {snapshot.clusters.find((c) => c.family === family).familyLabel}
                 </td>
                 {HORIZONS.map((h) => {
@@ -89,9 +119,10 @@ export default function HeatmapPage({ snapshot, selectedCluster, setSelectedClus
                   return (
                     <td key={h} className="py-1.5 pr-1 align-top">
                       {c ? (
-                        <HeatCell cluster={c} onClick={() => setSelectedCluster(c.id)} />
+                        <HeatCell cluster={c} selected={c.id === selectedCluster}
+                          onClick={() => setSelectedCluster(c.id)} />
                       ) : (
-                        <div className="flex h-16 items-center justify-center rounded border border-dashed border-ink-800 text-[10px] text-ink-500">
+                        <div className="flex h-14 items-center justify-center rounded-md border border-dashed border-border-1 text-[10px] text-txt-metadata">
                           not modeled
                         </div>
                       )}
@@ -102,12 +133,15 @@ export default function HeatmapPage({ snapshot, selectedCluster, setSelectedClus
             ))}
           </tbody>
         </table>
-        <p className="mt-2 text-[10px] text-ink-500">
-          Amber = PARTIAL freshness (missing/stale factors flagged by the producer — never zero-filled, never a bearish signal).
-          Cell state text is the producer-owned direction; no client-side economic inference is applied.
+        <p className="mt-2 text-[10px] leading-snug text-txt-metadata">
+          Amber = PARTIAL / STALE / MISSING / BLOCKED data state; gray dashed = NO_NEW_INFORMATION (a no-change
+          state) — never a bearish signal. Cell text is the producer-owned direction; no client-side inference.
         </p>
       </Card>
-      <Card title="Drill-down — producer cluster detail" className="min-h-0 flex-1" bodyClassName="overflow-auto">
+
+      {/* Coherent side/detail area — selected cluster */}
+      <Card title="Cluster detail"
+        className="w-80 shrink-0" bodyClassName="overflow-auto">
         <DrillDown cluster={selected} />
       </Card>
     </div>

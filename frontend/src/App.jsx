@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, CalendarClock, CircleSlash, RefreshCw } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CircleSlash, Layers, RefreshCw } from 'lucide-react'
 import { SCENARIOS, DEFAULT_SCENARIO_ID, loadSnapshot, loadRawSnapshot } from './snapshot/fixtures/index.js'
 import { validateSnapshot } from './snapshot/schema.js'
 import { shortDate } from './lib/format.js'
@@ -60,78 +60,105 @@ export default function App() {
   const common = { snapshot, selectedAsset, setSelectedAsset, selectedCluster, setSelectedCluster }
 
   return (
-    <div className="flex h-full flex-col bg-ink-950 text-zinc-200">
-      {/* Header / status ribbon */}
+    <div className="flex h-full flex-col bg-app-bg text-txt-primary">
+      {/* ===== Single compact workbench ribbon: identity | nav | status | demo ===== */}
       <header data-testid="status-ribbon"
-        className="flex h-12 shrink-0 items-center gap-3 border-b border-ink-700 bg-ink-900 px-3">
-        <span className="text-sm font-bold tracking-tight text-zinc-100">MACRO WORKBENCH</span>
-        <LaneBadge lane={snapshot.metadata.lane} />
-        <div className="flex items-baseline gap-2 whitespace-nowrap text-xs text-ink-300">
-          <span className="font-medium text-zinc-300">as of {shortDate(snapshot.metadata.as_of)}</span>
-          <span className="text-ink-500">·</span>
-          <span>decision {snapshot.metadata.decision_time}</span>
-          <span className="text-ink-500">·</span>
-          <span title="run / model identity">{snapshot.metadata.run_id}</span>
+        className="flex h-12 shrink-0 items-center gap-2 border-b border-border-1 bg-surface-1 px-3">
+        {/* product identity + evidence lane */}
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="flex items-center gap-1.5 text-sm font-bold tracking-tight text-txt-primary">
+            <Layers className="h-3.5 w-3.5 text-status-accent" aria-hidden />
+            MACRO WORKBENCH
+          </span>
+          <LaneBadge lane={snapshot.metadata.lane} />
         </div>
-        {/* backend-owned overall data-health; the producer emits no overall confidence */}
-        <span data-testid="data-overall"
-          title="Producer-owned overall data health (no overall confidence is emitted by DashboardSnapshotV0)"
-          className={`rounded border px-2 py-0.5 text-[11px] font-semibold tracking-wide ${
-            dh.overall === 'OK' || dh.overall === 'COMPLETE'
-              ? 'border-sky-500/30 bg-sky-500/10 text-sky-300'
-              : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
-          }`}>
-          DATA {dh.overall ?? 'N/A'}
-        </span>
-        <div data-testid="stale-blocked-summary" className="flex items-center gap-2 text-[11px]">
-          {rollup.map(({ label, value, Icon }) => (
-            <span key={label}
-              className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 ${
-                value > 0
-                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
-                  : 'border-zinc-700 bg-zinc-800/40 text-zinc-500'
-              }`}>
-              <Icon className="h-3 w-3" aria-hidden />
-              {value} {label}
+
+        {/* page navigation — inline tabs with kbd accelerator + selected/focus state */}
+        <nav data-testid="page-nav" className="flex items-center gap-0.5 rounded-md bg-surface-2/60 p-0.5"
+          aria-label="Workbench pages">
+          {PAGES.map((p) => {
+            const active = page === p.id
+            return (
+              <button key={p.id} type="button" data-testid="nav-tab" data-page={p.id}
+                aria-current={active ? 'page' : undefined}
+                onClick={() => setPage(p.id)}
+                className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[11.5px] font-medium transition-colors duration-75 ${
+                  active
+                    ? 'bg-surface-sel text-txt-primary ring-1 ring-inset ring-border-2'
+                    : 'text-txt-muted hover:bg-surface-hover hover:text-txt-secondary'
+                }`}>
+                <kbd className={`cx-kbd text-[9.5px] ${active ? 'text-status-accent' : ''}`}>{p.key}</kbd>
+                {p.label}
+              </button>
+            )
+          })}
+          {problems.length > 0 && (
+            <span data-testid="snapshot-contract-errors" role="alert"
+              className="ml-1 rounded border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-300">
+              contract: {problems.length}
             </span>
-          ))}
+          )}
+        </nav>
+
+        {/* persistent global status — as-of / decision / run identity */}
+        <div className="flex min-w-0 items-baseline gap-1.5 whitespace-nowrap text-[11px] text-txt-muted">
+          <span className="font-medium text-txt-secondary">as of {shortDate(snapshot.metadata.as_of)}</span>
+          <span aria-hidden>·</span>
+          <span>decision {snapshot.metadata.decision_time}</span>
+          <span aria-hidden>·</span>
+          <span className="truncate" title={`run/model: ${snapshot.metadata.run_id} / ${snapshot.metadata.model_version}`}>
+            {snapshot.metadata.run_id}
+          </span>
         </div>
-        <div className="ml-auto flex items-center gap-1.5">
+
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {/* backend-owned overall data-health; producer emits no overall confidence */}
+          <span data-testid="data-overall"
+            title="Producer-owned overall data health (no overall confidence is emitted by DashboardSnapshotV0)"
+            className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-[11px] font-semibold tracking-wide ${
+              dh.overall === 'OK' || dh.overall === 'COMPLETE'
+                ? 'border-status-info/30 bg-status-info/10 text-status-info'
+                : 'border-status-warning/40 bg-status-warning/10 text-status-warning-fg'
+            }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${
+              dh.overall === 'OK' || dh.overall === 'COMPLETE' ? 'bg-status-info' : 'bg-status-warning'
+            }`} aria-hidden />
+            DATA {dh.overall ?? 'N/A'}
+          </span>
+          <div data-testid="stale-blocked-summary" className="flex items-center gap-1.5 text-[10.5px]">
+            {rollup.map(({ label, value, Icon }) => (
+              <span key={label}
+                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
+                  value > 0
+                    ? 'bg-status-warning/10 text-status-warning-fg'
+                    : 'bg-surface-2/50 text-txt-metadata'
+                }`}>
+                <Icon className="h-3 w-3" aria-hidden />
+                {value} {label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* fixture / scenario demo controls — visually secondary to research state */}
+        <div className="flex shrink-0 items-center gap-1.5 opacity-70">
+          <span className="cx-label hidden xl:inline">scenario</span>
           <select
             aria-label="fixture scenario"
             value={scenarioId}
             onChange={(e) => setScenarioId(e.target.value)}
-            className="rounded border border-ink-700 bg-ink-850 px-2 py-1 text-[11px] text-zinc-300">
+            className="rounded border border-border-1 bg-input-bg px-2 py-1 text-[11px] text-txt-secondary">
             {SCENARIOS.map((s) => (
               <option key={s.id} value={s.id}>{s.label}</option>
             ))}
           </select>
           <button type="button" aria-label="reload fixture (r)"
             onClick={() => setReloadNonce((n) => n + 1)}
-            className="inline-flex items-center gap-1 rounded border border-ink-700 bg-ink-850 px-2 py-1 text-[11px] text-zinc-300 hover:bg-ink-800">
+            className="inline-flex items-center gap-1 rounded border border-border-1 bg-input-bg px-2 py-1 text-[11px] text-txt-secondary hover:bg-surface-hover">
             <RefreshCw className="h-3 w-3" aria-hidden /> reload
           </button>
         </div>
       </header>
-
-      {/* Page navigation */}
-      <nav data-testid="page-nav" className="flex h-8 shrink-0 items-center gap-1 border-b border-ink-700 bg-ink-950 px-3">
-        {PAGES.map((p) => (
-          <button key={p.id} type="button"
-            onClick={() => setPage(p.id)}
-            className={`rounded px-2.5 py-1 text-[11px] font-medium ${
-              page === p.id ? 'bg-ink-800 text-zinc-100 border border-ink-700' : 'text-ink-300 hover:text-zinc-200'
-            }`}>
-            <kbd className="mr-1 text-[9px] text-ink-500">{p.key}</kbd>{p.label}
-          </button>
-        ))}
-        {problems.length > 0 && (
-          <span data-testid="snapshot-contract-errors" role="alert"
-            className="ml-2 rounded border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-300">
-            snapshot contract violations: {problems.join('; ')}
-          </span>
-        )}
-      </nav>
 
       <main className="min-h-0 flex-1 overflow-hidden">
         <PageComponent {...common} />

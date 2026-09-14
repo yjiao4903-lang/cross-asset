@@ -1,114 +1,190 @@
 import {
-  Bar, BarChart, Cell, ResponsiveContainer, ReferenceLine, XAxis, YAxis, Tooltip,
+  Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
-import { Card, ConfidenceBadge, DirectionArrow, FreshnessChip, StanceChip } from '../components/primitives.jsx'
+import {
+  Card, StanceChip, DirectionArrow, FreshnessChip,
+} from '../components/primitives.jsx'
 import { fmtBackendMove, shortDate, directionSign } from '../lib/format.js'
 
 const POS = '#34d399'
 const NEG = '#fb7185'
+const NEU = '#5b6b8c'
 
+const TOOLTIP = { background: '#151c2b', border: '1px solid #34425f', fontSize: 11, borderRadius: 6 }
+
+/* 1 — ranked weekly changes (most important first). Cluster weekly_delta is a
+ * change (delta), so red/green direction color is appropriate here. */
+function RankedDeltaChart({ clusters }) {
+  const data = clusters
+    .filter((c) => c.horizon !== 'STRUCTURAL_CONTEXT')
+    .map((c) => ({
+      name: `${c.familyLabel.replace(' / ', ' ')} @ ${c.horizon.slice(0, 4)}`,
+      delta: c.weekly_delta,
+      id: c.id,
+    }))
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    .slice(0, 12)
+  return (
+    <div className="h-48 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 24, left: 0, bottom: 0 }}>
+          <XAxis type="number" tick={{ fill: '#6b7a9c', fontSize: 9 }} />
+          <YAxis type="category" dataKey="name" width={190} tick={{ fill: '#8a99b8', fontSize: 10 }} />
+          <Tooltip contentStyle={TOOLTIP} cursor={{ fill: '#1a2131' }} />
+          <ReferenceLine x={0} stroke="#263047" />
+          <Bar dataKey="delta" isAnimationActive={false} radius={[0, 2, 2, 0]} barSize={11}>
+            {data.map((d, i) => (
+              <Cell key={i} fill={d.delta > 0 ? POS : d.delta < 0 ? NEG : NEU} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <p className="cx-label mt-1">Weekly change (delta) by cluster — direction colored · zero line = no change</p>
+    </div>
+  )
+}
+
+/* 2 — cross-asset trailing levels: 1W / 1M / 3M + momentum trend state.
+ * Trailing returns are LEVELS, shown separately from the delta surfaces above. */
+function CrossAssetMatrix({ pulse }) {
+  return (
+    <div>
+      <table className="cx-table">
+        <thead>
+          <tr className="text-right">
+            <th className="text-left">Asset</th>
+            <th>1W</th>
+            <th>1M</th>
+            <th>3M</th>
+            <th className="text-left">Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pulse.entries.map((r) => (
+            <tr key={r.asset} className={r.r1w === 0 && r.r1m === 0 && r.r3m === 0 ? 'opacity-80' : undefined}>
+              <td className="py-1 text-left font-medium text-txt-primary">{r.label}</td>
+              {[r.r1w, r.r1m, r.r3m].map((v, i) => (
+                <td key={i} className={`py-1 text-right font-medium ${
+                  v > 0 ? 'text-status-positive' : v < 0 ? 'text-status-negative' : 'text-txt-muted'
+                }`}>
+                  {v > 0 ? '+' : ''}{v.toFixed(1)}%
+                </td>
+              ))}
+              <td className="py-1 text-left text-[11px] text-txt-muted">{String(r.momentum_label ?? '').replace(/_/g, ' ').toLowerCase()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="cx-label mt-1">Trailing-return levels (producer V0 emits 1W/1M/3M only — no YTD invented) · momentum = trend state, not a change</p>
+    </div>
+  )
+}
+
+/* 3 — macro state delta (cause-tagged by producer: NEW_INFORMATION vs NO_NEW_INFORMATION) */
+function MacroStateDeltaPanel({ entries }) {
+  return (
+    <ul className="space-y-0.5 text-[11.5px]">
+      {entries.map((e) => (
+        <li key={e.factor_id} className="flex items-center gap-2">
+          <span className="w-44 shrink-0 truncate text-txt-secondary">{e.factor_id.replaceAll('_', ' ').toLowerCase()}</span>
+          <span className="tabular-nums text-txt-metadata">{e.previous} → {e.current}</span>
+          <DirectionArrow sign={directionSign(e.delta > 0 ? 'RISING' : e.delta < 0 ? 'FALLING' : 'FLAT')} />
+          <span className={`ml-auto shrink-0 text-right font-semibold tabular-nums ${
+            e.delta > 0 ? 'text-status-positive' : e.delta < 0 ? 'text-status-negative' : 'text-txt-metadata'
+          }`}>
+            {e.delta > 0 ? '+' : ''}{e.delta.toFixed(2)}
+          </span>
+          <span className={`shrink-0 px-1.5 py-0.5 text-[10px] ${
+            e.cause === 'NEW_INFORMATION' ? 'bg-status-info/10 text-status-info' : 'bg-zinc-500/10 text-txt-muted'
+          }`}>
+            {String(e.cause ?? '').replaceAll('_', ' ')}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/* 4 — macro releases / revisions since prior snapshot */
 function ReleasesPanel({ weeklyChange }) {
   return (
     <div>
-      <ul className="space-y-1.5 text-[11px]">
+      <ul className="space-y-1 text-[11.5px]">
         {weeklyChange.events.map((e) => (
-          <li key={e.factor_id + String(e.observation_date)} className="flex items-start gap-2 rounded border border-ink-800 bg-ink-850 px-2 py-1.5">
+          <li key={e.factor_id + String(e.observation_date)}
+            className="flex items-start gap-2 rounded border border-divider bg-surface-2/40 px-2 py-1">
             <FreshnessChip status={e.status} />
             <div className="min-w-0 flex-1">
-              <div className="text-zinc-200">
-                {e.factor_id.replaceAll('_', ' ').toLowerCase()} · {e.event_type.replaceAll('_', ' ').toLowerCase()}
+              <div className="text-txt-secondary">
+                {e.factor_id.replaceAll('_', ' ').toLowerCase()}
+                <span className="mx-1 text-txt-metadata">·</span>
+                <span className="text-txt-muted">{String(e.event_type ?? '').replaceAll('_', ' ').toLowerCase()}</span>
                 {e.surprise && (
-                  <span className="ml-1.5 text-[10px] text-ink-500" title={`surprise ${e.surprise.value} vs ${e.surprise.baseline}`}>
+                  <span className="ml-1.5 text-[10px] text-txt-metadata" title={`surprise ${e.surprise.value} vs ${e.surprise.baseline}`}>
                     surprise ({e.surprise.method})
                   </span>
                 )}
               </div>
-              <div className="text-ink-500">{e.note} — series {e.series_id}</div>
+              <div className="text-txt-metadata">{e.note} — series {e.series_id}</div>
             </div>
-            <div className="shrink-0 text-right text-[10px] text-ink-500">{shortDate(e.observation_date)}</div>
+            <div className="shrink-0 text-right text-[10px] text-txt-metadata">{shortDate(e.observation_date)}</div>
           </li>
         ))}
       </ul>
       {weeklyChange.stale_factors.length > 0 && (
-        <p className="mt-2 text-[10px] text-amber-300/90">
-          stale factors (flagged, not zero-filled): {weeklyChange.stale_factors.join(', ')}
+        <p className="mt-1.5 text-[10px] text-amber-300/90">
+          stale (flagged, not zero-filled): {weeklyChange.stale_factors.join(', ')}
         </p>
       )}
     </div>
   )
 }
 
-function ClusterDeltaChart({ clusters }) {
-  const data = clusters
-    .filter((c) => c.horizon !== 'STRUCTURAL_CONTEXT')
-    .map((c) => ({ name: `${c.familyLabel.replaceAll(' & ', ' & ').split(' / ')[0]}@${c.horizon.slice(0, 4)}`, delta: c.weekly_delta }))
+/* 5 — genuine market-condition moves */
+function MarketMovesPanel({ moves }) {
   return (
-    <div className="h-48 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
-          <XAxis dataKey="name" tick={{ fill: '#5b6b8c', fontSize: 8 }} interval={0} angle={-30} textAnchor="end" height={58} />
-          <YAxis tick={{ fill: '#5b6b8c', fontSize: 9 }} />
-          <Tooltip contentStyle={{ background: '#141926', border: '1px solid #263047', fontSize: 11 }} />
-          <ReferenceLine y={0} stroke="#263047" />
-          <Bar dataKey="delta" isAnimationActive={false} radius={[2, 2, 0, 0]}>
-            {data.map((d, i) => (
-              <Cell key={i} fill={d.delta > 0 ? POS : d.delta < 0 ? NEG : '#5b6b8c'} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <ul className="space-y-0.5 text-[11.5px]">
+      {moves.map((m) => (
+        <li key={m.instrument} className="flex items-center justify-between border-b border-divider py-1">
+          <span className="text-txt-secondary">
+            {m.instrument}
+            <span className="ml-1 text-[10px] text-txt-metadata">
+              {m.unit === 'BPS' ? 'bps' : m.unit === 'POINT' ? 'pt' : '%'} · {String(m.metric_class ?? '').toLowerCase()}
+            </span>
+          </span>
+          <span className={`font-semibold tabular-nums ${
+            m.weekly_change > 0 ? 'text-status-positive' : m.weekly_change < 0 ? 'text-status-negative' : 'text-txt-muted'
+          }`}>
+            {fmtBackendMove(m)}
+          </span>
+        </li>
+      ))}
+    </ul>
   )
 }
 
-function CrossAssetMatrix({ pulse }) {
+/* 6 — asset stance / confidence changes */
+function StanceChangesPanel({ entries }) {
   return (
-    <table className="w-full border-collapse text-[11px] tabular-nums">
-      <thead>
-        <tr className="text-right text-[9px] uppercase tracking-wider text-ink-500">
-          <th className="text-left font-medium">Asset</th>
-          <th className="font-medium">1W</th>
-          <th className="font-medium">1M</th>
-          <th className="font-medium">3M</th>
-          <th className="font-medium">Momentum</th>
-        </tr>
-      </thead>
-      <tbody>
-        {pulse.entries.map((r) => (
-          <tr key={r.asset} className="border-t border-ink-800">
-            <td className="py-1 text-left text-zinc-200">{r.label}</td>
-            {[r.r1w, r.r1m, r.r3m].map((v, i) => (
-              <td key={i} className={`py-1 text-right font-medium ${v > 0 ? 'text-emerald-400' : v < 0 ? 'text-rose-400' : 'text-zinc-400'}`}>
-                {v > 0 ? '+' : ''}{v.toFixed(1)}%
-              </td>
-            ))}
-            <td className="py-1 text-right text-[10px] text-ink-300">{String(r.momentum_label ?? '').toLowerCase()}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
-
-function ViewDeltasPanel({ entries }) {
-  return (
-    <ul className="space-y-1.5 text-[11px]">
+    <ul className="space-y-1 text-[11.5px]">
       {entries.map((d) => {
         const changed = d.current_stance !== d.previous_stance
         return (
-          <li key={d.asset} className="rounded border border-ink-800 bg-ink-850 px-2 py-1.5">
+          <li key={d.asset} className="rounded border border-divider bg-surface-2/40 px-2 py-1.5">
             <div className="flex items-center gap-2">
-              <span className="w-20 shrink-0 font-medium text-zinc-200">{d.asset.replaceAll('_', ' ')}</span>
+              <span className="w-20 shrink-0 font-medium text-txt-primary">{d.asset.replaceAll('_', ' ')}</span>
               <StanceChip stance={d.previous_stance} />
               <DirectionArrow sign={changed ? (d.delta > 0 ? 'UP' : 'DOWN') : 'FLAT'} />
               <StanceChip stance={d.current_stance} />
-              <span className={`text-[10px] tabular-nums ${d.confidence_delta > 0 ? 'text-sky-300' : d.confidence_delta < 0 ? 'text-amber-300' : 'text-ink-500'}`}>
+              <span className={`ml-auto text-[10px] tabular-nums ${
+                d.confidence_delta > 0 ? 'text-status-info' : d.confidence_delta < 0 ? 'text-status-warning-fg' : 'text-txt-metadata'
+              }`}>
                 conf {d.confidence_delta > 0 ? '+' : ''}{d.confidence_delta}
               </span>
             </div>
             <div className="mt-1 flex flex-wrap gap-1">
               {d.reason_tags.map((t) => (
-                <span key={t} className="rounded bg-ink-800 px-1.5 py-0.5 text-[9px] text-ink-300">{t}</span>
+                <span key={t} className="rounded bg-surface-2 px-1.5 py-0.5 text-[9.5px] text-txt-muted">{t.replaceAll('_', ' ')}</span>
               ))}
             </div>
           </li>
@@ -118,66 +194,38 @@ function ViewDeltasPanel({ entries }) {
   )
 }
 
-function MacroStateDeltaPanel({ entries }) {
-  return (
-    <ul className="space-y-1 text-[11px]">
-      {entries.map((e) => (
-        <li key={e.factor_id} className="flex items-center gap-2">
-          <span className="w-44 shrink-0 truncate text-zinc-200">{e.factor_id.replaceAll('_', ' ').toLowerCase()}</span>
-          <span className="tabular-nums text-ink-500">{e.previous} → {e.current}</span>
-          <DirectionArrow sign={directionSign(e.delta > 0 ? 'RISING' : e.delta < 0 ? 'FALLING' : 'FLAT')} />
-          <span className={`w-12 shrink-0 text-right font-semibold tabular-nums ${e.delta > 0 ? 'text-emerald-400' : e.delta < 0 ? 'text-rose-400' : 'text-zinc-500'}`}>
-            {e.delta > 0 ? '+' : ''}{e.delta.toFixed(2)}
-          </span>
-          <span className={`rounded px-1.5 py-0.5 text-[9px] ${e.cause === 'NEW_INFORMATION' ? 'bg-sky-500/10 text-sky-300' : 'bg-zinc-500/10 text-zinc-400'}`}>
-            {e.cause.replaceAll('_', ' ')}
-          </span>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
 export default function WeeklyPulsePage({ snapshot }) {
   const wc = snapshot.weekly_change
   return (
     <div data-testid="weekly-pulse-page" className="h-full overflow-auto p-2">
-      <div className="grid grid-cols-2 gap-2">
-        <Card title="New macro releases / revisions since prior snapshot"
-          right={<span className="text-[10px] text-ink-500">information set: {String(wc.information_status).replaceAll('_', ' ')}</span>}>
-          <ReleasesPanel weeklyChange={wc} />
-        </Card>
-        <Card title="Genuine weekly market-condition moves">
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-            {wc.market_moves.map((m) => (
-              <li key={m.instrument} className="flex items-center justify-between border-b border-ink-800 py-1">
-                <span className="text-zinc-200">
-                  {m.instrument}
-                  <span className="ml-1 text-[9px] text-ink-500">{m.unit === 'BPS' ? 'bps' : m.unit === 'POINT' ? 'pt' : '%'} · {m.metric_class.toLowerCase()}</span>
-                </span>
-                <span className={`font-semibold tabular-nums ${m.weekly_change > 0 ? 'text-emerald-400' : m.weekly_change < 0 ? 'text-rose-400' : 'text-zinc-400'}`}>
-                  {fmtBackendMove(m)}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <h3 className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wider text-ink-300">
-            Cluster weekly delta (backend weekly_delta)
-          </h3>
-          <ClusterDeltaChart clusters={snapshot.clusters} />
+      <div className="flex flex-col gap-2">
+        {/* 1 — largest weekly changes (changes dominate) */}
+        <Card title="Largest weekly changes by factor cluster"
+          right={<span className="cx-label">change (delta), ranked by magnitude</span>}>
+          <RankedDeltaChart clusters={snapshot.clusters} />
         </Card>
 
-        <Card title="Cross-asset 1W / 1M / 3M matrix + momentum"
-          right={<span className="text-[10px] text-ink-500">producer V0 emits 1W/1M/3M only — no YTD invented</span>}>
+        {/* 2 — cross-asset matrix (levels) */}
+        <Card title="Cross-asset performance matrix — trailing levels"
+          right={<span className="cx-label">level (1W / 1M / 3M)</span>}>
           <CrossAssetMatrix pulse={snapshot.cross_asset_pulse} />
         </Card>
-        <Card title="Asset stance / confidence changes">
-          <ViewDeltasPanel entries={wc.asset_view_delta} />
-          <h3 className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wider text-ink-300">
-            Macro state delta (cause-tagged by producer)
-          </h3>
-          <MacroStateDeltaPanel entries={wc.macro_state_delta} />
-        </Card>
+
+        {/* lower section: releases + moves (changes) vs macro-state delta + stance changes */}
+        <div className="grid grid-cols-2 gap-2">
+          <Card title="Macro releases / revisions since prior snapshot" bodyClassName="overflow-auto">
+            <ReleasesPanel weeklyChange={wc} />
+          </Card>
+          <Card title="Genuine weekly market-condition moves" bodyClassName="overflow-auto">
+            <MarketMovesPanel moves={wc.market_moves} />
+          </Card>
+          <Card title="Macro state delta (cause-tagged by producer)" bodyClassName="overflow-auto">
+            <MacroStateDeltaPanel entries={wc.macro_state_delta} />
+          </Card>
+          <Card title="Asset stance / confidence changes" bodyClassName="overflow-auto">
+            <StanceChangesPanel entries={wc.asset_view_delta} />
+          </Card>
+        </div>
       </div>
     </div>
   )
