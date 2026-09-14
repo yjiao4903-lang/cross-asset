@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/*
+ * Visual semantics contract (frozen by #112 UI_FREEZE):
+ * - red/green reserved for market / stance direction only
+ * - amber = warning / low confidence / data-health problem
+ * - gray = unavailable / NO_NEW_INFORMATION
+ * - a data-health failure must never look like a bearish signal
+ */
+@theme {
+  --color-ink-950: #0b0e14;
+  --color-ink-900: #10141d;
+  --color-ink-850: #141926;
+  --color-ink-800: #1a2030;
+  --color-ink-700: #263047;
+  --color-ink-500: #5b6b8c;
+  --color-ink-300: #9fb0cf;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-ink-950);
+  color: #d5dce8;
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  overflow: hidden; /* cockpit layout owns scrolling per panel, never the page */
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #263047;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

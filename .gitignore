@@ -31,3 +31,4 @@ artifacts/*
 artifacts/live/
 artifacts/backtests/*.parquet
 *.log
+_shots/
