@@ -1,11 +1,43 @@
-import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, CalendarClock, CircleSlash, Lock } from 'lucide-react'
+import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, CalendarClock, CircleSlash, Clock, Lock } from 'lucide-react'
+
+/* =====================================================================
+ * Shared primitive layer (#118). These are the ONLY visual atoms shared
+ * across the five workbench pages. Red/green stay reserved for market /
+ * stance direction; amber = warning/health; gray = unavailable.
+ * ===================================================================== */
 
 /* ---------- direction (red/green RESERVED for market/stance direction) ---------- */
 
 export function DirectionArrow({ sign, className = '' }) {
-  if (sign === 'UP') return <ArrowUp aria-label="up" className={`inline h-3.5 w-3.5 text-emerald-400 ${className}`} />
-  if (sign === 'DOWN') return <ArrowDown aria-label="down" className={`inline h-3.5 w-3.5 text-rose-400 ${className}`} />
-  return <ArrowRight aria-label="flat" className={`inline h-3.5 w-3.5 text-zinc-500 ${className}`} />
+  if (sign === 'UP') return <ArrowUp aria-label="up" className={`inline h-3.5 w-3.5 text-status-positive ${className}`} />
+  if (sign === 'DOWN') return <ArrowDown aria-label="down" className={`inline h-3.5 w-3.5 text-status-negative ${className}`} />
+  return <ArrowRight aria-label="flat" className={`inline h-3.5 w-3.5 text-txt-metadata ${className}`} />
+}
+
+/* Signed numeric delta with directional color — one grammar for WoW/move.
+ * Positive and negative are directional (green/red); zero is neutral gray. */
+export function DeltaText({ value, suffix = '', className = '', title }) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return <span className={`text-txt-metadata ${className}`}>—</span>
+  }
+  const cls = value > 0 ? 'text-status-positive' : value < 0 ? 'text-status-negative' : 'text-txt-muted'
+  const sign = value > 0 ? '+' : ''
+  return (
+    <span title={title} className={`font-semibold tabular-nums ${cls} ${className}`}>
+      {sign}{value}{suffix}
+    </span>
+  )
+}
+
+/* Signed stance delta (non-zero) with arrow + number. */
+export function StanceDelta({ delta, className = '' }) {
+  if (!delta) return <span className={`text-txt-metadata ${className}`}>—</span>
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${className}`}>
+      <DirectionArrow sign={delta > 0 ? 'UP' : 'DOWN'} />
+      <span className={delta > 0 ? 'text-status-positive' : 'text-status-negative'}>{delta > 0 ? `+${delta}` : delta}</span>
+    </span>
+  )
 }
 
 /* ---------- stance (-2..+2): directional, so red/green allowed ---------- */
@@ -24,7 +56,7 @@ export function StanceChip({ stance, label, className = '' }) {
     <span
       data-testid="stance-chip"
       data-stance={stance}
-      className={`inline-flex min-w-[3.4rem] items-center justify-center rounded border px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${STANCE_CLASSES[key] ?? STANCE_CLASSES[0]} ${className}`}
+      className={`inline-flex min-w-[3.2rem] items-center justify-center rounded border px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${STANCE_CLASSES[key] ?? STANCE_CLASSES[0]} ${className}`}
     >
       {label ?? (stance > 0 ? `+${stance}` : `${stance}`)}
     </span>
@@ -38,8 +70,11 @@ const FRESHNESS_CLASSES = {
   FRESH: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
   UPDATED: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
   NO_NEW_INFORMATION: 'bg-zinc-500/10 text-zinc-400 border-zinc-600/40 border-dashed',
-  PARTIAL: 'bg-amber-500/10 text-amber-300 border-amber-500/40',
-  STALE: 'bg-amber-500/10 text-amber-300 border-amber-500/40',
+  /* PARTIAL vs STALE are distinct states (PARTIAL != STALE): partial coverage
+   * is a softer dashed amber; stale (aged) is a heavier solid amber with an
+   * aging clock. Both stay in the amber warning family — never bearish. */
+  PARTIAL: 'bg-amber-500/5 text-amber-300/90 border-amber-500/40 border-dashed',
+  STALE: 'bg-amber-500/15 text-amber-200 border-amber-500/60 border-solid',
   MISSING: 'bg-amber-500/5 text-amber-400/90 border-amber-500/30 border-dashed',
   BLOCKED: 'bg-amber-500/10 text-amber-300 border-amber-500/50',
 }
@@ -49,7 +84,7 @@ const FRESHNESS_ICONS = {
   UPDATED: null,
   NO_NEW_INFORMATION: CalendarClock,
   PARTIAL: AlertTriangle,
-  STALE: AlertTriangle,
+  STALE: Clock,
   MISSING: CircleSlash,
   BLOCKED: Lock,
 }
@@ -86,7 +121,7 @@ export function ConfidenceBadge({ confidence, className = '' }) {
   const level = confidence >= 0.65 ? 'HIGH' : confidence >= 0.45 ? 'MEDIUM' : 'LOW'
   const cls =
     level === 'HIGH'
-      ? 'text-sky-300 border-sky-500/30 bg-sky-500/10'
+      ? 'text-status-info border-status-info/30 bg-status-info/10'
       : level === 'MEDIUM'
         ? 'text-zinc-300 border-zinc-600/50 bg-zinc-500/10'
         : 'text-amber-300 border-amber-500/40 bg-amber-500/10'
@@ -102,7 +137,7 @@ export function ConfidenceBadge({ confidence, className = '' }) {
 
 const CONFIRMATION_CLASSES = {
   CONFIRMED: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10',
-  DIVERGENT: 'text-sky-300 border-sky-500/30 bg-sky-500/10',
+  DIVERGENT: 'text-status-info border-status-info/30 bg-status-info/10',
   COUNTER_TREND: 'text-amber-300 border-amber-500/40 bg-amber-500/10',
   /* UNKNOWN is a data-state, never a market direction (#117 R1 vocabulary) */
   UNKNOWN: 'text-zinc-400 border-zinc-600/40 bg-zinc-500/5 border-dashed',
@@ -128,18 +163,31 @@ export function LaneBadge({ lane, className = '' }) {
   )
 }
 
-/* ---------- panel card ---------- */
+/* ---------- panel (single framing unit) ---------- */
 
-export function Card({ title, right, children, className = '', bodyClassName = '' }) {
+export function Card({ title, right, children, className = '', bodyClassName = '', flush }) {
   return (
-    <section className={`flex min-h-0 flex-col rounded-lg border border-ink-700 bg-ink-900 ${className}`}>
+    <section className={`cx-panel ${className}`}>
       {title ? (
-        <header className="flex shrink-0 items-center justify-between border-b border-ink-700 px-3 py-1.5">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-ink-300">{title}</h2>
+        <header className="cx-panel-head">
+          <h2 className="cx-section">{title}</h2>
           {right}
         </header>
       ) : null}
-      <div className={`min-h-0 flex-1 px-3 py-2 ${bodyClassName}`}>{children}</div>
+      <div className={`cx-panel-body ${flush ? 'p-0' : ''} ${bodyClassName}`}>{children}</div>
     </section>
+  )
+}
+
+/* ---------- section heading used inside dense decision blocks ---------- */
+
+export function SectionHeading({ children, tone, className = '' }) {
+  const toneCls =
+    tone === 'warning' ? 'text-status-warning-fg'
+      : tone === 'positive' ? 'text-status-positive'
+        : tone === 'negative' ? 'text-status-negative'
+          : 'text-txt-muted'
+  return (
+    <h3 className={`cx-section ${toneCls} ${className}`}>{children}</h3>
   )
 }
