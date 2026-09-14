@@ -3,6 +3,33 @@ import { directionSign } from '../lib/format.js'
 
 const HORIZONS = ['CYCLICAL', 'TACTICAL', 'STRUCTURAL_CONTEXT']
 
+/* Null-safe numeric formatting. Legal DashboardSnapshotV0 producer payloads may
+ * emit score / weekly_delta / coverage as null (data unavailable). Those must
+ * render as an explicit unavailable dash — never silently become zero. */
+const NA = '—'
+function fmtNum(v, digits, signed = false) {
+  if (v === null || v === undefined || !Number.isFinite(v)) return NA
+  const sign = signed && v > 0 ? '+' : ''
+  return `${sign}${v.toFixed(digits)}`
+}
+
+/* Contributor object per the producer contract is { factor_id, contribution }.
+ * A contributed factor may also arrive as a plain string id. Consume safely. */
+function contributorLabel(t) {
+  if (t === null || t === undefined) return ''
+  if (typeof t === 'object') {
+    const name = String(t.factor_id ?? '').replaceAll('_', ' ').toLowerCase()
+    const c = t.contribution
+    const val = typeof c === 'number' && Number.isFinite(c) ? ` (${fmtNum(c, 2, true)})` : ''
+    return `${name}${val}`
+  }
+  return String(t).replaceAll('_', ' ').toLowerCase()
+}
+function contributorList(items) {
+  if (!Array.isArray(items) || items.length === 0) return '—'
+  return items.map(contributorLabel).filter(Boolean).join(', ') || '—'
+}
+
 /* Cell surface styling distinguishes every data state. The key invariant:
  * NO_NEW_INFORMATION is a gray dashed no-change state, never the amber used
  * for PARTIAL / STALE / MISSING — so NO_NEW_INFORMATION != STALE visually. */
@@ -23,19 +50,19 @@ function HeatCell({ cluster, selected, onClick }) {
     <button type="button"
       onClick={onClick}
       aria-pressed={selected}
-      title={`${cluster.id} — score ${cluster.score}, direction ${cluster.direction}, ${cluster.freshness}`}
+      title={`${cluster.id} — score ${fmtNum(cluster.score, 2)}, direction ${cluster.direction}, ${cluster.freshness}`}
       data-testid="heatmap-cell"
       className={`flex h-14 w-full flex-col items-start justify-between rounded-md border p-1.5 text-left transition-colors duration-75 ${
         selected ? 'ring-2 ring-status-accent ring-offset-1 ring-offset-surface-1 ' : ''
       }${state}`}>
       <span className="flex w-full items-center justify-between gap-1 text-[10.5px] font-semibold">
         <span className="truncate">{cluster.direction.replaceAll('_', ' ')}</span>
-        <span className="tabular-nums text-txt-metadata">({cluster.score > 0 ? '+' : ''}{cluster.score.toFixed(2)})</span>
+        <span className="tabular-nums text-txt-metadata">{fmtNum(cluster.score, 2, true)}</span>
       </span>
       <span className="flex w-full items-center justify-between gap-1">
         <DirectionArrow sign={directionSign(cluster.direction)} />
         <span className={`text-[10px] tabular-nums ${cluster.freshness === 'PARTIAL' || cluster.freshness === 'STALE' || cluster.freshness === 'MISSING' || cluster.freshness === 'BLOCKED' ? 'text-amber-300/80' : 'text-txt-metadata'}`}>
-          Δ{cluster.weekly_delta > 0 ? '+' : ''}{cluster.weekly_delta.toFixed(2)}
+          Δ{fmtNum(cluster.weekly_delta, 2, true)}
         </span>
       </span>
     </button>
@@ -64,16 +91,15 @@ function DrillDown({ cluster }) {
         <FreshnessChip status={cluster.freshness} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Field label="score"><span className="tabular-nums">{cluster.score.toFixed(3)}</span></Field>
-        <Field label="weekly_delta"><span className="tabular-nums">{cluster.weekly_delta > 0 ? '+' : ''}{cluster.weekly_delta.toFixed(3)}</span></Field>
+        <Field label="score"><span className="tabular-nums">{fmtNum(cluster.score, 3)}</span></Field>
+        <Field label="weekly_delta"><span className="tabular-nums">{fmtNum(cluster.weekly_delta, 3, true)}</span></Field>
         <Field label="direction">{cluster.direction}</Field>
-        <Field label="coverage"><span className="tabular-nums">{Math.round(cluster.coverage * 100)}%</span></Field>
-        <Field label="top_positive">
-          {cluster.top_positive.length ? cluster.top_positive.map((t) => t.replaceAll('_', ' ').toLowerCase()).join(', ') : '—'}
-        </Field>
-        <Field label="top_negative">
-          {cluster.top_negative.length ? cluster.top_negative.map((t) => t.replaceAll('_', ' ').toLowerCase()).join(', ') : '—'}
-        </Field>
+        <Field label="coverage"><span className="tabular-nums">{
+          cluster.coverage === null || cluster.coverage === undefined || !Number.isFinite(cluster.coverage)
+            ? NA : `${Math.round(cluster.coverage * 100)}%`
+        }</span></Field>
+        <Field label="top_positive">{contributorList(cluster.top_positive)}</Field>
+        <Field label="top_negative">{contributorList(cluster.top_negative)}</Field>
         <Field label="missing_factors" warn={cluster.missing_factors.length > 0}>
           {cluster.missing_factors.length ? cluster.missing_factors.join(', ') : '—'}
         </Field>

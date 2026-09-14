@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, CalendarClock, CircleSlash, Lock } from 'lucide-react'
+import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, CalendarClock, CircleSlash, Clock, Lock } from 'lucide-react'
 
 /* =====================================================================
  * Shared primitive layer (#118). These are the ONLY visual atoms shared
@@ -70,8 +70,11 @@ const FRESHNESS_CLASSES = {
   FRESH: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
   UPDATED: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
   NO_NEW_INFORMATION: 'bg-zinc-500/10 text-zinc-400 border-zinc-600/40 border-dashed',
-  PARTIAL: 'bg-amber-500/10 text-amber-300 border-amber-500/40',
-  STALE: 'bg-amber-500/10 text-amber-300 border-amber-500/40',
+  /* PARTIAL vs STALE are distinct states (PARTIAL != STALE): partial coverage
+   * is a softer dashed amber; stale (aged) is a heavier solid amber with an
+   * aging clock. Both stay in the amber warning family — never bearish. */
+  PARTIAL: 'bg-amber-500/5 text-amber-300/90 border-amber-500/40 border-dashed',
+  STALE: 'bg-amber-500/15 text-amber-200 border-amber-500/60 border-solid',
   MISSING: 'bg-amber-500/5 text-amber-400/90 border-amber-500/30 border-dashed',
   BLOCKED: 'bg-amber-500/10 text-amber-300 border-amber-500/50',
 }
@@ -81,7 +84,7 @@ const FRESHNESS_ICONS = {
   UPDATED: null,
   NO_NEW_INFORMATION: CalendarClock,
   PARTIAL: AlertTriangle,
-  STALE: AlertTriangle,
+  STALE: Clock,
   MISSING: CircleSlash,
   BLOCKED: Lock,
 }

@@ -49,11 +49,13 @@ export default function App() {
   const dh = snapshot.data_health_summary ?? {}
   const noNewInfoCount = Object.values(dh.family_information_status ?? {})
     .filter((s) => s === 'NO_NEW_INFORMATION').length
+  // tone: 'warn' = health/warning grammar (stale/missing/blocked); 'neutral' =
+  // NO_NEW_INFORMATION — a no-change state, neutral gray/blue-gray, never amber.
   const rollup = [
-    { label: 'stale', value: dh.stale_components?.length ?? 0, Icon: AlertTriangle },
-    { label: 'missing', value: dh.missing_components?.length ?? 0, Icon: CircleSlash },
-    { label: 'blocked', value: dh.blockers?.length ?? 0, Icon: AlertTriangle },
-    { label: 'no new info', value: noNewInfoCount, Icon: CalendarClock },
+    { label: 'stale', value: dh.stale_components?.length ?? 0, Icon: AlertTriangle, tone: 'warn' },
+    { label: 'missing', value: dh.missing_components?.length ?? 0, Icon: CircleSlash, tone: 'warn' },
+    { label: 'blocked', value: dh.blockers?.length ?? 0, Icon: AlertTriangle, tone: 'warn' },
+    { label: 'no new info', value: noNewInfoCount, Icon: CalendarClock, tone: 'neutral' },
   ]
 
   const PageComponent = PAGES.find((p) => p.id === page)?.component ?? OverviewPage
@@ -94,7 +96,7 @@ export default function App() {
           })}
           {problems.length > 0 && (
             <span data-testid="snapshot-contract-errors" role="alert"
-              className="ml-1 rounded border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-300">
+              className="ml-1 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">
               contract: {problems.length}
             </span>
           )}
@@ -126,11 +128,13 @@ export default function App() {
             DATA {dh.overall ?? 'N/A'}
           </span>
           <div data-testid="stale-blocked-summary" className="flex items-center gap-1.5 text-[10.5px]">
-            {rollup.map(({ label, value, Icon }) => (
-              <span key={label}
+            {rollup.map(({ label, value, Icon, tone }) => (
+              <span key={label} data-health-tone={tone}
                 className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
                   value > 0
-                    ? 'bg-status-warning/10 text-status-warning-fg'
+                    ? tone === 'warn'
+                      ? 'bg-status-warning/10 text-status-warning-fg'
+                      : 'bg-zinc-500/10 text-zinc-300' // neutral: no new information != warning
                     : 'bg-surface-2/50 text-txt-metadata'
                 }`}>
                 <Icon className="h-3 w-3" aria-hidden />

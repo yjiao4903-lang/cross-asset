@@ -14,18 +14,26 @@ import {
  * =====================================================================
  */
 
-/* Quadrant cell per backend quadrant_label (producer-owned classification). */
+/* Quadrant cell per backend quadrant_label (producer-owned classification).
+ * Four legal enum values only — GOLDILOCKS / REFLATION / STAGFLATION_RISK /
+ * DISINFLATIONARY_SLUMP. No frontend semantic alias such as SLOWDOWN. */
 const QUADRANT_CELLS = {
-  GOLDILOCKS: [1, -1],      // growth expanding (+1) × inflation decelerating (-1)
-  REFLATION: [1, 1],        // growth expanding × inflation accelerating
-  STAGFLATION_RISK: [-1, 1],// growth contracting × inflation accelerating
-  SLOWDOWN: [-1, -1],       // growth contracting × inflation decelerating
+  GOLDILOCKS: [1, -1],                       // growth expanding × inflation decelerating
+  REFLATION: [1, 1],                         // growth expanding × inflation accelerating
+  STAGFLATION_RISK: [-1, 1],                 // growth contracting × inflation accelerating
+  DISINFLATIONARY_SLUMP: [-1, -1],           // growth contracting × inflation decelerating
 }
-const QUADRANT_SHORT = { GOLDILOCKS: 'Goldilocks', REFLATION: 'Reflation', STAGFLATION_RISK: 'Stagflation', SLOWDOWN: 'Slowdown' }
+const QUADRANT_SHORT = {
+  GOLDILOCKS: 'Goldilocks',
+  REFLATION: 'Reflation',
+  STAGFLATION_RISK: 'Stagflation',
+  DISINFLATIONARY_SLUMP: 'Disinfl. slump',   // human-readable display; enum identity unchanged
+}
 
 function QuadCell({ label, short, active }) {
   return (
-    <div className={`relative flex items-center justify-center rounded-md border text-[12px] font-semibold transition-colors duration-75 ${
+    <div data-quadrant={label} data-active={active ? 'true' : 'false'}
+      className={`relative flex items-center justify-center rounded-md border text-[12px] font-semibold transition-colors duration-75 ${
       active
         ? 'border-status-accent/70 bg-surface-sel text-sky-100'
         : 'border-border-1 bg-surface-2/40 text-txt-metadata'
@@ -53,7 +61,7 @@ function RegimeFocal({ regime, macroClimate }) {
         <div className="grid h-full grid-cols-2 grid-rows-2 flex-1 gap-1 pb-2">
           <QuadCell label="stagnation" short="Stagfl. risk" active={g === -1 && i === 1} />
           <QuadCell label="expansion" short="Reflation" active={g === 1 && i === 1} />
-          <QuadCell label="contraction" short="Slowdown" active={g === -1 && i === -1} />
+          <QuadCell label="contraction" short="Disinfl. slump" active={g === -1 && i === -1} />
           <QuadCell label="soft landing" short="Goldilocks" active={g === 1 && i === -1} />
         </div>
         <div className="flex items-center justify-between border-t border-divider pt-1 text-[10px] text-txt-metadata">
@@ -229,7 +237,7 @@ function WhatChangedPanel({ weeklyChange }) {
       {/* B — genuine market-condition move */}
       <div className="flex shrink-0 flex-col">
         <div className="mb-1">
-          <SectionHeading tone="positive">Genuine market-condition move</SectionHeading>
+          <SectionHeading>Genuine market-condition move</SectionHeading>
         </div>
         <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[11.5px]">
           {weeklyChange.market_moves.map((m) => (
