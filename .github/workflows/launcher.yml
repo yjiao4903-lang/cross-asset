@@ -27,7 +27,7 @@ permissions:
 jobs:
   windows-launcher:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,11 +35,29 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Windows environment evidence
+        shell: powershell
+        run: |
+          (Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber) | Format-List
+          node --version
+          npm --version
       - name: Launcher T1-T9 integration matrix
         shell: powershell
         env:
           MACRO_WORKBENCH_NO_BROWSER: '1'
         run: .\launcher\tests\launcher.tests.ps1
+      - name: Real checkout start, browser-open path, health, stop
+        shell: powershell
+        run: |
+          Remove-Item Env:MACRO_WORKBENCH_NO_BROWSER -ErrorAction SilentlyContinue
+          & .\launcher\launcher.ps1
+          if ($LASTEXITCODE -ne 0) { throw "launcher failed with exit $LASTEXITCODE" }
+          $health = Invoke-WebRequest -UseBasicParsing -Uri http://127.0.0.1:8765/__health -TimeoutSec 2
+          if ($health.StatusCode -ne 200 -or $health.Content -notmatch 'macro-workbench') { throw 'health verification failed' }
+          $log = Get-Content -LiteralPath .\launcher\logs\launcher.log -Raw
+          if ($log -notmatch 'Opened default browser: http://127.0.0.1:8765') { throw 'default-browser launch path was not executed' }
+          & .\launcher\stop.ps1
+          if ($LASTEXITCODE -ne 0) { throw "stop failed with exit $LASTEXITCODE" }
       - name: Frontend regression on Windows
         shell: powershell
         working-directory: frontend
