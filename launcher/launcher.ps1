@@ -146,18 +146,36 @@ function Invoke-NpmCommand {
         [Parameter(Mandatory = $true)][string[]]$Arguments,
         [Parameter(Mandatory = $true)][string]$Label
     )
+
     Write-LauncherLog "$Label started: npm $($Arguments -join ' ')"
-    Push-Location $FrontendDir
+    $token = [Guid]::NewGuid().ToString('N')
+    $stdoutPath = Join-Path $RuntimeDir "npm-$token.out.log"
+    $stderrPath = Join-Path $RuntimeDir "npm-$token.err.log"
+
     try {
-        & $NpmPath @Arguments 2>&1 | ForEach-Object {
-            $text = [string]$_
-            Add-Content -LiteralPath $LauncherLog -Value $text -Encoding UTF8
-            Write-Host $text
+        $process = Start-Process -FilePath $NpmPath `
+            -ArgumentList $Arguments `
+            -WorkingDirectory $FrontendDir `
+            -NoNewWindow `
+            -RedirectStandardOutput $stdoutPath `
+            -RedirectStandardError $stderrPath `
+            -Wait `
+            -PassThru
+
+        foreach ($path in @($stdoutPath, $stderrPath)) {
+            if (Test-Path -LiteralPath $path -PathType Leaf) {
+                Get-Content -LiteralPath $path -Encoding UTF8 | ForEach-Object {
+                    $text = [string]$_
+                    Add-Content -LiteralPath $LauncherLog -Value $text -Encoding UTF8
+                    Write-Host $text
+                }
+            }
         }
-        $exitCode = $LASTEXITCODE
+        $exitCode = $process.ExitCode
     } finally {
-        Pop-Location
+        Remove-Item -LiteralPath $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
     }
+
     if ($exitCode -ne 0) {
         Write-LauncherLog "$Label failed with exit code $exitCode." 'ERROR'
         return $exitCode
