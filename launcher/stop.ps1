@@ -96,7 +96,7 @@ function Invoke-StopMain {
         try { Wait-Process -Id $pidValue -Timeout 5 -ErrorAction SilentlyContinue } catch { }
         Write-StopLog "Stopped launcher-owned server PID $pidValue."
     } catch {
-        Write-StopLog "Failed to stop launcher-owned server PID $pidValue: $($_.Exception.Message)" 'ERROR'
+        Write-StopLog "Failed to stop launcher-owned server PID $($pidValue): $($_.Exception.Message)" 'ERROR'
         return 43
     } finally {
         Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
