@@ -63,5 +63,10 @@ def load_schedule(path='config/schedule.yml'):
 
 
 def shadow_run(**kwargs):
+    if kwargs.get("store") is None:
+        raise ValueError("store_required")
+    if kwargs.get("fetcher") is None:
+        raise ValueError("fetcher_required")
+    kwargs.pop("source_mode", None)
     runner=ShadowRunner(kwargs.pop('store'),kwargs.pop('archive_root','data/raw'),kwargs.pop('output_root','artifacts/shadow'),kwargs.pop('fetcher'),kwargs.pop('lock_path',None))
     return runner.run(kwargs.pop('as_of',datetime.now(UTC).date()),**kwargs)
