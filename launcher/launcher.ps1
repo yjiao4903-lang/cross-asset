@@ -260,7 +260,7 @@ function Stop-StartedProcessSafely {
         Stop-Process -Id $ProcessId -ErrorAction Stop
         Write-LauncherLog "Cleaned up launcher-started server PID $ProcessId."
     } catch {
-        Write-LauncherLog "Failed to clean up launcher-started PID $ProcessId: $($_.Exception.Message)" 'WARN'
+        Write-LauncherLog "Failed to clean up launcher-started PID $($ProcessId): $($_.Exception.Message)" 'WARN'
     }
     Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
 }
