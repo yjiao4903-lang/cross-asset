@@ -1,3 +1,4 @@
+from .catalog import series_catalog_read_model, sync_series_catalog
 from .duckdb import DuckDBStore, Storage, connect, init_db
 from .experiment import explain_run, persist_local_experiment
 from .provenance import (
@@ -37,7 +38,9 @@ __all__ = [
     "latest_observations_asof",
     "observations_asof",
     "persist_local_experiment",
+    "series_catalog_read_model",
     "source_tree_hash",
     "stage_wind_csv",
     "stage_wind_xlsx",
+    "sync_series_catalog",
 ]
