@@ -100,6 +100,10 @@ def _approved_observation_predicates(
     simultaneously approved for the same canonical series/usage, the series is
     excluded rather than silently switching or mixing sources.
 
+    Rows produced by an explicit ``MONITORING:*`` ingestion run are excluded
+    even if their real provider/source identity also has a formal registry
+    approval. Monitoring is operational evidence, not formal admission.
+
     ``allowed_quality`` is used only by all-vintage queries. Latest-vintage
     queries rank the newest approved PIT row first and apply quality afterwards,
     so a bad latest vintage can never silently fall back to an older good row.
@@ -119,6 +123,12 @@ def _approved_observation_predicates(
     conflict_approval = _registry_approval_sql("conflict")
     clauses = [
         "o.available_at <= ?",
+        """NOT EXISTS (
+            SELECT 1
+            FROM ingestion_runs monitoring_run
+            WHERE monitoring_run.run_id = o.run_id
+              AND upper(monitoring_run.provider) LIKE 'MONITORING:%'
+        )""",
         f"""EXISTS (
             SELECT 1
             FROM data_acceptance_registry a
@@ -238,8 +248,9 @@ def latest_formal_observations_asof(
     This is the sanctioned read path for formal market-data consumption. It
     binds each observation to one exact approved registry identity, selects the
     latest approved PIT vintage, then applies the formal row-quality gate. A bad
-    latest vintage cannot trade down to an older good row. The optional market
-    data cutoff is applied before ranking.
+    latest vintage cannot trade down to an older good row. Explicit monitoring
+    ingestion lineage is never eligible. The optional market data cutoff is
+    applied before ranking.
     """
 
     frame = latest_approved_observations_asof(
