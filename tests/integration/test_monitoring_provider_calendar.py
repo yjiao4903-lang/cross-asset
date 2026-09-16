@@ -32,6 +32,10 @@ class _FakeYahooMonitoring:
         ]
 
 
+def _naive_utc(hour):
+    return datetime(2026, 9, 17, hour, tzinfo=UTC).replace(tzinfo=None)
+
+
 def _calendar_files(tmp_path, *, max_lag=0):
     calendars = tmp_path / "calendars.yml"
     calendars.write_text(
@@ -106,7 +110,7 @@ def test_monitoring_pipeline_persists_operational_row_but_not_formal(tmp_path):
         ).fetchall()
         assert events == [("MONITORING_OK",)]
 
-        decision_time = datetime(2026, 9, 17, 1)
+        decision_time = _naive_utc(1)
         for usage_status in ("LIVE_VERIFIED", "RESEARCH_ADMISSIBLE"):
             formal = latest_formal_observations_asof(
                 store.conn,
@@ -144,7 +148,7 @@ def test_monitoring_default_calendar_contract_fails_closed_without_mapping():
         )
         health = monitoring_data_health(
             store.conn,
-            datetime(2026, 9, 17, 1),
+            _naive_utc(1),
             market_data_cutoff=date(2026, 9, 16),
             series_ids=["US_EQ"],
         )[0]
@@ -165,7 +169,7 @@ def test_monitoring_freshness_reuses_session_calendar_and_can_be_stale(tmp_path)
         calendars, mapping = _calendar_files(tmp_path, max_lag=0)
         health = monitoring_data_health(
             store.conn,
-            datetime(2026, 9, 17, 23),
+            _naive_utc(23),
             market_data_cutoff=date(2026, 9, 17),
             calendar_config=calendars,
             series_calendar_config=mapping,
@@ -188,7 +192,7 @@ def test_failed_monitoring_quality_cannot_appear_healthy(tmp_path):
         calendars, mapping = _calendar_files(tmp_path)
         health = monitoring_data_health(
             store.conn,
-            datetime(2026, 9, 17, 1),
+            _naive_utc(1),
             market_data_cutoff=date(2026, 9, 16),
             calendar_config=calendars,
             series_calendar_config=mapping,
