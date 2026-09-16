@@ -9,7 +9,6 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-
 _FORMAL_PIT_GRADES = frozenset({"A", "B"})
 
 
