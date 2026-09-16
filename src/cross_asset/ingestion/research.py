@@ -9,6 +9,8 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
+_FORMAL_PIT_GRADES = frozenset({"A", "B"})
+
 
 def _parse_date(value: Any) -> date:
     if isinstance(value, date) and not isinstance(value, datetime):
@@ -60,11 +62,14 @@ def validate_research_admission(
         errors.append("reviewer_approval_required")
     if record.get("origin") in (None, "", "UNAVAILABLE"):
         errors.append("origin_required")
-    if record.get("pit_grade") not in {"A", "B", "C"}:
+    pit_grade = record.get("pit_grade")
+    if pit_grade not in {"A", "B", "C"}:
         errors.append("pit_grade_a_b_c_required")
+    elif pit_grade not in _FORMAL_PIT_GRADES:
+        errors.append("research_admissible_requires_pit_grade_a_or_b")
     if not record.get("raw_hash") or not record.get("source_contract"):
         errors.append("raw_hash_and_source_contract_required")
-    if record.get("pit_grade") == "C" and not record.get("conservative_lag"):
+    if pit_grade == "C" and not record.get("conservative_lag"):
         errors.append("grade_c_conservative_warning_required")
     if record.get("usage_status") == "LIVE_VERIFIED":
         errors.append("live_verified_requires_explicit_separate_gate")
@@ -101,8 +106,8 @@ def _registry_errors(record: dict, store) -> list[str]:
         errors.append("acceptance_registry_research_admissible_required")
     if reviewer in (None, "", "TBD") or approved_at is None:
         errors.append("acceptance_registry_approval_required")
-    if pit_grade not in {"A", "B", "C"}:
-        errors.append("acceptance_registry_pit_grade_required")
+    if pit_grade not in _FORMAL_PIT_GRADES:
+        errors.append("acceptance_registry_formal_pit_grade_a_or_b_required")
     return errors
 
 
