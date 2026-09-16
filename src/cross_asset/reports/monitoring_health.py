@@ -35,7 +35,7 @@ def monitoring_data_health(
     as_of = as_of or datetime.now(UTC).replace(tzinfo=None)
     cutoff = market_data_cutoff or as_of.date()
     base = {row["series_id"]: row for row in data_health(conn, as_of)}
-    wanted = set(str(value) for value in series_ids) if series_ids else set(base)
+    wanted = {str(value) for value in series_ids} if series_ids else set(base)
     result = []
 
     for sid in sorted(wanted):
