@@ -1,0 +1,216 @@
+@import "tailwindcss";
+
+/* =====================================================================
+ * Macro Workbench — Visual V2 design system (#118)
+ *
+ * Visual semantics contract (frozen by #112 UI_FREEZE, binding in V2):
+ *  - red/green RESERVED for market / stance direction only
+ *  - amber = warning / low confidence / data-health problem
+ *  - neutral gray / blue-gray = unavailable / unknown / NO_NEW_INFORMATION
+ *  - a data-health failure must never look like a bearish signal
+ *  - decision-critical text is never smaller than 11px; 9–10px only for
+ *    genuinely non-essential metadata.
+ * ===================================================================== */
+
+/* ---------- 1. Semantic surface tokens ---------- */
+@theme {
+  /* app background */
+  --color-app-bg: #090c13;
+  /* primary surface (panels) */
+  --color-surface-1: #10141d;
+  /* elevated surface (offscreen / floating) */
+  --color-surface-2: #151c2b;
+  /* selected surface */
+  --color-surface-sel: #1a2944;
+  /* hover surface */
+  --color-surface-hover: #1a2131;
+  /* divider */
+  --color-divider: #1f2634;
+  /* border */
+  --color-border-1: #263047;
+  /* strong border */
+  --color-border-2: #34425f;
+  /* input field surface */
+  --color-input-bg: #0c1019;
+
+  /* compatible legacy ink aliases (kept for continuity with V1 tests) */
+  --color-ink-950: #0b0e14;
+  --color-ink-900: #10141d;
+  --color-ink-850: #141926;
+  --color-ink-800: #1a2030;
+  --color-ink-700: #263047;
+  --color-ink-500: #5b6b8c;
+  --color-ink-300: #9fb0cf;
+}
+
+/* ---------- 2. Semantic text tokens ---------- */
+@theme {
+  --color-txt-primary: #e8edf6;
+  --color-txt-secondary: #b7c2d8;
+  --color-txt-muted: #8a99b8;
+  --color-txt-metadata: #6b7a9c;
+  --color-txt-disabled: #46506d;
+
+  /* semantic status (direction is handled by emerald/rose utilities below) */
+  --color-status-positive: #34d399;   /* emerald-400 — market/stance up */
+  --color-status-negative: #fb7185;   /* rose-400   — market/stance down */
+  --color-status-warning: #fbbf24;    /* amber-400  — warning / low conf / partial / stale / blocked */
+  --color-status-warning-fg: #fcd34d; /* amber-300  — readable on dark */
+  --color-status-info: #7dd3fc;       /* sky-300    — informational / FRESH */
+  --color-status-accent: #38bdf8;     /* sky-400    — selected */
+
+  /* typography scale (roles) */
+  --text-prod: 13px;
+  --text-page: 15px;
+  --text-section: 11px;
+  --text-key: 15px;
+  --text-body: 12px;
+  --text-table: 11.5px;
+  --text-meta: 10px;
+  --text-caption: 9.5px;
+}
+
+/* ---------- 3. Base ---------- */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-app-bg);
+  color: var(--color-txt-primary);
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  overflow: hidden; /* cockpit layout owns scrolling per panel, never the page */
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum" 1;
+}
+
+/* consistent scrollers */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #2b3548;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a4762;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ---------- 4. Reusable component classes (small primitive layer) ---------- */
+@layer components {
+  /* surface panel — the single framing unit (minimized so data leads) */
+  .cx-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    border: 1px solid var(--color-border-1);
+    border-radius: 6px;
+    background: var(--color-surface-1);
+  }
+  .cx-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .cx-panel-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px 10px;
+  }
+
+  /* section title — 12px so it stays legible for scanning (>=11px rule) */
+  .cx-section {
+    color: var(--color-txt-muted);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  /* data label / metadata — small but reserved for non-decision context */
+  .cx-label {
+    color: var(--color-txt-metadata);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* table grammar (consistent density + header treatment) */
+  .cx-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .cx-table thead th {
+    padding: 4px 6px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-txt-muted);
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .cx-table tbody td {
+    padding: 5px 6px;
+  }
+  .cx-table tbody tr {
+    border-top: 1px solid var(--color-divider);
+  }
+  .cx-row {
+    cursor: pointer;
+    transition: background-color 80ms linear;
+  }
+  .cx-row:hover {
+    background: var(--color-surface-hover);
+  }
+  .cx-row:focus-visible {
+    outline: 2px solid var(--color-status-accent);
+    outline-offset: -2px;
+  }
+
+  /* visible keyboard focus — never rely on color alone for status */
+  .cx-focus:focus-visible,
+  .cx-focus-visible:focus-visible,
+  button:focus-visible,
+  select:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--color-status-accent);
+    outline-offset: 1px;
+    border-radius: 4px;
+  }
+
+  /* compact kbd accelerator for tab labels */
+  .cx-kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--color-txt-metadata);
+  }
+
+  /* subtle dashed base for unavailable / no-new-information states */
+  .cx-unavailable {
+    border: 1px dashed var(--color-border-2);
+    color: var(--color-txt-muted);
+  }
+}
