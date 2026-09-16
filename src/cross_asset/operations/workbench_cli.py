@@ -35,6 +35,7 @@ def shadow_run_command(
     mode = source_mode.strip().upper()
     if mode not in {"LIVE", "FIXTURE", "SIMULATED"}:
         raise typer.BadParameter("--source-mode must be LIVE, FIXTURE, or SIMULATED")
+    decision_time = as_of or datetime.now(UTC).date().isoformat()
     if database is None:
         run = blocked_run(
             run_kind="shadow",
@@ -42,6 +43,7 @@ def shadow_run_command(
             blockers=["store_required"],
             status="DATA_BLOCKED",
             config_identity="shadow-run",
+            decision_time=decision_time,
         )
         if mode == "LIVE":
             from .workbench_run import apply_frozen_from_previous_valid
@@ -58,6 +60,7 @@ def shadow_run_command(
             blockers=["live_fetcher_not_configured"],
             status="DATA_BLOCKED",
             config_identity="shadow-run",
+            decision_time=decision_time,
         )
         apply_frozen_from_previous_valid(run, workbench_root, reason="live_fetcher_not_configured")
         persist_run(run, workbench_root)
@@ -82,12 +85,15 @@ def shadow_run_command(
             blockers=[f"shadow_failed:{type(exc).__name__}"],
             status="FAILED",
             config_identity="shadow-run",
+            decision_time=decision_time,
         )
         persist_run(run, workbench_root)
         _echo_run_and_exit(run)
     finally:
         store.close()
 
+    if "as_of" not in payload:
+        payload = {**payload, "as_of": decision_time}
     run = from_pipeline_payload(payload, run_kind="shadow", source_mode=mode)
     if not payload.get("series_count"):
         run.status = "DATA_BLOCKED"
