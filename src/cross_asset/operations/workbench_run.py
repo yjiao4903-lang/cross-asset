@@ -32,6 +32,7 @@ class WorkbenchRun:
     model_version: str
     config_identity: str
     data_cutoff: str | None
+    decision_time: str | None = None
     allocation_status: str | None = None
     previous_valid_run_id: str | None = None
     previous_valid_source: str | None = None
@@ -114,8 +115,34 @@ def list_runs(root: str | Path | None = None) -> list[WorkbenchRun]:
     return items
 
 
+def _parse_timestamp(value: object) -> datetime | None:
+    """Parse an economic/creation timestamp as UTC; malformed values fail closed."""
+
+    if value in (None, ""):
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def _append_once(values: list, value: str) -> list:
+    result = list(values)
+    if value not in result:
+        result.append(value)
+    return result
+
+
 def is_formal_previous_valid_eligible(run: WorkbenchRun) -> bool:
-    """LIVE label is not enough; eligibility requires the #18 formal query gate."""
+    """LIVE label is insufficient; #18 formal provenance and decision_time are required."""
 
     run.validate()
     provenance = run.provenance if isinstance(run.provenance, dict) else {}
@@ -124,25 +151,54 @@ def is_formal_previous_valid_eligible(run: WorkbenchRun) -> bool:
         and run.status == "SUCCESS"
         and run.allocation_status == "ACTIVE"
         and bool(run.weights)
+        and _parse_timestamp(run.decision_time) is not None
         and provenance.get("formal_gate") is True
         and provenance.get("formal_query") == FORMAL_QUERY
         and provenance.get("required_usage_status") == FORMAL_USAGE_STATUS
     )
 
 
-def load_formal_previous_valid(root: str | Path | None = None) -> dict | None:
-    """Latest eligible formal ACTIVE run from persisted WorkbenchRun objects."""
+def load_formal_previous_valid(
+    root: str | Path | None = None,
+    *,
+    before_decision_time: str | None = None,
+) -> dict | None:
+    """Select prior formal ACTIVE state by economic decision_time, not file creation time.
 
-    eligible = [run for run in list_runs(root) if is_formal_previous_valid_eligible(run)]
-    if not eligible:
+    The latest economic decision strictly before ``before_decision_time`` wins.
+    Same-decision retries are deterministic: latest ``created_at`` then ``run_id``.
+    This prevents a later-created backfill for an older decision from displacing
+    the true prior economic run.
+    """
+
+    cutoff = _parse_timestamp(before_decision_time)
+    if before_decision_time is not None and cutoff is None:
         return None
-    eligible.sort(key=lambda run: (run.created_at or "", run.run_id))
-    chosen = eligible[-1]
+
+    candidates: list[tuple[datetime, datetime, str, WorkbenchRun]] = []
+    minimum_created = datetime.min.replace(tzinfo=UTC)
+    for run in list_runs(root):
+        if not is_formal_previous_valid_eligible(run):
+            continue
+        decision = _parse_timestamp(run.decision_time)
+        if decision is None:
+            continue
+        if cutoff is not None and decision >= cutoff:
+            continue
+        created = _parse_timestamp(run.created_at) or minimum_created
+        candidates.append((decision, created, run.run_id, run))
+
+    if not candidates:
+        return None
+
+    _, _, _, chosen = max(candidates, key=lambda item: item[:3])
     return {
         "run_id": chosen.run_id,
         "source_mode": chosen.source_mode,
         "status": chosen.status,
         "allocation_status": chosen.allocation_status,
+        "decision_time": chosen.decision_time,
+        "created_at": chosen.created_at,
         "weights": dict(chosen.weights or {}),
         "source": "formal",
         "formal_query": (chosen.provenance or {}).get("formal_query"),
@@ -165,25 +221,107 @@ def needs_frozen_restore(run: WorkbenchRun) -> bool:
     return str(run.allocation_status or "").upper() in _UNHEALTHY_ALLOCATION
 
 
+def _load_current_allocation_policy() -> tuple[dict[str, float], dict]:
+    """Read the same current allocation policy used by FullModelStrategy."""
+
+    import yaml
+
+    from ..settings import get_settings
+
+    config_path = Path(get_settings().cross_asset_config_dir) / "allocation.yml"
+    payload = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    strategic_weights = {
+        str(key): float(value)
+        for key, value in dict(payload.get("strategic_weights") or {}).items()
+    }
+    if not strategic_weights:
+        raise ValueError("strategic_weights_missing")
+    constraints = dict(payload.get("constraints") or {})
+    return strategic_weights, constraints
+
+
+def _project_previous_with_current_policy(previous_weights: dict, *, decision_time: str):
+    """Reuse #19 allocation authority for FROZEN restoration."""
+
+    from ..engines.allocation import allocate
+
+    strategic_weights, constraints = _load_current_allocation_policy()
+    return allocate(
+        {},
+        strategic_weights,
+        max_tilt=float(
+            constraints.get(
+                "max_tactical_tilt",
+                constraints.get("max_tilt", 0.10),
+            )
+        ),
+        min_weight=float(constraints.get("min_weight", 0.0)),
+        max_weight=float(constraints.get("max_weight", 0.5)),
+        health=False,
+        previous_valid_weight=previous_weights,
+        as_of=decision_time,
+    )
+
+
 def apply_frozen_from_previous_valid(
     run: WorkbenchRun,
     root: str | Path | None = None,
     *,
     reason: str,
 ) -> WorkbenchRun:
-    previous = load_formal_previous_valid(root)
-    if previous is None:
-        run.status = "DATA_BLOCKED"
-        run.allocation_status = "FROZEN"
-        run.freeze_reason = reason
-        run.blockers = list(run.blockers) + ["previous_valid_formal_allocation_missing"]
-        run.weights = None
-        return run
+    """Restore prior formal intent only through current #19 constraints."""
+
     run.allocation_status = "FROZEN"
     run.freeze_reason = reason
+
+    if _parse_timestamp(run.decision_time) is None:
+        run.status = "DATA_BLOCKED"
+        run.blockers = _append_once(
+            run.blockers, "decision_time_missing_for_previous_valid_selection"
+        )
+        run.weights = None
+        return run
+
+    previous = load_formal_previous_valid(
+        root, before_decision_time=run.decision_time
+    )
+    if previous is None:
+        run.status = "DATA_BLOCKED"
+        run.blockers = _append_once(
+            run.blockers, "previous_valid_formal_allocation_missing"
+        )
+        run.weights = None
+        return run
+
     run.previous_valid_run_id = previous["run_id"]
     run.previous_valid_source = "formal"
-    run.weights = dict(previous["weights"])
+    try:
+        allocation = _project_previous_with_current_policy(
+            previous["weights"], decision_time=run.decision_time
+        )
+    except (FileNotFoundError, ImportError, KeyError, TypeError, ValueError) as exc:
+        run.status = "DATA_BLOCKED"
+        run.blockers = _append_once(
+            run.blockers, "current_allocation_policy_unavailable"
+        )
+        run.warnings = _append_once(
+            run.warnings, f"frozen_projection_failed:{type(exc).__name__}"
+        )
+        run.weights = None
+        return run
+
+    run.weights = dict(allocation.weights)
+    for warning in allocation.warnings:
+        run.warnings = _append_once(run.warnings, str(warning))
+    provenance = dict(run.provenance or {})
+    provenance["frozen_projection"] = {
+        "authority": "cross_asset.engines.allocation.allocate",
+        "previous_valid_decision_time": previous["decision_time"],
+        "previous_valid_created_at": previous["created_at"],
+        "allocation_model_version": allocation.model_version,
+        "warnings": list(allocation.warnings),
+    }
+    run.provenance = provenance
     if run.status == "SUCCESS":
         run.status = "PARTIAL"
     return run
@@ -198,6 +336,7 @@ def blocked_run(
     model_version: str = "workbench_v0.1",
     config_identity: str = "undeclared",
     data_cutoff: str | None = None,
+    decision_time: str | None = None,
 ) -> WorkbenchRun:
     prefix = (run_kind or "wb")[:2]
     return WorkbenchRun(
@@ -208,6 +347,7 @@ def blocked_run(
         model_version=model_version,
         config_identity=config_identity,
         data_cutoff=data_cutoff,
+        decision_time=decision_time,
         blockers=list(blockers),
         components={},
         created_at=datetime.now(UTC).isoformat(),
@@ -219,7 +359,11 @@ def component_view(run: WorkbenchRun, name: str) -> dict:
     if payload in (None, {}, []):
         return {"status": "UNAVAILABLE", "reason": "data_gap", "value": None}
     if isinstance(payload, dict) and payload.get("status") in {None, "", "MISSING"}:
-        return {**payload, "status": "UNAVAILABLE", "reason": payload.get("reason") or "data_gap"}
+        return {
+            **payload,
+            "status": "UNAVAILABLE",
+            "reason": payload.get("reason") or "data_gap",
+        }
     return payload
 
 
@@ -260,22 +404,43 @@ def from_pipeline_payload(
     }
     cutoff = payload.get("data_cutoff")
     if isinstance(cutoff, dict):
-        cutoff = cutoff.get("cross_market") or cutoff.get("marco") or json.dumps(cutoff, default=str)
+        cutoff = (
+            cutoff.get("cross_market")
+            or cutoff.get("marco")
+            or json.dumps(cutoff, default=str)
+        )
     raw_weights = payload.get("weights")
     if not isinstance(raw_weights, dict):
-        raw_weights = payload.get("allocation") if isinstance(payload.get("allocation"), dict) else None
-    run_id = str(payload.get("run_id") or new_run_id(run_kind[:2] if run_kind else "wb"))
+        raw_weights = (
+            payload.get("allocation")
+            if isinstance(payload.get("allocation"), dict)
+            else None
+        )
+    raw_decision_time = payload.get("decision_time") or payload.get("as_of")
+    decision_time = str(raw_decision_time) if raw_decision_time not in (None, "") else None
+    run_id = str(
+        payload.get("run_id") or new_run_id(run_kind[:2] if run_kind else "wb")
+    )
     return WorkbenchRun(
         run_id=run_id,
         run_kind=run_kind,
         source_mode=source_mode,
         status=status,
         model_version=str(payload.get("model_version") or "workbench_v0.1"),
-        config_identity=str(payload.get("config_hash") or payload.get("config_identity") or run_kind),
+        config_identity=str(
+            payload.get("config_hash")
+            or payload.get("config_identity")
+            or run_kind
+        ),
         data_cutoff=str(cutoff) if cutoff else None,
+        decision_time=decision_time,
         allocation_status=allocation_status,
         freeze_reason=payload.get("freeze_reason"),
-        components={key: value for key, value in components.items() if value not in (None, {}, [])},
+        components={
+            key: value
+            for key, value in components.items()
+            if value not in (None, {}, [])
+        },
         warnings=list(payload.get("warnings") or []),
         blockers=list(payload.get("blockers") or []),
         provenance={"pipeline_status": raw_status, "payload_keys": sorted(payload)},
@@ -297,7 +462,9 @@ def stamp_formal_gate_from_payload(run: WorkbenchRun, payload: dict) -> Workbenc
     return run
 
 
-def persist_and_maybe_record(run: WorkbenchRun, root: str | Path | None = None) -> WorkbenchRun:
+def persist_and_maybe_record(
+    run: WorkbenchRun, root: str | Path | None = None
+) -> WorkbenchRun:
     """Persist the canonical run only. Eligibility is derived from that lineage."""
 
     return persist_run(run, root)
@@ -310,15 +477,24 @@ def persist_from_cli_payload(
     source_mode: str,
     root: str | Path | None = None,
 ) -> WorkbenchRun:
-    """Persist a pipeline CLI JSON payload as the canonical workbench run."""
+    """Persist a pipeline CLI payload and apply fail-closed FROZEN lineage."""
 
-    run = from_pipeline_payload(payload, run_kind=run_kind, source_mode=source_mode)
+    run = from_pipeline_payload(
+        payload, run_kind=run_kind, source_mode=source_mode
+    )
     stamp_formal_gate_from_payload(run, payload)
-    if payload.get("status") in {"DATA_BLOCKED", "BLOCKED", "UNAVAILABLE"} and not run.blockers:
+    if (
+        payload.get("status") in {"DATA_BLOCKED", "BLOCKED", "UNAVAILABLE"}
+        and not run.blockers
+    ):
         run.blockers = ["pipeline_data_blocked"]
         run.status = "DATA_BLOCKED"
     if needs_frozen_restore(run):
-        reason = run.blockers[0] if run.blockers else str(run.allocation_status or run.status)
+        reason = (
+            run.blockers[0]
+            if run.blockers
+            else str(run.allocation_status or run.status)
+        )
         apply_frozen_from_previous_valid(run, root, reason=reason)
     return persist_run(run, root)
 
