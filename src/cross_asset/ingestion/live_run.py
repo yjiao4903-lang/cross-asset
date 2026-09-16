@@ -14,6 +14,22 @@ from .normalization import normalize_observation
 from .raw_archive import ImmutableRawArchive
 
 CANONICAL_LIVE_SERIES=("US_EQ","GOLD","COPPER","OIL","DXY","USDCNH","HK_EQ","US_GOV_10Y")
+_SYNTHETIC_SOURCE_BY_MODE={"SIMULATED":"simulated","FIXTURE":"fixture"}
+
+
+def _validate_synthetic_source_identities(rows, *, source_mode):
+    expected=_SYNTHETIC_SOURCE_BY_MODE[source_mode]
+    offenders=[]
+    for row in rows:
+        actual=str(row.get('source','')).strip().lower()
+        if actual != expected:
+            offenders.append(f"{row.get('series_id','UNKNOWN')}:{actual or 'missing'}")
+    if offenders:
+        raise ValueError(
+            f"synthetic_source_identity_required:{source_mode.lower()}:"
+            + ",".join(sorted(offenders))
+        )
+
 
 def _run_live_pipeline_unlocked(*, store, archive_root, output_root, fetcher, probe=None, run_key=None, retry=False, source_mode='SIMULATED', as_of=None, quality_checker=None):
     if source_mode not in ('SIMULATED','FIXTURE'): raise ValueError('live test mode must be SIMULATED or FIXTURE')
@@ -32,6 +48,7 @@ def _run_live_pipeline_unlocked(*, store, archive_root, output_root, fetcher, pr
         item=normalize_observation(item)
         item.metadata={**(item.metadata or {}), 'origin': source_mode}
         normalized.append(item.model_dump(mode='json'))
+    _validate_synthetic_source_identities(normalized, source_mode=source_mode)
     raw=None
     if normalized:
         raw=ImmutableRawArchive(archive_root).write('simulated' if source_mode=='SIMULATED' else 'fixture','observations',normalized)
