@@ -48,23 +48,24 @@ def test_fixture_mode_writes_with_fixture_source_identity(tmp_path):
     assert store.conn.execute('select count(*) from observations').fetchone()[0] == 240
 
 
-def test_simulated_mode_rejects_real_source_identity_before_persistence(tmp_path):
+@pytest.mark.parametrize('source_mode', ['SIMULATED', 'FIXTURE'])
+def test_synthetic_modes_reject_real_source_identity_before_persistence(tmp_path, source_mode):
     store=init_db(':memory:')
     start=datetime(2025,1,1,tzinfo=UTC)
-    raw_root=tmp_path/'guard-raw'
+    raw_root=tmp_path/f'guard-raw-{source_mode.lower()}'
     def fetch(series):
         return [Observation(series_id=series[0], observation_date=start.date(), available_at=start, value=100, source='manual', source_series_id='SPX', frequency='daily', unit='index')]
 
     with pytest.raises(
         ValueError,
-        match='synthetic_source_identity_required:simulated:US_EQ:manual',
+        match=f'synthetic_source_identity_required:{source_mode.lower()}:US_EQ:manual',
     ):
         run_live_pipeline(
             store=store,
             archive_root=raw_root,
-            output_root=tmp_path/'guard-out',
+            output_root=tmp_path/f'guard-out-{source_mode.lower()}',
             fetcher=fetch,
-            source_mode='SIMULATED',
+            source_mode=source_mode,
         )
 
     assert store.conn.execute('select count(*) from observations').fetchone()[0] == 0
