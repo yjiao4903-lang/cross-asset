@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import pandas as pd
@@ -334,6 +334,63 @@ def _inflation_state(score: float) -> InflationState:
     return InflationState.MODERATE
 
 
+def _economic_week_id(value: date) -> str:
+    """Stable economic-step identity: Monday date of the product decision week."""
+
+    return (value - timedelta(days=value.weekday())).isoformat()
+
+
+def _snapshot_economic_week_id(snapshot: DashboardSnapshotV0) -> str:
+    explicit = snapshot.details.get("economic_week_id")
+    if explicit:
+        return str(explicit)
+    raw_cutoff = snapshot.details.get("data_cutoff")
+    if raw_cutoff:
+        try:
+            return _economic_week_id(date.fromisoformat(str(raw_cutoff)[:10]))
+        except ValueError:
+            pass
+    return _economic_week_id(snapshot.metadata.as_of)
+
+
+def _normalized_regime_history(
+    previous_snapshot: DashboardSnapshotV0 | None,
+    *,
+    current_week_id: str,
+) -> list[dict[str, Any]]:
+    """Return causal, de-duplicated economic-week history.
+
+    Pre-F04 rows had no economic-step identity and therefore cannot safely be
+    replayed as multiple dwell weeks. Conservatively retain only the last such
+    row, assigning it to the previous snapshot's own economic week; earlier
+    unkeyed rows are dropped rather than guessed.
+    """
+
+    if previous_snapshot is None:
+        return []
+    by_week: dict[str, dict[str, Any]] = {}
+    legacy_last: dict[str, Any] | None = None
+    for raw in previous_snapshot.details.get("regime_input_history", []):
+        item = dict(raw)
+        week_id = item.get("economic_week_id")
+        if not week_id:
+            legacy_last = item
+            continue
+        resolved = str(week_id)
+        if resolved <= current_week_id:
+            item["economic_week_id"] = resolved
+            by_week[resolved] = item
+
+    if legacy_last is not None:
+        previous_week_id = _snapshot_economic_week_id(previous_snapshot)
+        if previous_week_id <= current_week_id and previous_week_id not in by_week:
+            migrated = dict(legacy_last)
+            migrated["economic_week_id"] = previous_week_id
+            by_week[previous_week_id] = migrated
+
+    return [by_week[week_id] for week_id in sorted(by_week)]
+
+
 def _cluster_views(
     current: dict[tuple[str, HorizonClass], HorizonAggregate],
     previous: dict[tuple[str, HorizonClass], HorizonAggregate] | None,
@@ -400,6 +457,8 @@ def _build_regime(
     current: dict[tuple[str, HorizonClass], HorizonAggregate],
     previous_snapshot: DashboardSnapshotV0 | None,
     taxonomy: DecisionSupportConfig,
+    *,
+    economic_week_id: str,
 ):
     growth = current[("GROWTH_ACTIVITY", HorizonClass.CYCLICAL)]
     inflation = current[("INFLATION_COST", HorizonClass.CYCLICAL)]
@@ -408,18 +467,19 @@ def _build_regime(
             "regime axes unavailable; refusing to synthesize growth/inflation from missing data"
         )
 
-    history: list[dict[str, Any]] = []
-    if previous_snapshot is not None:
-        history = list(previous_snapshot.details.get("regime_input_history", []))
-    history.append(
-        {
-            "growth_score": growth.score,
-            "inflation_score": inflation.score,
-            "confidence": min(growth.confidence, inflation.confidence),
-            "coverage": min(growth.coverage, inflation.coverage),
-        }
+    history = _normalized_regime_history(
+        previous_snapshot,
+        current_week_id=economic_week_id,
     )
-    history = history[-12:]
+    by_week = {str(item["economic_week_id"]): dict(item) for item in history}
+    by_week[economic_week_id] = {
+        "economic_week_id": economic_week_id,
+        "growth_score": growth.score,
+        "inflation_score": inflation.score,
+        "confidence": min(growth.confidence, inflation.confidence),
+        "coverage": min(growth.coverage, inflation.coverage),
+    }
+    history = [by_week[week_id] for week_id in sorted(by_week)][-12:]
 
     engine = RegimeEngine(
         axis_threshold=taxonomy.regime.axis_threshold,
@@ -589,6 +649,16 @@ def build_monitoring_snapshot(
     """Build one truthful non-fixture DashboardSnapshotV0 in MONITORING lane."""
 
     _validate_pack(pack)
+    economic_week_id = _economic_week_id(pack.lineage.data_cutoff)
+    same_week_retry = False
+    if previous_snapshot is not None:
+        if previous_snapshot.metadata.decision_time >= pack.lineage.decision_time:
+            raise ValueError("previous_snapshot_must_precede_current_decision_time")
+        previous_week_id = _snapshot_economic_week_id(previous_snapshot)
+        if previous_week_id > economic_week_id:
+            raise ValueError("previous_snapshot_economic_week_after_current")
+        same_week_retry = previous_week_id == economic_week_id
+
     taxonomy = taxonomy or load_taxonomy()
     registry = registry or load_factor_bindings(taxonomy=taxonomy)
     scores, factor_statuses = score_monitoring_factors(
@@ -640,58 +710,73 @@ def build_monitoring_snapshot(
         summary="producer-owned tactical investment climate from canonical monitoring inputs",
     )
     regime, regime_history = _build_regime(
-        current_aggregates, previous_snapshot, taxonomy
+        current_aggregates,
+        previous_snapshot,
+        taxonomy,
+        economic_week_id=economic_week_id,
     )
 
-    info_delta = build_information_set_delta(
-        pack.release_events,
-        expected_releases=pack.expected_releases,
-        as_of=pack.as_of,
-    )
-    previous_raw = (
-        previous_snapshot.details.get("subfactor_scores_current", {})
-        if previous_snapshot is not None
-        else {}
-    )
-    current_raw = {
-        factor_id: score.score
-        for factor_id, score in scores.items()
-        if score.resolved_horizon() is HorizonClass.CYCLICAL and not score.missing
-    }
-    previous_cyclical = {
-        spec.factor_id: previous_raw[spec.factor_id]
-        for spec in taxonomy.subfactors()
-        if spec.resolved_horizon() is HorizonClass.CYCLICAL
-        and previous_raw.get(spec.factor_id) is not None
-    }
-    changed_by_release = {
-        event.factor_id
-        for event in pack.release_events
-        if event.resolved_event_type() is not ReleaseEventType.OVERDUE
-    }
-    macro_delta = build_macro_state_delta(
-        previous_cyclical,
-        current_raw,
-        information_status=info_delta.resolved_status(),
-        changed_by_release=changed_by_release,
-    )
-    market_delta = build_market_condition_delta(
-        [
-            build_market_move(
-                move.instrument,
-                move.metric_class,
-                move.prior_value,
-                move.current_value,
-                volatility_style=taxonomy.market_delta.volatility_style,
-            )
-            for move in pack.market_moves
-        ]
-    )
+    if same_week_retry and previous_snapshot is not None:
+        info_delta = previous_snapshot.weekly_change.information_set_delta.model_copy(deep=True)
+        macro_delta = previous_snapshot.weekly_change.macro_state_delta.model_copy(deep=True)
+        market_delta = previous_snapshot.weekly_change.market_condition_delta.model_copy(deep=True)
+        changed_by_release = {
+            event.factor_id
+            for event in info_delta.events
+            if event.resolved_event_type() is not ReleaseEventType.OVERDUE
+        }
+    else:
+        info_delta = build_information_set_delta(
+            pack.release_events,
+            expected_releases=pack.expected_releases,
+            as_of=pack.as_of,
+        )
+        previous_raw = (
+            previous_snapshot.details.get("subfactor_scores_current", {})
+            if previous_snapshot is not None
+            else {}
+        )
+        current_raw = {
+            factor_id: score.score
+            for factor_id, score in scores.items()
+            if score.resolved_horizon() is HorizonClass.CYCLICAL and not score.missing
+        }
+        previous_cyclical = {
+            spec.factor_id: previous_raw[spec.factor_id]
+            for spec in taxonomy.subfactors()
+            if spec.resolved_horizon() is HorizonClass.CYCLICAL
+            and previous_raw.get(spec.factor_id) is not None
+        }
+        changed_by_release = {
+            event.factor_id
+            for event in pack.release_events
+            if event.resolved_event_type() is not ReleaseEventType.OVERDUE
+        }
+        macro_delta = build_macro_state_delta(
+            previous_cyclical,
+            current_raw,
+            information_status=info_delta.resolved_status(),
+            changed_by_release=changed_by_release,
+        )
+        market_delta = build_market_condition_delta(
+            [
+                build_market_move(
+                    move.instrument,
+                    move.metric_class,
+                    move.prior_value,
+                    move.current_value,
+                    volatility_style=taxonomy.market_delta.volatility_style,
+                )
+                for move in pack.market_moves
+            ]
+        )
 
     gates = _asset_gates(scores, current_aggregates, taxonomy)
     asset_views, asset_delta = _asset_views_and_delta(
         gates, previous_snapshot, macro_delta.changed_factors(), taxonomy
     )
+    if same_week_retry and previous_snapshot is not None:
+        asset_delta = previous_snapshot.weekly_change.asset_view_delta.model_copy(deep=True)
     health = _data_health(clusters, gates, factor_statuses)
 
     records = registry.records(taxonomy)
@@ -726,6 +811,7 @@ def build_monitoring_snapshot(
     details = {
         "producer": "REAL-SNAPSHOT-V1",
         "data_cutoff": pack.lineage.data_cutoff.isoformat(),
+        "economic_week_id": economic_week_id,
         "config_identity": pack.lineage.config_identity,
         "source_mode": pack.lineage.source_mode,
         "origin": pack.origin,
