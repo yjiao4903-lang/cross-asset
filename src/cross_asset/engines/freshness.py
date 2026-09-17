@@ -1,11 +1,9 @@
-"""Calendar-aware freshness interface for formal consumers (fail-closed).
+"""Calendar-aware freshness interface for formal and monitoring consumers (fail-closed).
 
-Issue #18 owns the consumer-side freshness semantics; the real per-series
-calendar evidence (holidays, early closes, CN_INTERBANK make-up weekends and
-the six Wind source confirmations) is owned by Issue #21. Until a series is
-explicitly mapped to a VERIFIED calendar with an explicit session-lag budget,
-this interface refuses to certify freshness and formal consumers must remain
-DATA_BLOCKED/FROZEN. No weekend heuristic or implicit default lag is used.
+Series may explicitly bind either to the legacy evidence-backed project calendar
+configuration or to the existing upstream exchange-calendar adapter. Missing or
+unsupported mappings remain BLOCKED. No weekend heuristic, elapsed-hour fallback,
+or implicit lag budget is used.
 """
 
 from __future__ import annotations
@@ -17,8 +15,10 @@ from pathlib import Path
 import yaml
 
 from cross_asset.operations.calendar import MarketCalendar
+from cross_asset.operations.exchange_calendar import CalendarBlockedError, exchange_calendar
 
 _MAX_CALENDAR_WALK_DAYS = 370
+_EXCHANGE_ADAPTER_SOURCE = "exchange_adapter"
 
 
 @dataclass(frozen=True)
@@ -57,6 +57,63 @@ def load_series_calendar_mapping(
     }
 
 
+def _exchange_freshness(
+    series_id: str,
+    *,
+    latest_observation_date: date,
+    market_data_cutoff: date,
+    calendar_name: str,
+    max_lag: int,
+) -> FreshnessResult:
+    def blocked(reason: str) -> FreshnessResult:
+        return FreshnessResult(series_id, "BLOCKED", reason)
+
+    if latest_observation_date > market_data_cutoff:
+        return blocked("observation_after_market_cutoff")
+    try:
+        adapter = exchange_calendar(calendar_name)
+        coverage = adapter.coverage().get(calendar_name, {})
+        first = coverage.get("first_session")
+        last = coverage.get("last_session")
+        if first is not None and latest_observation_date < first:
+            return blocked("calendar_coverage_missing")
+        if last is not None and market_data_cutoff > last:
+            return blocked("calendar_coverage_missing")
+        sessions = adapter.sessions(
+            calendar_name,
+            latest_observation_date,
+            market_data_cutoff,
+        )
+    except (CalendarBlockedError, KeyError, TypeError, ValueError):
+        return blocked("calendar_unavailable")
+
+    eligible_sessions = sorted(
+        day for day in sessions if latest_observation_date < day <= market_data_cutoff
+    )
+    lag = len(eligible_sessions)
+    cutoff_sessions = [day for day in sessions if day <= market_data_cutoff]
+    expected = max(cutoff_sessions) if cutoff_sessions else None
+    if lag > max_lag:
+        return FreshnessResult(
+            series_id,
+            "STALE",
+            "calendar_lag_exceeds_max_lag_sessions",
+            calendar=calendar_name,
+            expected_session=expected,
+            latest_observation_date=latest_observation_date,
+            lag_sessions=lag,
+        )
+    return FreshnessResult(
+        series_id,
+        "OK",
+        "fresh_within_calendar_lag",
+        calendar=calendar_name,
+        expected_session=expected,
+        latest_observation_date=latest_observation_date,
+        lag_sessions=lag,
+    )
+
+
 def evaluate_series_freshness(
     series_id: str,
     *,
@@ -68,10 +125,10 @@ def evaluate_series_freshness(
 ) -> FreshnessResult:
     """Evaluate calendar-driven freshness for one series at the market cutoff.
 
-    The lag budget is the number of open sessions after the latest approved
-    observation date up to and including the market-data cutoff. Any missing
-    piece of evidence (mapping, verified calendar, covered year, explicit lag
-    budget) fails closed as BLOCKED rather than defaulting to fresh.
+    The lag budget is the number of open sessions after the latest approved or
+    monitoring observation date up to and including the market-data cutoff. Any
+    missing evidence (mapping, supported calendar, explicit lag budget, or
+    coverage) fails closed rather than defaulting to fresh.
     """
 
     def blocked(reason: str) -> FreshnessResult:
@@ -98,6 +155,18 @@ def evaluate_series_freshness(
         return blocked("max_lag_sessions_invalid")
     if max_lag < 0:
         return blocked("max_lag_sessions_invalid")
+
+    calendar_source = str(entry.get("calendar_source") or "config").strip().lower()
+    if calendar_source == _EXCHANGE_ADAPTER_SOURCE:
+        return _exchange_freshness(
+            series_id,
+            latest_observation_date=latest_observation_date,
+            market_data_cutoff=market_data_cutoff,
+            calendar_name=calendar_name,
+            max_lag=max_lag,
+        )
+    if calendar_source != "config":
+        return blocked("calendar_source_unsupported")
 
     try:
         calendar = MarketCalendar(str(calendar_name), calendar_config)
