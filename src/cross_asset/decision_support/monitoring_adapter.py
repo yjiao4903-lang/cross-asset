@@ -7,11 +7,12 @@ snapshot lineage. It never grants FORMAL/OOS eligibility.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from cross_asset.operations.workbench_run import WorkbenchRun
 from cross_asset.reports.monitoring_health import monitoring_data_health
+from cross_asset.storage._time import utc_naive
 
 from .binding import FactorBindingRegistry, load_factor_bindings
 from .producer import (
@@ -39,7 +40,9 @@ def _parse_decision_time(value: str | None) -> datetime:
         parsed = datetime.fromisoformat(text)
     except ValueError as exc:
         raise ValueError("workbench_run_decision_time_invalid") from exc
-    return parsed
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _parse_cutoff(value: str | None) -> date:
@@ -76,7 +79,7 @@ def _monitoring_rows(conn, series_ids: list[str], decision_time: datetime, cutof
                 ORDER BY o.available_at DESC,o.ingested_at DESC,o.run_id DESC
             )=1
             ORDER BY o.series_id,o.observation_date,o.available_at""",
-        [*series_ids, decision_time, cutoff],
+        [*series_ids, utc_naive(decision_time), cutoff],
     )
 
 
@@ -94,6 +97,7 @@ def build_monitoring_pack_from_db(
     if workbench_run.source_mode != "LIVE":
         raise ValueError("monitoring_snapshot_requires_live_workbench_run")
     decision_time = _parse_decision_time(workbench_run.decision_time)
+    db_as_of = utc_naive(decision_time)
     cutoff = _parse_cutoff(workbench_run.data_cutoff)
     registry = registry or load_factor_bindings()
     bound = [
@@ -107,7 +111,7 @@ def build_monitoring_pack_from_db(
 
     health_rows = monitoring_data_health(
         store.conn,
-        as_of=decision_time,
+        as_of=db_as_of,
         market_data_cutoff=cutoff,
         calendar_config=calendar_config,
         series_calendar_config=series_calendar_config,
@@ -130,7 +134,9 @@ def build_monitoring_pack_from_db(
         observations = [
             MonitoringObservation(
                 observation_date=row["observation_date"],
-                available_at=row["available_at"],
+                available_at=row["available_at"].replace(tzinfo=UTC)
+                if row["available_at"].tzinfo is None
+                else row["available_at"].astimezone(UTC),
                 value=float(row["value"]),
                 source_ref=(
                     f"{row.get('source') or 'unknown'}:"
