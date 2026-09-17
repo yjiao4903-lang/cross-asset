@@ -22,12 +22,15 @@ EDT = ZoneInfo("America/New_York")
 
 def _obs(series_id, day, value, available=None):
     stamp = available or f"{day}T16:00:00+08:00"
+    unit = "percent" if "BOND" in series_id else "index_points"
     return Observation(
         series_id=series_id,
         observation_date=date.fromisoformat(day),
         value=value,
         available_at=to_beijing(stamp),
         source="fixture",
+        source_series_id=f"FIXTURE_{series_id}",
+        unit=unit,
     )
 
 
@@ -69,6 +72,8 @@ def test_us_friday_close_visible_saturday_noon_beijing():
             value=5500,
             available_at=to_beijing(us_close),
             source="fred",
+            source_series_id="US_EQ_TEST",
+            unit="index_points",
         )
     ]
     friday_night = datetime(2026, 9, 4, 23, 59, 59, tzinfo=BEIJING)
@@ -159,7 +164,8 @@ def test_compare_weeks_and_cli_fixture(tmp_path: Path):
         snapshot_output=tmp_path / "weekly.snapshot.json",
         config_path="config/weekly_review.yml",
     )
-    assert result["status"] == "READY"
+    assert result["status"] == "PARTIAL"
+    assert any("SOURCE_IDENTITY_MISSING" in item for item in result["missing_lookbacks"])
     assert result["week_end"] == "2026-09-04"
     assert result["timezone"] == "Asia/Shanghai"
     assert result["usage"] == "PERSONAL_WEEKLY"
