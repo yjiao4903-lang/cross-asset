@@ -30,6 +30,13 @@ _HEALTH_TO_PACK = {
     "FAILED": "BLOCKED",
     "UNAVAILABLE": "BLOCKED",
 }
+# #129 explicitly permits captured publication-frequency macro history to remain
+# MONITORING evidence when publication freshness is not yet governed. Keep this
+# exception narrow: only missing publication/calendar authority is downgraded to
+# an explicit unverified state. Provider/schema/identity failures stay BLOCKED.
+_MONITORING_FRESHNESS_UNVERIFIED_REASONS = {
+    "calendar_mapping_missing",
+}
 
 
 def _parse_decision_time(value: str | None) -> datetime:
@@ -83,6 +90,18 @@ def _monitoring_rows(conn, series_ids: list[str], decision_time: datetime, cutof
     )
 
 
+def _pack_status(health_row: dict[str, Any], rows: list[dict[str, Any]]) -> str:
+    monitoring_status = str(health_row.get("monitoring_status") or "MISSING").upper()
+    reason = str(health_row.get("monitoring_reason") or "").strip().lower()
+    if (
+        rows
+        and monitoring_status == "BLOCKED"
+        and reason in _MONITORING_FRESHNESS_UNVERIFIED_REASONS
+    ):
+        return "FRESHNESS_UNVERIFIED"
+    return _HEALTH_TO_PACK.get(monitoring_status, "BLOCKED")
+
+
 def build_monitoring_pack_from_db(
     store,
     workbench_run: WorkbenchRun,
@@ -91,7 +110,7 @@ def build_monitoring_pack_from_db(
     calendar_config: str = "config/calendars.yml",
     series_calendar_config: str = "config/series_calendars.yml",
 ) -> MonitoringObservationPack:
-    """Build a canonical observation pack directly from merged #127 authorities."""
+    """Build a canonical observation pack directly from merged #127/#129 authorities."""
 
     workbench_run.validate()
     if workbench_run.source_mode != "LIVE":
@@ -127,10 +146,7 @@ def build_monitoring_pack_from_db(
     for series_id in series_ids:
         rows = by_series.get(series_id, [])
         health_row = health.get(series_id, {})
-        status = _HEALTH_TO_PACK.get(
-            str(health_row.get("monitoring_status") or "MISSING").upper(),
-            "BLOCKED",
-        )
+        status = _pack_status(health_row, rows)
         observations = [
             MonitoringObservation(
                 observation_date=row["observation_date"],
@@ -153,6 +169,7 @@ def build_monitoring_pack_from_db(
                 for row in rows
             }
         )
+        monitoring_reason = health_row.get("monitoring_reason")
         series.append(
             MonitoringSeries(
                 series_id=series_id,
@@ -163,7 +180,11 @@ def build_monitoring_pack_from_db(
                     "ingestion_run_ids": ingestion_run_ids,
                     "source_refs": source_refs,
                     "monitoring_status": health_row.get("monitoring_status"),
-                    "monitoring_reason": health_row.get("monitoring_reason"),
+                    "monitoring_reason": monitoring_reason,
+                    "freshness_verified": status != "FRESHNESS_UNVERIFIED",
+                    "freshness_limitation": (
+                        monitoring_reason if status == "FRESHNESS_UNVERIFIED" else None
+                    ),
                     "calendar": health_row.get("calendar"),
                     "calendar_lag_sessions": health_row.get("calendar_lag_sessions"),
                     "formal_readiness": health_row.get("formal_readiness"),
