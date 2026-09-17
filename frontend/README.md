@@ -7,21 +7,34 @@ Stack (frozen by #112 UI freeze): React 19 + Vite + Tailwind CSS v4 +
 Recharts + Lucide. No chart library beyond Recharts. No business/signal math
 in React — the app renders one snapshot object.
 
-## Run on Windows (local)
+## Run on Windows (user path)
+
+From the repository root, double-click:
+
+```text
+START_MACRO_WORKBENCH.cmd
+```
+
+The Windows launcher checks Node/npm, installs dependencies only when needed,
+builds `frontend/dist` only when missing/stale, serves it on
+`http://127.0.0.1:8765`, waits for health, then opens the default browser.
+Double-click `STOP_MACRO_WORKBENCH.cmd` to stop the launcher-owned server.
+See `launcher/README.md` for troubleshooting and safety details.
+
+## Frontend developer commands
+
+For frontend development only:
 
 ```bat
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-Open http://localhost:5173 in a desktop browser at 1440×900.
-
-Production build + preview:
+Production build:
 
 ```bat
 npm run build
-npm run preview
 ```
 
 Unit / component tests:
