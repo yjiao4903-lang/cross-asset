@@ -1,0 +1,69 @@
+version: 1
+contract: REAL_SNAPSHOT_V1
+note: >-
+  Binding overlay for the accepted decision_support_v2 factor taxonomy. Factor identity
+  remains factor_id; provider tickers are deliberately excluded. MONITORING and FORMAL
+  statuses are independent and every canonical_series_id must refer to a canonical
+  repository series identity.
+
+bindings:
+  - factor_id: US_PAYROLLS_TREND
+    canonical_series_ids: [US_NONFARM_PAYROLLS]
+    transform: {type: CHANGE_CAUSAL_ZSCORE, min_history: 12}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "FRED/ALFRED registry canonical identity; monitoring binding does not grant formal admission."
+  - factor_id: US_CORE_CPI_TREND
+    canonical_series_ids: [US_CPI_CORE]
+    transform: {type: YOY_CAUSAL_ZSCORE, min_history: 12, lag_periods: 12}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "Core CPI canonical identity; formal status intentionally independent."
+  - factor_id: US_YIELD_CURVE_10Y2Y
+    canonical_series_ids: [US_TSY_10Y, US_TSY_2Y]
+    transform: {type: SPREAD_CAUSAL_ZSCORE, min_history: 20}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "10Y minus 2Y canonical Treasury yields."
+  - factor_id: US_10Y_REAL_YIELD
+    canonical_series_ids: [US_REAL_10Y]
+    transform: {type: LEVEL_CAUSAL_ZSCORE, min_history: 20}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "Canonical 10Y TIPS real-yield series; taxonomy sign supplies restrictive orientation."
+  - factor_id: US_FIN_COND_TREND
+    canonical_series_ids: [US_NFCI]
+    transform: {type: LEVEL_CAUSAL_ZSCORE, min_history: 20}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "Canonical NFCI identity; taxonomy sign maps lower index to easier conditions."
+  - factor_id: USD_BROAD_MOMENTUM
+    canonical_series_ids: [USD_BROAD_INDEX]
+    transform: {type: TREND_63D}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "Canonical broad-dollar index; no provider ticker embedded in factor identity."
+  - factor_id: US_EQ_TREND_63D
+    canonical_series_ids: [US_EQ]
+    transform: {type: TREND_63D}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "Canonical US equity series."
+  - factor_id: CN_EQ_TREND_63D
+    canonical_series_ids: [CN_EQ_LARGE]
+    transform: {type: TREND_63D}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "Canonical China large-cap equity series."
+  - factor_id: GOLD_TREND_63D
+    canonical_series_ids: [GOLD]
+    transform: {type: TREND_63D}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "Canonical gold series."
+  - factor_id: COPPER_TREND_63D
+    canonical_series_ids: [COPPER]
+    transform: {type: TREND_63D}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "Canonical copper series."
