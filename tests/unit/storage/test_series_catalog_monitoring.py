@@ -56,3 +56,48 @@ def test_expected_source_identities_are_exact_and_config_backed():
         assert identities == {"US_EQ": {"^GSPC"}}
     finally:
         store.close()
+
+
+def test_fred_monitoring_canonical_identities_and_mappings_are_real_catalog_rows():
+    store = DuckDBStore(":memory:")
+    series_ids = [
+        "US_NONFARM_PAYROLLS",
+        "US_CORE_CPI",
+        "US_GOV_2Y",
+        "US_REAL_10Y",
+    ]
+    try:
+        result = sync_series_catalog(store, series_ids=series_ids, provider="fred")
+        assert result == {
+            "series_catalog_rows": 4,
+            "source_mapping_rows": 4,
+            "acceptance_registry_writes": 0,
+        }
+        assert store.conn.execute(
+            "SELECT count(*) FROM data_acceptance_registry"
+        ).fetchone()[0] == 0
+
+        identities = expected_source_identities(store.conn, "fred", series_ids)
+        assert identities == {
+            "US_NONFARM_PAYROLLS": {"PAYEMS"},
+            "US_CORE_CPI": {"CPILFESL"},
+            "US_GOV_2Y": {"DGS2"},
+            "US_REAL_10Y": {"DFII10"},
+        }
+
+        rows = series_catalog_read_model(
+            store.conn, series_ids=series_ids, provider="fred"
+        )
+        by_id = {row["series_id"]: row for row in rows}
+        assert by_id["US_NONFARM_PAYROLLS"]["frequency"] == "monthly"
+        assert by_id["US_NONFARM_PAYROLLS"]["unit"] == "thousands_persons"
+        assert by_id["US_CORE_CPI"]["frequency"] == "monthly"
+        assert by_id["US_CORE_CPI"]["unit"] == "index_1982_1984_100"
+        assert by_id["US_GOV_2Y"]["unit"] == "yield_percent"
+        assert by_id["US_REAL_10Y"]["unit"] == "yield_percent"
+        for row in rows:
+            assert row["semantic_equivalence"] is True
+            assert row["usage_eligibility"] == "MONITORING_ONLY"
+            assert row["registry_usage_statuses"] == []
+    finally:
+        store.close()
