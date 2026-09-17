@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from .binding import load_factor_bindings
-from .snapshot import DashboardSnapshotV0, SNAPSHOT_VERSION
+from .snapshot import SNAPSHOT_VERSION, DashboardSnapshotV0
 from .taxonomy import load_taxonomy
 
 
@@ -114,7 +114,7 @@ class SnapshotReadService:
 class _Handler(BaseHTTPRequestHandler):
     service: SnapshotReadService
 
-    def log_message(self, format: str, *args) -> None:  # noqa: A002
+    def log_message(self, format: str, *args) -> None:
         return
 
     def _json(self, status: int, payload: dict) -> None:
@@ -126,7 +126,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         path = unquote(urlparse(self.path).path)
         try:
             if path == "/api/snapshot/latest":
