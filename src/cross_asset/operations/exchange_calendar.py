@@ -220,7 +220,11 @@ def exchange_calendar(
 
 def cn_hk_calendar(*, provider: ExchangeCalendarAdapter | None = None) -> ExchangeCalendarAdapter:
     """Return the existing CN/HK adapter contract."""
-    return exchange_calendar(("XSHG", "XHKG"), provider=provider)
+    if provider is not None:
+        # Preserve the pre-existing injectable Sprint2 contract: injected test or
+        # local calendar objects need only expose the methods their caller uses.
+        return provider
+    return exchange_calendar(("XSHG", "XHKG"))
 
 
 def weekly_decision_dates(
