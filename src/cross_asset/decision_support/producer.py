@@ -48,7 +48,6 @@ from .taxonomy import DecisionSupportConfig, load_taxonomy, signed_score
 from .weekly import (
     AssetStanceChange,
     AssetViewDelta,
-    MarketMove,
     ReleaseEvent,
     build_information_set_delta,
     build_macro_state_delta,
@@ -203,7 +202,7 @@ def _transform_binding(
         )
         score = result.score
         confidence = result.confidence
-    else:  # guarded by binding validation
+    else:
         raise ValueError(f"unsupported transform: {typ}")
 
     if score is None:
