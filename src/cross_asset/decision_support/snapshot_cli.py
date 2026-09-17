@@ -6,6 +6,10 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 
+from cross_asset.operations.workbench_run import load_run
+from cross_asset.storage.duckdb import DuckDBStore
+
+from .monitoring_adapter import build_monitoring_pack_from_db
 from .producer import MonitoringObservationPack, build_monitoring_snapshot
 from .serving import SnapshotStore, make_server
 from .snapshot import DashboardSnapshotV0
@@ -26,10 +30,24 @@ def _previous_snapshot_for(
     return None
 
 
+def _pack_from_args(args: argparse.Namespace) -> MonitoringObservationPack:
+    if args.input:
+        # Explicit diagnostic/test path. Normal runtime is DB/read-model driven.
+        return MonitoringObservationPack.model_validate_json(
+            Path(args.input).read_text(encoding="utf-8")
+        )
+    if not args.db or not args.run_id:
+        raise ValueError("normal build requires --db and --run-id")
+    run = load_run(args.run_id, args.runs_root)
+    store = DuckDBStore(args.db)
+    try:
+        return build_monitoring_pack_from_db(store, run)
+    finally:
+        store.close()
+
+
 def _build(args: argparse.Namespace) -> int:
-    pack = MonitoringObservationPack.model_validate_json(
-        Path(args.input).read_text(encoding="utf-8")
-    )
+    pack = _pack_from_args(args)
     store = SnapshotStore(args.root)
     previous = _previous_snapshot_for(store, pack.lineage.decision_time)
     snapshot = build_monitoring_snapshot(pack, previous_snapshot=previous)
@@ -57,7 +75,14 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     build = sub.add_parser("build", help="build/persist a MONITORING DashboardSnapshotV0")
-    build.add_argument("--input", required=True, help="canonical MonitoringObservationPack JSON")
+    source = build.add_mutually_exclusive_group(required=True)
+    source.add_argument("--db", help="merged #127 DuckDB monitoring store (normal runtime)")
+    source.add_argument(
+        "--input",
+        help="explicit diagnostic/test MonitoringObservationPack JSON; not normal runtime",
+    )
+    build.add_argument("--run-id", help="accepted #106 WorkbenchRun id (required with --db)")
+    build.add_argument("--runs-root", default="artifacts/workbench")
     build.add_argument("--root", default="artifacts/dashboard_snapshots")
     build.set_defaults(handler=_build)
 
