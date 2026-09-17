@@ -1,9 +1,8 @@
-"""Optional exchange-calendar integration for CN/HK weekly decisions.
+"""Optional exchange-calendar integration for session-aware decisions and freshness.
 
-The project deliberately has no calendar dependency in its base installation.  This
-module therefore accepts calendar objects by injection and only imports a provider
-when a caller explicitly asks for one.  A missing provider is a hard BLOCKED state;
-there is no weekday approximation.
+The project reuses installed ``exchange_calendars`` / ``pandas_market_calendars``
+through this thin adapter. Missing or unsupported provider calendars are hard
+BLOCKED states; there is no weekday approximation.
 """
 
 from __future__ import annotations
@@ -50,12 +49,26 @@ def _as_date(value: Any) -> date:
 class ExchangeCalendarAdapter:
     """Small common interface around exchange_calendars/PMC or test fakes."""
 
-    def __init__(self, cn: Any, hk: Any, *, metadata: CalendarMetadata):
-        self._calendars = {"XSHG": cn, "XHKG": hk}
+    def __init__(
+        self,
+        cn: Any | None = None,
+        hk: Any | None = None,
+        *,
+        metadata: CalendarMetadata,
+        calendars: dict[str, Any] | None = None,
+    ):
+        if calendars is None:
+            if cn is None or hk is None:
+                raise ValueError("XSHG/XHKG calendars required")
+            calendars = {"XSHG": cn, "XHKG": hk}
+        self._calendars = dict(calendars)
         self.metadata = metadata
 
     def sessions(self, market: str, start: date, end: date) -> set[date]:
-        calendar = self._calendars[market]
+        try:
+            calendar = self._calendars[market]
+        except KeyError as exc:
+            raise CalendarBlockedError(f"BLOCKED: unsupported calendar {market}") from exc
         first = _as_date(calendar.first_session) if hasattr(calendar, "first_session") else start
         last = _as_date(calendar.last_session) if hasattr(calendar, "last_session") else end
         bounded_start = max(start, first)
@@ -105,7 +118,16 @@ def _group_by_week(days: Iterable[date]) -> dict[tuple[int, int], list[date]]:
     return result
 
 
-def _load_exchange_calendars() -> ExchangeCalendarAdapter:
+_PMC_ALIASES = {
+    "XSHG": ("XSHG", "SSE", "Shanghai Stock Exchange"),
+    "XHKG": ("XHKG", "HKEX", "Hong Kong Stock Exchange"),
+    "XNYS": ("XNYS", "NYSE", "New York Stock Exchange"),
+}
+
+
+def _load_exchange_calendars(
+    markets: tuple[str, ...] = ("XSHG", "XHKG"),
+) -> ExchangeCalendarAdapter:
     try:
         module = import_module("exchange_calendars")
     except ImportError as exc:
@@ -114,23 +136,26 @@ def _load_exchange_calendars() -> ExchangeCalendarAdapter:
             "or inject calendars explicitly (no Mon-Fri fallback)."
         ) from exc
     try:
+        calendars = {market: module.get_calendar(market) for market in markets}
         return ExchangeCalendarAdapter(
-            module.get_calendar("XSHG"),
-            module.get_calendar("XHKG"),
             metadata=CalendarMetadata(
                 "exchange_calendars",
                 "exchange_calendars",
                 _package_version("exchange-calendars"),
-                ("XSHG", "XHKG"),
+                markets,
             ),
+            calendars=calendars,
         )
     except Exception as exc:
+        names = "/".join(markets)
         raise CalendarBlockedError(
-            f"BLOCKED: exchange_calendars XSHG/XHKG unavailable: {exc}"
+            f"BLOCKED: exchange_calendars {names} unavailable: {exc}"
         ) from exc
 
 
-def _load_pandas_market_calendars() -> ExchangeCalendarAdapter:
+def _load_pandas_market_calendars(
+    markets: tuple[str, ...] = ("XSHG", "XHKG"),
+) -> ExchangeCalendarAdapter:
     try:
         module = import_module("pandas_market_calendars")
     except ImportError as exc:
@@ -139,41 +164,67 @@ def _load_pandas_market_calendars() -> ExchangeCalendarAdapter:
             "pandas_market_calendars missing); no Mon-Fri fallback."
         ) from exc
     try:
-
-        def get(names: tuple[str, ...]):
-            available = set(module.get_calendar_names())
-            selected = next((name for name in names if name in available), None)
+        available = set(module.get_calendar_names())
+        calendars = {}
+        for market in markets:
+            aliases = _PMC_ALIASES.get(market)
+            if aliases is None:
+                raise KeyError(market)
+            selected = next((name for name in aliases if name in available), None)
             if selected is None:
-                raise KeyError(names)
-            return module.get_calendar(selected)
-
+                raise KeyError(aliases)
+            calendars[market] = module.get_calendar(selected)
         return ExchangeCalendarAdapter(
-            get(("XSHG", "SSE", "Shanghai Stock Exchange")),
-            get(("XHKG", "HKEX", "Hong Kong Stock Exchange")),
             metadata=CalendarMetadata(
                 "pandas_market_calendars",
                 "pandas_market_calendars",
                 _package_version("pandas-market-calendars"),
-                ("XSHG", "XHKG"),
+                markets,
             ),
+            calendars=calendars,
         )
     except Exception as exc:
+        names = "/".join(markets)
         raise CalendarBlockedError(
-            f"BLOCKED: pandas_market_calendars XSHG/XHKG unavailable: {exc}"
+            f"BLOCKED: pandas_market_calendars {names} unavailable: {exc}"
         ) from exc
 
 
-def cn_hk_calendar(*, provider: ExchangeCalendarAdapter | None = None) -> ExchangeCalendarAdapter:
-    """Return an injected adapter or the first supported real provider."""
+def exchange_calendar(
+    markets: str | Iterable[str], *, provider: ExchangeCalendarAdapter | None = None
+) -> ExchangeCalendarAdapter:
+    """Return the existing upstream adapter for explicit canonical market ids."""
+    requested = (markets,) if isinstance(markets, str) else tuple(markets)
+    if not requested:
+        raise CalendarBlockedError("BLOCKED: no calendar requested")
+    if any(market not in _PMC_ALIASES for market in requested):
+        raise CalendarBlockedError(
+            "BLOCKED: unsupported calendar(s): " + ",".join(sorted(set(requested)))
+        )
     if provider is not None:
+        coverage = provider.coverage()
+        missing = [market for market in requested if market not in coverage]
+        if missing:
+            raise CalendarBlockedError(
+                "BLOCKED: injected provider missing calendar(s): " + ",".join(missing)
+            )
         return provider
     try:
-        return _load_exchange_calendars()
+        return _load_exchange_calendars(requested)
     except CalendarBlockedError as first:
         try:
-            return _load_pandas_market_calendars()
+            return _load_pandas_market_calendars(requested)
         except CalendarBlockedError as second:
             raise CalendarBlockedError(f"{second}; exchange_calendars detail: {first}") from second
+
+
+def cn_hk_calendar(*, provider: ExchangeCalendarAdapter | None = None) -> ExchangeCalendarAdapter:
+    """Return the existing CN/HK adapter contract."""
+    if provider is not None:
+        # Preserve the pre-existing injectable Sprint2 contract: injected test or
+        # local calendar objects need only expose the methods their caller uses.
+        return provider
+    return exchange_calendar(("XSHG", "XHKG"))
 
 
 def weekly_decision_dates(

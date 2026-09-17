@@ -1,8 +1,11 @@
-"""Fail-closed freshness interface tests (Issue #18; real calendars are #21)."""
+"""Fail-closed freshness interface tests (Issue #18; calendar reuse is #125)."""
 
 from datetime import date
 
-from cross_asset.engines.freshness import evaluate_series_freshness
+from cross_asset.engines.freshness import (
+    evaluate_series_freshness,
+    load_series_calendar_mapping,
+)
 
 CUTOFF = date(2026, 8, 31)  # a Monday
 
@@ -112,3 +115,76 @@ def test_uncovered_year_fails_closed(tmp_path):
     )
     assert not result.healthy
     assert result.reason == "calendar_coverage_missing"
+
+
+def test_default_mapping_activates_only_evidence_backed_exchange_series():
+    mapping = load_series_calendar_mapping()
+    assert set(mapping) == {"US_EQ", "HK_EQ"}
+    assert mapping["US_EQ"] == {
+        "calendar": "XNYS",
+        "calendar_source": "exchange_adapter",
+        "max_lag_sessions": 1,
+    }
+    assert mapping["HK_EQ"] == {
+        "calendar": "XHKG",
+        "calendar_source": "exchange_adapter",
+        "max_lag_sessions": 1,
+    }
+
+
+def test_upstream_exchange_series_can_be_ok_or_stale():
+    mapping = {
+        "A": {
+            "calendar": "XNYS",
+            "calendar_source": "exchange_adapter",
+            "max_lag_sessions": 1,
+        }
+    }
+    fresh = _evaluate(mapping, latest=date(2025, 12, 24), cutoff=date(2025, 12, 26))
+    assert fresh.status == "OK"
+    assert fresh.calendar == "XNYS"
+    assert fresh.lag_sessions == 1
+
+    stale = _evaluate(mapping, latest=date(2025, 12, 23), cutoff=date(2025, 12, 26))
+    assert stale.status == "STALE"
+    assert stale.lag_sessions == 2
+
+
+def test_real_exchange_holiday_is_not_counted_as_open_session():
+    mapping = {
+        "A": {
+            "calendar": "XNYS",
+            "calendar_source": "exchange_adapter",
+            "max_lag_sessions": 0,
+        }
+    }
+    # Christmas Day is a real XNYS holiday. A 12/24 observation remains at
+    # zero open-session lag through 12/25; no generic Mon-Fri approximation.
+    holiday = _evaluate(mapping, latest=date(2025, 12, 24), cutoff=date(2025, 12, 25))
+    assert holiday.status == "OK"
+    assert holiday.lag_sessions == 0
+    assert holiday.expected_session == date(2025, 12, 24)
+
+
+def test_unmapped_and_unsupported_special_calendars_stay_blocked():
+    unmapped = evaluate_series_freshness(
+        "US_GOV_10Y",
+        latest_observation_date=date(2025, 12, 24),
+        market_data_cutoff=date(2025, 12, 26),
+    )
+    assert unmapped.status == "BLOCKED"
+    assert unmapped.reason == "calendar_mapping_missing"
+
+    unsupported = _evaluate(
+        {
+            "A": {
+                "calendar": "US_TREASURY_SPECIAL",
+                "calendar_source": "exchange_adapter",
+                "max_lag_sessions": 1,
+            }
+        },
+        latest=date(2025, 12, 24),
+        cutoff=date(2025, 12, 26),
+    )
+    assert unsupported.status == "BLOCKED"
+    assert unsupported.reason == "calendar_unavailable"
