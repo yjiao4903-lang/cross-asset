@@ -8,7 +8,10 @@ from http.client import HTTPConnection
 import pandas as pd
 
 from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
-from cross_asset.decision_support.producer import build_monitoring_snapshot, score_monitoring_factors
+from cross_asset.decision_support.producer import (
+    build_monitoring_snapshot,
+    score_monitoring_factors,
+)
 from cross_asset.decision_support.serving import SnapshotStore, make_server
 from cross_asset.operations.workbench_run import WorkbenchRun
 from cross_asset.storage.catalog import sync_series_catalog
