@@ -139,12 +139,12 @@ def test_monitoring_pipeline_persists_operational_row_but_not_formal(tmp_path):
         store.close()
 
 
-def test_monitoring_default_calendar_contract_fails_closed_without_mapping():
+def test_monitoring_default_calendar_contract_reuses_upstream_mapping():
     store = DuckDBStore(":memory:")
     try:
         MonitoringRunner(store, _FakeYahooMonitoring()).run(
             DataRequest(series_ids=["US_EQ"]),
-            run_id="monitoring-yahoo-calendar-blocked",
+            run_id="monitoring-yahoo-calendar-upstream",
         )
         health = monitoring_data_health(
             store.conn,
@@ -152,9 +152,13 @@ def test_monitoring_default_calendar_contract_fails_closed_without_mapping():
             market_data_cutoff=date(2026, 9, 16),
             series_ids=["US_EQ"],
         )[0]
-        assert health["monitoring_status"] == "BLOCKED"
-        assert health["monitoring_reason"] == "calendar_mapping_missing"
+        assert health["monitoring_status"] == "OK"
+        assert health["monitoring_reason"] == "fresh_within_calendar_lag"
+        assert health["calendar"] == "XNYS"
+        assert health["calendar_lag_sessions"] == 0
         assert health["formal_readiness"] == "FORMAL_BLOCKED"
+        assert health["formal_observation_available"] is False
+        assert health["usage_separation"] == "MONITORING_NOT_FORMAL"
     finally:
         store.close()
 
