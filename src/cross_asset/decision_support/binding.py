@@ -1,10 +1,9 @@
 """Lane-aware REAL-SNAPSHOT-V1 factor bindings.
 
-This is a narrow overlay on the accepted ``decision_support_v2`` taxonomy, not
-an alternative factor authority. Economic factor identity, horizon and sign
-remain owned by :mod:`cross_asset.decision_support.taxonomy`; this module only
-binds those factor ids to canonical series and explicitly independent evidence
-lanes.
+This remains a narrow overlay on the accepted ``decision_support_v2`` taxonomy.
+A binding may be MONITORING=BOUND only when every raw series identity is a real
+repository-governed canonical identity. Provider symbols and correlated proxies
+never create canonical authority.
 """
 
 from pathlib import Path
@@ -15,9 +14,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .taxonomy import DecisionSupportConfig, SubfactorSpec, load_taxonomy
 
-DEFAULT_BINDINGS_PATH = (
-    Path(__file__).resolve().parents[3] / "config" / "decision_support_v2_bindings.yml"
-)
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_BINDINGS_PATH = _REPO_ROOT / "config" / "decision_support_v2_bindings.yml"
+DEFAULT_SERIES_PATH = _REPO_ROOT / "config" / "series.yml"
 _ALLOWED_LANE_STATUS = {"BOUND", "UNBOUND", "BLOCKED"}
 _ALLOWED_TRANSFORMS = {
     "LEVEL_CAUSAL_ZSCORE",
@@ -25,6 +24,8 @@ _ALLOWED_TRANSFORMS = {
     "YOY_CAUSAL_ZSCORE",
     "SPREAD_CAUSAL_ZSCORE",
     "TREND_63D",
+    "PAYROLL_3M6M_SMOOTHED_MOMENTUM",
+    "CORE_CPI_3M6M_ANNUALIZED",
 }
 
 
@@ -48,21 +49,19 @@ class FactorBinding(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     factor_id: str
-    canonical_series_ids: list[str] = Field(min_length=1)
-    transform: FactorTransform
+    canonical_series_ids: list[str] = Field(default_factory=list)
+    transform: FactorTransform | None = None
     monitoring: LaneBinding
     formal: LaneBinding
     provenance_note: str = ""
 
     def render_record(self, spec: SubfactorSpec) -> dict[str, Any]:
-        """Return the API/audit record with taxonomy-owned economics attached."""
-
         return {
             "factor_id": self.factor_id,
             "canonical_series_ids": list(self.canonical_series_ids),
             "horizon": spec.resolved_horizon().value,
             "sign": spec.sign,
-            "transform": self.transform.model_dump(),
+            "transform": self.transform.model_dump() if self.transform else None,
             "monitoring": self.monitoring.model_dump(),
             "formal": self.formal.model_dump(),
             "provenance_note": self.provenance_note,
@@ -103,21 +102,38 @@ class FactorBindingRegistry(BaseModel):
         return records
 
 
+def _governed_series_ids(path: str | Path) -> set[str]:
+    payload = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    result: set[str] = set()
+    for item in payload.get("series", []) or []:
+        if isinstance(item, dict) and item.get("series_id"):
+            result.add(str(item["series_id"]))
+    return result
+
+
 def load_factor_bindings(
     path: str | Path | None = None,
     *,
     taxonomy: DecisionSupportConfig | None = None,
+    series_path: str | Path | None = None,
 ) -> FactorBindingRegistry:
     config_path = Path(path) if path is not None else DEFAULT_BINDINGS_PATH
+    canonical_path = Path(series_path) if series_path is not None else DEFAULT_SERIES_PATH
     raw = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
     registry = FactorBindingRegistry(**raw)
-    _validate_registry(registry, taxonomy or load_taxonomy())
+    _validate_registry(
+        registry,
+        taxonomy or load_taxonomy(),
+        governed_series_ids=_governed_series_ids(canonical_path),
+    )
     return registry
 
 
 def _validate_registry(
     registry: FactorBindingRegistry,
     taxonomy: DecisionSupportConfig,
+    *,
+    governed_series_ids: set[str],
 ) -> None:
     specs = {spec.factor_id: spec for spec in taxonomy.subfactors()}
     seen: set[str] = set()
@@ -129,24 +145,33 @@ def _validate_registry(
             raise ValueError(f"binding references unknown factor_id: {binding.factor_id}")
         if len(binding.canonical_series_ids) != len(set(binding.canonical_series_ids)):
             raise ValueError(f"duplicate canonical series in binding: {binding.factor_id}")
-        if binding.transform.type not in _ALLOWED_TRANSFORMS:
-            raise ValueError(
-                f"unsupported transform for {binding.factor_id}: {binding.transform.type}"
-            )
-        for lane_name, lane in (
-            ("monitoring", binding.monitoring),
-            ("formal", binding.formal),
-        ):
+        for lane_name, lane in (("monitoring", binding.monitoring), ("formal", binding.formal)):
             if lane.status not in _ALLOWED_LANE_STATUS:
                 raise ValueError(
                     f"invalid {lane_name} status for {binding.factor_id}: {lane.status}"
                 )
-        if binding.monitoring.status == "BOUND" and not binding.monitoring.route:
-            raise ValueError(f"monitoring route missing for {binding.factor_id}")
+        if binding.monitoring.status == "BOUND":
+            if not binding.monitoring.route:
+                raise ValueError(f"monitoring route missing for {binding.factor_id}")
+            if not binding.canonical_series_ids:
+                raise ValueError(f"BOUND binding missing canonical series: {binding.factor_id}")
+            unknown = sorted(set(binding.canonical_series_ids) - governed_series_ids)
+            if unknown:
+                raise ValueError(
+                    f"BOUND binding references ungoverned canonical series for "
+                    f"{binding.factor_id}: {','.join(unknown)}"
+                )
+            if binding.transform is None:
+                raise ValueError(f"BOUND binding missing transform: {binding.factor_id}")
+        if binding.transform is not None and binding.transform.type not in _ALLOWED_TRANSFORMS:
+            raise ValueError(
+                f"unsupported transform for {binding.factor_id}: {binding.transform.type}"
+            )
 
 
 __all__ = [
     "DEFAULT_BINDINGS_PATH",
+    "DEFAULT_SERIES_PATH",
     "FactorBinding",
     "FactorBindingRegistry",
     "FactorTransform",
