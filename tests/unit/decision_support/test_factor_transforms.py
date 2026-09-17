@@ -12,7 +12,20 @@ from cross_asset.decision_support.factor_transforms import (
 def test_payroll_transform_is_3m6m_smoothed_monthly_job_gain_and_causal():
     dates = pd.date_range("2024-01-01", periods=12, freq="MS")
     levels = pd.Series(
-        [100000, 100100, 100220, 100360, 100520, 100700, 100900, 101120, 101360, 101620, 101900, 102200],
+        [
+            100000,
+            100100,
+            100220,
+            100360,
+            100520,
+            100700,
+            100900,
+            101120,
+            101360,
+            101620,
+            101900,
+            102200,
+        ],
         index=dates,
         dtype=float,
     )
@@ -31,7 +44,29 @@ def test_payroll_transform_is_3m6m_smoothed_monthly_job_gain_and_causal():
 
 def test_core_cpi_transform_is_3m6m_annualized_not_yoy_and_causal():
     dates = pd.date_range("2024-01-01", periods=18, freq="MS")
-    values = pd.Series([300.0 * (1.003 ** i) for i in range(18)], index=dates)
+    monthly_rates = [
+        0.0020,
+        0.0022,
+        0.0024,
+        0.0028,
+        0.0031,
+        0.0035,
+        0.0038,
+        0.0034,
+        0.0030,
+        0.0027,
+        0.0025,
+        0.0023,
+        0.0026,
+        0.0030,
+        0.0036,
+        0.0042,
+        0.0045,
+    ]
+    levels = [300.0]
+    for rate in monthly_rates:
+        levels.append(levels[-1] * (1.0 + rate))
+    values = pd.Series(levels, index=dates)
     trend = core_cpi_3m6m_annualized_trend(values)
 
     last = values.iloc[-1]
