@@ -3,10 +3,27 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 from pathlib import Path
 
 from .producer import MonitoringObservationPack, build_monitoring_snapshot
 from .serving import SnapshotStore, make_server
+from .snapshot import DashboardSnapshotV0
+
+
+def _previous_snapshot_for(
+    store: SnapshotStore,
+    decision_time: datetime,
+) -> DashboardSnapshotV0 | None:
+    """Return only an economically earlier snapshot; never look ahead on backfill/retry."""
+
+    try:
+        candidate = store.load_latest()
+    except FileNotFoundError:
+        return None
+    if candidate.metadata.decision_time < decision_time:
+        return candidate
+    return None
 
 
 def _build(args: argparse.Namespace) -> int:
@@ -14,13 +31,7 @@ def _build(args: argparse.Namespace) -> int:
         Path(args.input).read_text(encoding="utf-8")
     )
     store = SnapshotStore(args.root)
-    previous = None
-    try:
-        candidate = store.load_latest()
-        if candidate.metadata.snapshot_id != f"pending:{pack.lineage.run_id}":
-            previous = candidate
-    except FileNotFoundError:
-        pass
+    previous = _previous_snapshot_for(store, pack.lineage.decision_time)
     snapshot = build_monitoring_snapshot(pack, previous_snapshot=previous)
     path = store.persist(snapshot)
     print(
