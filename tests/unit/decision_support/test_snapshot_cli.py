@@ -1,31 +1,29 @@
-from datetime import UTC, datetime
-from types import SimpleNamespace
+from datetime import UTC, date, datetime
 
 from cross_asset.decision_support.snapshot_cli import _previous_snapshot_for
 
 
 class _Store:
-    def __init__(self, candidate=None, *, missing: bool = False):
+    def __init__(self, candidate=None):
         self.candidate = candidate
-        self.missing = missing
+        self.calls = []
 
-    def load_latest(self):
-        if self.missing:
-            raise FileNotFoundError("latest_snapshot_not_found")
+    def prior_for(self, *, decision_time, current_week_id):
+        self.calls.append((decision_time, current_week_id))
         return self.candidate
 
 
-def _snapshot(decision_time: datetime):
-    return SimpleNamespace(metadata=SimpleNamespace(decision_time=decision_time))
-
-
-def test_previous_snapshot_selection_is_strictly_economic_and_never_looks_ahead():
+def test_previous_snapshot_selection_uses_canonical_history_and_economic_week():
     current = datetime(2026, 9, 17, 1, tzinfo=UTC)
-    earlier = _snapshot(datetime(2026, 9, 10, 1, tzinfo=UTC))
-    equal = _snapshot(current)
-    future = _snapshot(datetime(2026, 9, 18, 1, tzinfo=UTC))
+    candidate = object()
+    store = _Store(candidate)
 
-    assert _previous_snapshot_for(_Store(earlier), current) is earlier
-    assert _previous_snapshot_for(_Store(equal), current) is None
-    assert _previous_snapshot_for(_Store(future), current) is None
-    assert _previous_snapshot_for(_Store(missing=True), current) is None
+    assert (
+        _previous_snapshot_for(
+            store,
+            current,
+            data_cutoff=date(2026, 9, 17),
+        )
+        is candidate
+    )
+    assert store.calls == [(current, "2026-09-14")]
