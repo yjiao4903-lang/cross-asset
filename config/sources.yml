@@ -12,6 +12,9 @@ mappings:
   - {series_id: US_UNEMPLOYMENT, provider: fred, source_series_id: UNRATE, priority: 1, enabled: true, semantic_equivalence: true}
   - {series_id: US_INITIAL_CLAIMS, provider: fred, source_series_id: ICSA, priority: 1, enabled: true, semantic_equivalence: true}
   - {series_id: US_INDUSTRIAL_PRODUCTION, provider: fred, source_series_id: INDPRO, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: US_NONFARM_PAYROLLS, provider: fred, source_series_id: PAYEMS, priority: 1, enabled: true, semantic_equivalence: true, notes: "Exact PAYEMS total nonfarm payroll employment; monitoring capture is non-PIT"}
+  - {series_id: US_CORE_CPI, provider: fred, source_series_id: CPILFESL, priority: 1, enabled: true, semantic_equivalence: true, notes: "Exact core CPI index; monitoring capture is non-PIT"}
+  - {series_id: US_GOV_2Y, provider: fred, source_series_id: DGS2, priority: 1, enabled: true, semantic_equivalence: true, notes: "Exact 2Y Treasury constant-maturity yield; monitoring capture is non-PIT"}
   - {series_id: CN_EQ_LARGE, provider: manual, source_series_id: CN_EQ_LARGE, priority: 1, enabled: true, semantic_equivalence: true}
   - {series_id: CN_EQ_SMALL, provider: manual, source_series_id: CN_EQ_SMALL, priority: 1, enabled: true, semantic_equivalence: true}
   - {series_id: HK_EQ, provider: yahoo, source_series_id: ^HSI, priority: 1, enabled: true, semantic_equivalence: true}
@@ -20,12 +23,12 @@ mappings:
   - {series_id: US_GOV_10Y, provider: fred, source_series_id: DGS10, priority: 1, enabled: true, semantic_equivalence: true}
   # Yahoo ^TNX is an auxiliary quote (not semantically equivalent to FRED DGS10).
   - {series_id: US_GOV_10Y, provider: yahoo, source_series_id: ^TNX, priority: 99, enabled: true, semantic_equivalence: false, notes: "auxiliary live diagnostic only"}
-  - {series_id: US_REAL_10Y, provider: fred, source_series_id: DFII10, priority: 1, enabled: true, semantic_equivalence: true}
+  - {series_id: US_REAL_10Y, provider: fred, source_series_id: DFII10, priority: 1, enabled: true, semantic_equivalence: true, notes: "Exact 10Y TIPS real yield; monitoring capture and formal PIT lanes remain separate"}
   - {series_id: EFFR, provider: fred, source_series_id: EFFR, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
-  - {series_id: DGS2, provider: fred, source_series_id: DGS2, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
+  - {series_id: DGS2, provider: fred, source_series_id: DGS2, priority: 1, enabled: true, semantic_equivalence: true, notes: "legacy provider-code evidence identity; use governed US_GOV_2Y for product monitoring"}
   - {series_id: DGS5, provider: fred, source_series_id: DGS5, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
   - {series_id: DGS30, provider: fred, source_series_id: DGS30, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
-  - {series_id: CPILFESL, provider: fred, source_series_id: CPILFESL, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
+  - {series_id: CPILFESL, provider: fred, source_series_id: CPILFESL, priority: 1, enabled: true, semantic_equivalence: true, notes: "legacy provider-code evidence identity; use governed US_CORE_CPI for product monitoring"}
   - {series_id: PCEPI, provider: fred, source_series_id: PCEPI, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
   - {series_id: T10YIE, provider: fred, source_series_id: T10YIE, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
   - {series_id: T5YIE, provider: fred, source_series_id: T5YIE, priority: 1, enabled: true, semantic_equivalence: true, notes: "priority public CSV evidence batch; acceptance remains PARTIAL"}
