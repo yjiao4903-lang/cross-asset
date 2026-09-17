@@ -1,11 +1,26 @@
-version: 2
+version: 3
 contract: REAL_SNAPSHOT_V1
 note: >-
   Binding overlay for the accepted decision_support_v2 factor taxonomy. Only exact,
-  repository-governed canonical identities may be MONITORING=BOUND. Factors whose
-  exact raw identity or transform contract is unavailable remain absent/UNBOUND.
+  repository-governed canonical identities with an enabled semantically equivalent
+  source mapping may be MONITORING=BOUND. Factors whose exact raw identity or
+  transform contract is unavailable remain absent/UNBOUND.
 
 bindings:
+  - factor_id: US_PAYROLLS_TREND
+    canonical_series_ids: [US_NONFARM_PAYROLLS]
+    transform: {type: PAYROLL_3M6M_SMOOTHED_MOMENTUM, min_history: 20}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "Accepted #129 canonical identity US_NONFARM_PAYROLLS -> FRED PAYEMS; 3m/6m smoothed payroll momentum; monitoring capture is non-PIT and does not grant formal admission."
+
+  - factor_id: US_CORE_CPI_TREND
+    canonical_series_ids: [US_CORE_CPI]
+    transform: {type: CORE_CPI_3M6M_ANNUALIZED_TREND, min_history: 20}
+    monitoring: {route: CANONICAL_MONITORING_OBSERVATIONS, status: BOUND}
+    formal: {route: SANCTIONED_FORMAL_QUERY, status: BLOCKED}
+    provenance_note: "Accepted #129 canonical identity US_CORE_CPI -> FRED CPILFESL; 3m/6m annualized core-CPI trend; monitoring capture is non-PIT and does not grant formal admission."
+
   - factor_id: US_10Y_REAL_YIELD
     canonical_series_ids: [US_REAL_10Y]
     transform: {type: LEVEL_CAUSAL_ZSCORE, min_history: 20}
