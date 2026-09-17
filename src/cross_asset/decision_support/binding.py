@@ -2,8 +2,8 @@
 
 This remains a narrow overlay on the accepted ``decision_support_v2`` taxonomy.
 A binding may be MONITORING=BOUND only when every raw series identity is a real
-repository-governed canonical identity. Provider symbols and correlated proxies
-never create canonical authority.
+repository-governed canonical identity with an enabled, semantically equivalent
+source mapping. Provider symbols and correlated proxies never create authority.
 """
 
 from pathlib import Path
@@ -17,6 +17,7 @@ from .taxonomy import DecisionSupportConfig, SubfactorSpec, load_taxonomy
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_BINDINGS_PATH = _REPO_ROOT / "config" / "decision_support_v2_bindings.yml"
 DEFAULT_SERIES_PATH = _REPO_ROOT / "config" / "series.yml"
+DEFAULT_SOURCES_PATH = _REPO_ROOT / "config" / "sources.yml"
 _ALLOWED_LANE_STATUS = {"BOUND", "UNBOUND", "BLOCKED"}
 _ALLOWED_TRANSFORMS = {
     "LEVEL_CAUSAL_ZSCORE",
@@ -121,20 +122,37 @@ def _governed_series_ids(path: str | Path) -> set[str]:
     return result
 
 
+def _exact_source_series_ids(path: str | Path) -> set[str]:
+    payload = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    result: set[str] = set()
+    for item in payload.get("mappings", []) or []:
+        if not isinstance(item, dict) or not item.get("series_id"):
+            continue
+        if not bool(item.get("enabled", False)):
+            continue
+        if item.get("semantic_equivalence") is not True:
+            continue
+        result.add(str(item["series_id"]))
+    return result
+
+
 def load_factor_bindings(
     path: str | Path | None = None,
     *,
     taxonomy: DecisionSupportConfig | None = None,
     series_path: str | Path | None = None,
+    sources_path: str | Path | None = None,
 ) -> FactorBindingRegistry:
     config_path = Path(path) if path is not None else DEFAULT_BINDINGS_PATH
     canonical_path = Path(series_path) if series_path is not None else DEFAULT_SERIES_PATH
+    source_path = Path(sources_path) if sources_path is not None else DEFAULT_SOURCES_PATH
     raw = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
     registry = FactorBindingRegistry(**raw)
     _validate_registry(
         registry,
         taxonomy or load_taxonomy(),
         governed_series_ids=_governed_series_ids(canonical_path),
+        exact_source_series_ids=_exact_source_series_ids(source_path),
     )
     return registry
 
@@ -144,6 +162,7 @@ def _validate_registry(
     taxonomy: DecisionSupportConfig,
     *,
     governed_series_ids: set[str],
+    exact_source_series_ids: set[str],
 ) -> None:
     specs = {spec.factor_id: spec for spec in taxonomy.subfactors()}
     seen: set[str] = set()
@@ -168,8 +187,14 @@ def _validate_registry(
             unknown = sorted(set(binding.canonical_series_ids) - governed_series_ids)
             if unknown:
                 raise ValueError(
-                    f"BOUND binding references ungoverned canonical series for "
+                    "BOUND binding references ungoverned canonical series for "
                     f"{binding.factor_id}: {','.join(unknown)}"
+                )
+            unmapped = sorted(set(binding.canonical_series_ids) - exact_source_series_ids)
+            if unmapped:
+                raise ValueError(
+                    "BOUND binding lacks enabled semantically equivalent source mapping for "
+                    f"{binding.factor_id}: {','.join(unmapped)}"
                 )
             if binding.transform is None:
                 raise ValueError(f"BOUND binding missing transform: {binding.factor_id}")
@@ -188,6 +213,7 @@ def _validate_registry(
 __all__ = [
     "DEFAULT_BINDINGS_PATH",
     "DEFAULT_SERIES_PATH",
+    "DEFAULT_SOURCES_PATH",
     "FactorBinding",
     "FactorBindingRegistry",
     "FactorTransform",
