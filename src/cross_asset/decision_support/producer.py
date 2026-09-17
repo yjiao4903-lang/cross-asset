@@ -31,6 +31,10 @@ from .enums import (
     InformationSetStatus,
     ReleaseEventType,
 )
+from .factor_transforms import (
+    core_cpi_3m6m_annualized_trend,
+    payroll_3m6m_smoothed_momentum,
+)
 from .horizon import HorizonAggregate, SubfactorScore, aggregate_cluster_horizon, aggregate_context
 from .regime import RegimeEngine
 from .snapshot import (
@@ -189,6 +193,12 @@ def _transform_binding(
         values = _pandas_series(resolved[0])
         yoy = values.pct_change(periods=transform.lag_periods, fill_method=None) * 100.0
         score = _causal_score(yoy, min_history=transform.min_history)
+    elif typ == "PAYROLL_3M6M_SMOOTHED_MOMENTUM":
+        momentum = payroll_3m6m_smoothed_momentum(_pandas_series(resolved[0]))
+        score = _causal_score(momentum, min_history=transform.min_history)
+    elif typ == "CORE_CPI_3M6M_ANNUALIZED_TREND":
+        trend = core_cpi_3m6m_annualized_trend(_pandas_series(resolved[0]))
+        score = _causal_score(trend, min_history=transform.min_history)
     elif typ == "SPREAD_CAUSAL_ZSCORE":
         if len(resolved) != 2:
             raise ValueError(f"SPREAD_CAUSAL_ZSCORE needs two series: {binding.factor_id}")
