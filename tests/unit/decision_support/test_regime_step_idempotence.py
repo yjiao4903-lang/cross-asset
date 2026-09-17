@@ -12,7 +12,13 @@ from cross_asset.decision_support.binding import (
     FactorTransform,
     LaneBinding,
 )
-from cross_asset.decision_support.enums import AxisDirection, InflationState, QuadrantLabel
+from cross_asset.decision_support.enums import (
+    AxisDirection,
+    HorizonClass,
+    InflationState,
+    QuadrantLabel,
+    ReleaseEventType,
+)
 from cross_asset.decision_support.horizon import HorizonAggregate
 from cross_asset.decision_support.producer import (
     MonitoringObservation,
@@ -25,12 +31,9 @@ from cross_asset.decision_support.producer import (
 from cross_asset.decision_support.regime import RegimeEngine
 from cross_asset.decision_support.taxonomy import load_taxonomy
 from cross_asset.decision_support.weekly import ReleaseEvent
-from cross_asset.decision_support.enums import ReleaseEventType
 
 
 def _aggregates(growth: float, inflation: float):
-    from cross_asset.decision_support.enums import HorizonClass
-
     return {
         ("GROWTH_ACTIVITY", HorizonClass.CYCLICAL): HorizonAggregate(
             horizon=HorizonClass.CYCLICAL,
