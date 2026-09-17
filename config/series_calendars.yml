@@ -1,2 +1,11 @@
-# Explicit mapping; missing mappings remain UNKNOWN.
-series_calendars: {}
+# Explicit evidence-backed series -> calendar mappings for freshness.
+# Unsupported/ambiguous calendars intentionally remain unmapped and BLOCKED.
+series_calendars:
+  US_EQ:
+    calendar: XNYS
+    calendar_source: exchange_adapter
+    max_lag_sessions: 1
+  HK_EQ:
+    calendar: XHKG
+    calendar_source: exchange_adapter
+    max_lag_sessions: 1
