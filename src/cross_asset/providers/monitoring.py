@@ -259,7 +259,7 @@ class FREDMonitoringProvider(BaseProvider):
 __all__ = [
     "FRED_MONITORING_CONTRACTS",
     "FRED_MONITORING_SERIES",
-    "FREDMonitoringProvider",
     "YAHOO_MONITORING_SERIES",
+    "FREDMonitoringProvider",
     "YahooMonitoringProvider",
 ]
