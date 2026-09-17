@@ -27,6 +27,16 @@ _ALLOWED_TRANSFORMS = {
     "PAYROLL_3M6M_SMOOTHED_MOMENTUM",
     "CORE_CPI_3M6M_ANNUALIZED_TREND",
 }
+_FACTOR_TRANSFORM_CONTRACT = {
+    "US_PAYROLLS_TREND": "PAYROLL_3M6M_SMOOTHED_MOMENTUM",
+    "US_CORE_CPI_TREND": "CORE_CPI_3M6M_ANNUALIZED_TREND",
+    "US_YIELD_CURVE_10Y2Y": "SPREAD_CAUSAL_ZSCORE",
+    "US_10Y_REAL_YIELD": "LEVEL_CAUSAL_ZSCORE",
+    "US_EQ_TREND_63D": "TREND_63D",
+    "CN_EQ_TREND_63D": "TREND_63D",
+    "GOLD_TREND_63D": "TREND_63D",
+    "COPPER_TREND_63D": "TREND_63D",
+}
 
 
 class LaneBinding(BaseModel):
@@ -163,6 +173,12 @@ def _validate_registry(
                 )
             if binding.transform is None:
                 raise ValueError(f"BOUND binding missing transform: {binding.factor_id}")
+            expected = _FACTOR_TRANSFORM_CONTRACT.get(binding.factor_id)
+            if expected is not None and binding.transform.type != expected:
+                raise ValueError(
+                    f"BOUND transform violates V2 factor definition for {binding.factor_id}: "
+                    f"expected {expected}, got {binding.transform.type}"
+                )
         if binding.transform is not None and binding.transform.type not in _ALLOWED_TRANSFORMS:
             raise ValueError(
                 f"unsupported transform for {binding.factor_id}: {binding.transform.type}"
