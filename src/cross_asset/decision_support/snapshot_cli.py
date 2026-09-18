@@ -9,6 +9,7 @@ from pathlib import Path
 from cross_asset.operations.workbench_run import load_run
 from cross_asset.storage.duckdb import DuckDBStore
 
+from .decision_history import economic_week_id
 from .monitoring_adapter import build_monitoring_pack_from_db
 from .producer import MonitoringObservationPack, build_monitoring_snapshot
 from .serving import SnapshotStore, make_server
@@ -18,16 +19,15 @@ from .snapshot import DashboardSnapshotV0
 def _previous_snapshot_for(
     store: SnapshotStore,
     decision_time: datetime,
+    *,
+    data_cutoff,
 ) -> DashboardSnapshotV0 | None:
-    """Return only an economically earlier snapshot; never look ahead on backfill/retry."""
+    """Return canonical earlier economic week; never look ahead on backfill/retry."""
 
-    try:
-        candidate = store.load_latest()
-    except FileNotFoundError:
-        return None
-    if candidate.metadata.decision_time < decision_time:
-        return candidate
-    return None
+    return store.prior_for(
+        decision_time=decision_time,
+        current_week_id=economic_week_id(data_cutoff),
+    )
 
 
 def _pack_from_args(args: argparse.Namespace) -> MonitoringObservationPack:
@@ -49,7 +49,11 @@ def _pack_from_args(args: argparse.Namespace) -> MonitoringObservationPack:
 def _build(args: argparse.Namespace) -> int:
     pack = _pack_from_args(args)
     store = SnapshotStore(args.root)
-    previous = _previous_snapshot_for(store, pack.lineage.decision_time)
+    previous = _previous_snapshot_for(
+        store,
+        pack.lineage.decision_time,
+        data_cutoff=pack.lineage.data_cutoff,
+    )
     snapshot = build_monitoring_snapshot(pack, previous_snapshot=previous)
     path = store.persist(snapshot)
     print(

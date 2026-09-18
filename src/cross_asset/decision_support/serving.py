@@ -1,24 +1,31 @@
-"""Minimal read-only DashboardSnapshot API for REAL-SNAPSHOT-V1.
-
-No new web framework is introduced: the repository has no FastAPI/Flask
-runtime dependency, so the standard-library HTTP server is the smallest
-FastAPI-equivalent surface consistent with current dependencies.
-"""
+"""Read-only DashboardSnapshot API with DECISION-HISTORY-V1 continuity."""
 
 from __future__ import annotations
 
 import argparse
 import json
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from .binding import load_factor_bindings
+from .decision_history import (
+    asset_stance_history,
+    canonical_by_week,
+    canonical_prior,
+    history_payload,
+    snapshot_economic_week_id,
+    structured_diff,
+    technical_history_payload,
+)
 from .snapshot import SNAPSHOT_VERSION, DashboardSnapshotV0
 from .taxonomy import load_taxonomy
 
 
 class SnapshotStore:
+    """File-backed immutable technical snapshots plus canonical economic history."""
+
     def __init__(self, root: str | Path = "artifacts/dashboard_snapshots") -> None:
         self.root = Path(root)
 
@@ -27,30 +34,73 @@ class SnapshotStore:
             raise ValueError("invalid_snapshot_id")
         return self.root / f"{snapshot_id}.json"
 
+    def _write_latest(self, snapshot: DashboardSnapshotV0) -> None:
+        raw = snapshot.to_json(indent=2) + "\n"
+        latest = self.root / "latest.json"
+        latest_temp = self.root / "latest.json.tmp"
+        latest_temp.write_text(raw, encoding="utf-8")
+        latest_temp.replace(latest)
+
     def persist(self, snapshot: DashboardSnapshotV0) -> Path:
+        """Persist technical snapshot and refresh canonical economic current.
+
+        Late backfills never displace the true later economic current. Same-week
+        retries may replace that week's canonical representative when their
+        decision_time is later, while the superseded technical file remains.
+        """
+
         self.root.mkdir(parents=True, exist_ok=True)
         raw = snapshot.to_json(indent=2) + "\n"
         target = self._path(snapshot.metadata.snapshot_id)
         temp = target.with_suffix(".json.tmp")
         temp.write_text(raw, encoding="utf-8")
         temp.replace(target)
-        latest = self.root / "latest.json"
-        latest_temp = self.root / "latest.json.tmp"
-        latest_temp.write_text(raw, encoding="utf-8")
-        latest_temp.replace(latest)
+        canonical = canonical_by_week(self.list_snapshots())
+        if canonical:
+            self._write_latest(canonical[-1])
         return target
+
+    def list_snapshots(self) -> list[DashboardSnapshotV0]:
+        if not self.root.exists():
+            return []
+        snapshots: list[DashboardSnapshotV0] = []
+        for path in sorted(self.root.glob("*.json")):
+            if path.name == "latest.json":
+                continue
+            snapshots.append(DashboardSnapshotV0.from_json(path.read_text(encoding="utf-8")))
+        return sorted(
+            snapshots,
+            key=lambda snapshot: (
+                snapshot_economic_week_id(snapshot),
+                snapshot.metadata.decision_time,
+                snapshot.metadata.snapshot_id,
+            ),
+        )
+
+    def list_canonical(self) -> list[DashboardSnapshotV0]:
+        return canonical_by_week(self.list_snapshots())
 
     def load_latest(self) -> DashboardSnapshotV0:
         path = self.root / "latest.json"
-        if not path.exists():
+        if path.exists():
+            return DashboardSnapshotV0.from_json(path.read_text(encoding="utf-8"))
+        canonical = self.list_canonical()
+        if not canonical:
             raise FileNotFoundError("latest_snapshot_not_found")
-        return DashboardSnapshotV0.from_json(path.read_text(encoding="utf-8"))
+        return canonical[-1]
 
     def load(self, snapshot_id: str) -> DashboardSnapshotV0:
         path = self._path(snapshot_id)
         if not path.exists():
             raise FileNotFoundError(f"snapshot_not_found:{snapshot_id}")
         return DashboardSnapshotV0.from_json(path.read_text(encoding="utf-8"))
+
+    def prior_for(self, *, decision_time: datetime, current_week_id: str) -> DashboardSnapshotV0 | None:
+        return canonical_prior(
+            self.list_snapshots(),
+            decision_time=decision_time,
+            current_week_id=current_week_id,
+        )
 
 
 class SnapshotReadService:
@@ -66,6 +116,32 @@ class SnapshotReadService:
 
     def by_id(self, snapshot_id: str) -> dict:
         return self.store.load(snapshot_id).model_dump(mode="json")
+
+    def snapshots(
+        self,
+        *,
+        view: str = "canonical",
+        start_week: str | None = None,
+        end_week: str | None = None,
+        limit: int | None = None,
+    ) -> dict:
+        snapshots = self.store.list_snapshots()
+        if view == "technical":
+            return technical_history_payload(snapshots)
+        if view != "canonical":
+            raise ValueError(f"unsupported_history_view:{view}")
+        return history_payload(
+            snapshots,
+            start_week=start_week,
+            end_week=end_week,
+            limit=limit,
+        )
+
+    def asset_history(self, asset: str) -> dict:
+        return asset_stance_history(self.store.list_snapshots(), asset)
+
+    def diff(self, snapshot_id: str, prior_id: str) -> dict:
+        return structured_diff(self.store.load(snapshot_id), self.store.load(prior_id))
 
     def factors(self) -> dict:
         return {
@@ -127,10 +203,26 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def do_GET(self) -> None:
-        path = unquote(urlparse(self.path).path)
+        parsed = urlparse(self.path)
+        path = unquote(parsed.path)
+        query = parse_qs(parsed.query)
         try:
             if path == "/api/snapshot/latest":
                 payload = self.service.latest()
+            elif path == "/api/snapshots":
+                limit_raw = query.get("limit", [None])[0]
+                payload = self.service.snapshots(
+                    view=query.get("view", ["canonical"])[0],
+                    start_week=query.get("start_week", [None])[0],
+                    end_week=query.get("end_week", [None])[0],
+                    limit=int(limit_raw) if limit_raw is not None else None,
+                )
+            elif path.startswith("/api/history/assets/"):
+                payload = self.service.asset_history(path.removeprefix("/api/history/assets/"))
+            elif path.startswith("/api/snapshot/") and "/diff/" in path:
+                remainder = path.removeprefix("/api/snapshot/")
+                snapshot_id, prior_id = remainder.split("/diff/", 1)
+                payload = self.service.diff(snapshot_id, prior_id)
             elif path.startswith("/api/snapshot/"):
                 payload = self.service.by_id(path.removeprefix("/api/snapshot/"))
             elif path == "/api/factors":
