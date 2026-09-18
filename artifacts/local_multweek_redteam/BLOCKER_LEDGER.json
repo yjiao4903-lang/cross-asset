@@ -1,0 +1,114 @@
+{
+  "schema": "blocker-ledger-v2",
+  "task": "LOCAL-A MULTIWEEK-MONITORING-CLOSURE-REDTEAM-V1 (#139)",
+  "owner_lane": "LOCAL-DEV-A",
+  "baseline_main": "036b58450226e2b4c2e88401ca246aa2b3fe6024",
+  "severity_key": "P0 fabricates/overwrites authority or crosses lanes; P1 misstates data/decision/history or breaks normal use; P2 diagnosability/maintenance gap without current decision corruption",
+  "items": [
+    {
+      "id": "RT139-CLOSED-01",
+      "severity": "P1",
+      "title": "ADV-P1-01: real multi-week monitoring loop could not produce week 2 once a new monthly observation arrived",
+      "status": "CLOSED_THIS_TASK",
+      "fix": "Monitoring-only OBSERVED_UPDATE information-set contract (enums.py, monitoring_adapter.py provenance identities, producer.py derivation, weekly.py docstrings); guard preserved; regressions in tests/redteam139.",
+      "owner": "LOCAL-DEV-A (this PR)"
+    },
+    {
+      "id": "RT139-CLOSED-02",
+      "severity": "P2",
+      "title": "ADV-P2-01: monitoring read model served mis-identified persisted rows as canonical evidence",
+      "status": "CLOSED_THIS_TASK",
+      "fix": "Exact narrow port of the #138 monitoring_adapter identity revalidation (fail-closed per series, identity_blockers recorded, raw provenance retained); regressions in test_b1_*.",
+      "owner": "LOCAL-DEV-A (this PR, port of review-boundary PR #138)"
+    },
+    {
+      "id": "RT139-CLOSED-03",
+      "severity": "P1",
+      "title": "ADV-P1-02: SnapshotStore latest pointer had no economic monotonicity guard",
+      "status": "CLOSED_BY_MERGED_#135",
+      "fix": "No code change. All six #139 Phase-3 required cases pass on current main and are regression-tested in test_b6_*.",
+      "owner": "#133/#135 owner (verified by LOCAL-DEV-A)"
+    },
+    {
+      "id": "RT139-P2-01",
+      "severity": "P2",
+      "title": "Direct MonitoringObservationPack contract has no duplicate-observation-date guard",
+      "status": "OPEN",
+      "decision_needed": "reject vs latest-vintage-wins for the diagnostic --input path",
+      "owner": "REAL-SNAPSHOT-V1 owner / WEB-CONTROL",
+      "evidence": "tests/redteam139/test_b2_time_causality.py::test_b2_04"
+    },
+    {
+      "id": "RT139-P2-02",
+      "severity": "P2",
+      "title": "metadata.as_of may diverge from details.data_cutoff in hand-built packs",
+      "status": "OPEN",
+      "decision_needed": "is as_of derived from data_cutoff or independently meaningful?",
+      "owner": "REAL-SNAPSHOT-V1 owner",
+      "evidence": "tests/redteam139/test_b2_time_causality.py::test_b2_13"
+    },
+    {
+      "id": "RT139-P2-03",
+      "severity": "P2",
+      "title": "First snapshot with both regime axes inside the deadband resolves to a named quadrant",
+      "status": "OPEN",
+      "decision_needed": "product semantics for the first-snapshot default label",
+      "owner": "Decision-Support-V2 owner / WEB-CONTROL",
+      "evidence": "tests/redteam139/test_b4_factor_regime.py::test_b4_10"
+    },
+    {
+      "id": "RT139-P2-04",
+      "severity": "P2",
+      "title": "Corrupted latest.json surfaces a raw pydantic ValidationError (fail-closed but untyped)",
+      "status": "OPEN",
+      "decision_needed": "typed error surface in SnapshotStore/SnapshotReadService (serving.py is #133/#135 surface)",
+      "owner": "DECISION-HISTORY owner",
+      "evidence": "tests/redteam139/test_b6_snapshot_history_api.py::test_b6_06"
+    },
+    {
+      "id": "RT139-P2-05",
+      "severity": "P2",
+      "title": "snapshot_id does not cover previous_snapshot lineage, so distinct bodies can collide",
+      "status": "OPEN",
+      "decision_needed": "identity formula change affects persisted ids and #133/#135 history",
+      "owner": "REAL-SNAPSHOT-V1 owner with #133/#135 owner",
+      "evidence": "tests/redteam139/test_b6_snapshot_history_api.py::test_b6_21"
+    },
+    {
+      "id": "RT139-P2-06",
+      "severity": "P2",
+      "title": "to_json documents 'sorted keys' but preserves details insertion order; HTTP layer sorts",
+      "status": "OPEN",
+      "decision_needed": "fix docstring or serializer",
+      "owner": "REAL-SNAPSHOT-V1 owner",
+      "evidence": "tests/redteam139/test_b6_snapshot_history_api.py::test_b6_22"
+    },
+    {
+      "id": "RT139-P2-07",
+      "severity": "P2",
+      "title": "Same-week retry copies prior weekly deltas while recomputing views (intra-week revision invisible in delta surfaces)",
+      "status": "OPEN",
+      "decision_needed": "whether an intra-week revision is a new weekly-change event",
+      "owner": "REAL-SNAPSHOT-V1 owner / #133-#135 owner",
+      "evidence": "tests/redteam139/test_b5_asset_rules.py::test_b5_04"
+    },
+    {
+      "id": "RT139-P2-08",
+      "severity": "P2",
+      "title": "No unit cross-check between the provider contract and the series catalog",
+      "status": "OPEN",
+      "decision_needed": "machine-checkable unit contract authority for the monitoring lane",
+      "owner": "PROVIDER-CALENDAR-V1 owner (ONLINE-DEV-B)",
+      "evidence": "ADVERSARIAL_MATRIX.json STATIC-09"
+    },
+    {
+      "id": "RT139-P2-09 (new)",
+      "severity": "P2",
+      "title": "Duplicate canonical series across bindings is not rejected (over-weights family aggregate)",
+      "status": "OPEN",
+      "decision_needed": "binding-config authority: reject across-binding duplicates or document shared-series weighting",
+      "owner": "WEB-CONTROL (binding config authority)",
+      "evidence": "tests/redteam139/test_c2_emergent.py::test_c2_10"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "local-state-inventory-v1",
+  "task": "LOCAL-A MULTIWEEK-MONITORING-CLOSURE-REDTEAM-V1 (#139)",
+  "owner_lane": "LOCAL-DEV-A",
+  "captured_at_local": "2026-09-18T23:30+08:00",
+  "authoritative_main": "036b58450226e2b4c2e88401ca246aa2b3fe6024",
+  "workstation_root": "<local-workspace> (absolute paths withheld per #139 artifact rule)",
+  "authoritative_populated_cross_asset_db": null,
+  "census": [
+    {
+      "path": "_redteam137/data/db/cross_asset.duckdb",
+      "size_bytes": 798720,
+      "sha256": "77edb5c25a5fbd352425b57bf9b4b3a38c71f9ed4f903c1161ada24365db034d",
+      "origin": "#137 WEEKEND-REDTEAM window scratch clone (old baseline 5cac5c4)",
+      "tables": ["allocation_results", "asset_scores", "data_acceptance_registry", "data_quality_events", "data_snapshots", "factor_values", "ingestion_runs", "model_runs", "observations", "provider_attempts", "research_fold_results", "research_runs", "series_catalog", "source_mapping", "wind_evidence_staging"],
+      "row_counts": {"observations": 0, "ingestion_runs": 0, "series_catalog": 0},
+      "verdict": "EMPTY_SCHEMA_ONLY — not an authoritative populated DB; left untouched"
+    },
+    {
+      "path": "_redteam137/artifacts/workbench/runs/",
+      "count": 37,
+      "content": "daily WorkbenchRun JSON records, all status=DATA_BLOCKED / FROZEN (pipeline_data_blocked)",
+      "verdict": "historical evidence of a data-blocked formal lane; no monitoring snapshot state"
+    },
+    {
+      "path": "_rt_tmp/**, _audit_scratch/** (various *.duckdb)",
+      "content": "test-scoped scratch DBs from prior windows (pytest basetemp artifacts)",
+      "verdict": "not authoritative; left untouched"
+    },
+    {
+      "path": "dashboard_snapshots roots anywhere on the workstation",
+      "content": "none found",
+      "verdict": "no persisted real DashboardSnapshot history exists locally"
+    }
+  ],
+  "decision": {
+    "authoritative_db_exists": false,
+    "mutation_policy": "No fault injection into any pre-existing DB. All adversarial and soak work runs on task-scoped scratch DuckDB stores (:memory: or temp dirs) created strictly through accepted code paths: sync_series_catalog -> store.start_run/insert_observations/finish_run (MonitoringRunner contract) -> WorkbenchRun -> build_monitoring_pack_from_db -> build_monitoring_snapshot -> SnapshotStore. Snapshot stores are temp dirs created per test/soak iteration.",
+    "no_wind_note": "Wind/manual CN-proprietary lanes remain NOT_EXERCISED; absence is not a blocker for this task."
+  }
+}

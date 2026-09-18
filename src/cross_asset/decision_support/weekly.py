@@ -3,7 +3,8 @@
 Four explicit change surfaces:
 
 1. ``information_set_delta`` — UPDATED / NO_NEW_INFORMATION / OVERDUE_STALE,
-   with revisions and new observations preserved as events.
+   with revisions, new observations and monitoring-only capture-time
+   OBSERVED_UPDATE events (#139 Phase 4) preserved as events.
 2. ``macro_state_delta`` — cyclical factor change caused by new information;
    a missing release must never produce synthetic movement.
 3. ``market_condition_delta`` — genuine high-frequency weekly moves with
@@ -150,7 +151,9 @@ def build_macro_state_delta(
     Invariants:
     - if the information set did not update, every delta must be exactly zero;
     - a non-zero delta is only allowed for factors with an observed release
-      (``changed_by_release``); anything else is synthetic drift and raises.
+      (``changed_by_release``) or a monitoring OBSERVED_UPDATE event (#139:
+      a new observation/value became visible to the capture-time decision set);
+      anything else is synthetic drift and raises.
     """
     resolved_status = InformationSetStatus(information_status)
     changed_by_release = changed_by_release or set()

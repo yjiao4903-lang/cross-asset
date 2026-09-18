@@ -1,0 +1,146 @@
+{
+  "schema": "current-main-reclassification-v1",
+  "task": "LOCAL-A MULTIWEEK-MONITORING-CLOSURE-REDTEAM-V1 (#139)",
+  "owner_lane": "LOCAL-DEV-A",
+  "authoritative_main": "036b58450226e2b4c2e88401ca246aa2b3fe6024",
+  "evidence_source": "PR #138 (branch WEEKEND-REDTEAM, head 98c3d48, unmerged) — read-only historical evidence",
+  "reproduction_rule": "no finding was carried forward without a fresh reproduction on current main",
+  "items": [
+    {
+      "id": "ADV-P1-01",
+      "old_status": "OPEN / BLOCKER (P1)",
+      "current_main_reproduction": "repro_current_main.py ATTACK 3: week 2 with a genuinely new monthly observation raised SyntheticMovementError (US_CORE_CPI_TREND moved while information set was NO_NEW_INFORMATION)",
+      "current_status": "STILL_REPRODUCIBLE -> CLOSED_THIS_TASK",
+      "disposition": "Narrow OBSERVED_UPDATE contract implemented (enums.py, monitoring_adapter.py, producer.py, weekly.py) per the #139 Phase 4 frozen semantic rule; regressions in tests/redteam139 (B7, C2).",
+      "evidence": "tests/redteam139/test_b7_weekly_lane.py, tests/redteam139/test_c2_emergent.py, artifacts/local_multweek_redteam/repro_current_main.py"
+    },
+    {
+      "id": "ADV-P1-02",
+      "old_status": "OPEN / BLOCKER (P1)",
+      "current_main_reproduction": "backfilled older week no longer displaces latest: persist(week2) then persist(week1) leaves load_latest() at 2026-09-11; same-week retry keeps the week; corrupted/missing pointer degrades typed; restart readback intact; canonical current/prior correct",
+      "current_status": "CLOSED_BY_MERGED_#135",
+      "disposition": "No code change; required-case regressions added in tests/redteam139/test_b6_snapshot_history_api.py.",
+      "evidence": "tests/redteam139/test_b6_snapshot_history_api.py::test_b6_01..b6_12"
+    },
+    {
+      "id": "ADV-P2-01",
+      "old_status": "FIXED in PR #138 (unmerged)",
+      "current_main_reproduction": "US_CORE_CPI rows with source_series_id=PAYEMS and rows with source=wind under a MONITORING:fred run were both served as CPI evidence at 036b584 (identity_verified absent, n_obs=40)",
+      "current_status": "STILL_REPRODUCIBLE -> FIXED_THIS_TASK",
+      "disposition": "Ported the exact narrow monitoring_adapter identity revalidation from the review-boundary PR #138 (fail-closed per series, raw provenance retained); regressions added.",
+      "evidence": "artifacts/local_multweek_redteam/repro_current_main.py ATTACK 1; tests/redteam139/test_b1_identity_source.py"
+    },
+    {
+      "id": "ADV-P2-02",
+      "old_status": "OPEN / LOW-IMPACT (P2)",
+      "current_main_reproduction": "hand-built pack with duplicate observation dates still accepted by _validate_pack",
+      "current_status": "STILL_REPRODUCIBLE (OPEN / P2)",
+      "disposition": "Ledger item; reject-vs-latest-vintage is a contract decision; DB read model already resolves by latest vintage.",
+      "evidence": "tests/redteam139/test_b2_time_causality.py::test_b2_04"
+    },
+    {
+      "id": "ADV-P2-03",
+      "old_status": "OPEN / LOW-IMPACT (P2)",
+      "current_main_reproduction": "hand-built pack with as_of=2026-08-01 and data_cutoff=2026-09-11 accepted; metadata.as_of diverges from details.data_cutoff",
+      "current_status": "STILL_REPRODUCIBLE (OPEN / P2)",
+      "disposition": "Ledger item; runtime adapter always sets as_of=cutoff.",
+      "evidence": "tests/redteam139/test_b2_time_causality.py::test_b2_13"
+    },
+    {
+      "id": "ADV-P2-04",
+      "old_status": "OPEN / DIAGNOSABILITY (P2)",
+      "current_main_reproduction": "RegimeEngine.candidate_quadrant(0.0, 0.0, prior=None) resolves via the documented default quadrant",
+      "current_status": "STILL_REPRODUCIBLE (OPEN / DIAGNOSABILITY)",
+      "disposition": "Ledger item; changing the first-snapshot label is a product decision.",
+      "evidence": "tests/redteam139/test_b4_factor_regime.py::test_b4_10"
+    },
+    {
+      "id": "ADV-P2-05",
+      "old_status": "OPEN / BLOCKER (P2, overlap)",
+      "current_main_reproduction": "corrupted latest.json -> raw pydantic ValidationError from load_latest(); health() only guards FileNotFoundError",
+      "current_status": "STILL_REPRODUCIBLE (OPEN / P2)",
+      "disposition": "Ledger item; semantics are fail-closed (no fixture fallback); typed error surface is a serving.py improvement for the #133/#135 owner.",
+      "evidence": "tests/redteam139/test_b6_snapshot_history_api.py::test_b6_06"
+    },
+    {
+      "id": "ADV-P2-06",
+      "old_status": "OPEN / LOW-IMPACT (P2)",
+      "current_main_reproduction": "snapshot_id identical with and without previous_snapshot; bodies differ",
+      "current_status": "STILL_REPRODUCIBLE (OPEN / P2)",
+      "disposition": "Ledger item; identity formula change affects persisted ids and #133/#135 history.",
+      "evidence": "tests/redteam139/test_b6_snapshot_history_api.py::test_b6_21"
+    },
+    {
+      "id": "ADV-P2-07",
+      "old_status": "OPEN / DIAGNOSABILITY (P2)",
+      "current_main_reproduction": "to_json preserves insertion order while the HTTP layer sorts keys",
+      "current_status": "STILL_REPRODUCIBLE (OPEN / DIAGNOSABILITY)",
+      "disposition": "Ledger item; docstring-vs-serializer contract decision.",
+      "evidence": "tests/redteam139/test_b6_snapshot_history_api.py::test_b6_22"
+    },
+    {
+      "id": "ADV-P2-08",
+      "old_status": "OPEN / DIAGNOSABILITY (P2)",
+      "current_main_reproduction": "same-week retry copies prior weekly deltas while recomputing views",
+      "current_status": "STILL_REPRODUCIBLE (OPEN / DIAGNOSABILITY)",
+      "disposition": "Ledger item; retry-is-not-a-new-week semantics accepted; visibility gap recorded.",
+      "evidence": "tests/redteam139/test_b5_asset_rules.py::test_b5_04"
+    },
+    {
+      "id": "ADV-P2-09",
+      "old_status": "OPEN / DIAGNOSABILITY (P2)",
+      "current_main_reproduction": "static: no unit cross-check between provider contracts and series catalog",
+      "current_status": "STILL_REPRODUCIBLE (OPEN / DIAGNOSABILITY)",
+      "disposition": "Ledger item; no machine-checkable unit contract authority exists for the monitoring lane.",
+      "evidence": "ADVERSARIAL_MATRIX.json STATIC-09"
+    },
+    {
+      "id": "ADV-P2-10",
+      "old_status": "FIXED in PR #138 (tests/adversarial/__init__.py)",
+      "current_main_reproduction": "current main has no second un-packaged tests/**/conftest.py; condition absent",
+      "current_status": "STALE_ON_CURRENT_MAIN (lesson applied)",
+      "disposition": "tests/redteam139 is an importable package; lesson encoded as STATIC-22 and the package __init__ docstring.",
+      "evidence": "tests/redteam139/__init__.py"
+    },
+    {
+      "id": "ADV-GAP-01",
+      "old_status": "GAP / ADJACENT-WIP (P2)",
+      "current_main_reproduction": "history enumeration, diff, asset-history and weekly-window surfaces all exist and are exercised",
+      "current_status": "CLOSED_BY_MERGED_#135",
+      "disposition": "No action; regression coverage added.",
+      "evidence": "tests/redteam139/test_b6_snapshot_history_api.py::test_b6_16..b6_24"
+    },
+    {
+      "id": "ADV-GAP-02",
+      "old_status": "GAP / ADJACENT-WIP (P2)",
+      "current_main_reproduction": "weekly_core.py contains the semantic-comparability gate",
+      "current_status": "CLOSED_BY_MERGED_#132",
+      "disposition": "No action.",
+      "evidence": "tests/redteam139/test_b6_snapshot_history_api.py::test_b6_18"
+    },
+    {
+      "id": "ADV-GAP-03",
+      "old_status": "NOT_EXERCISED",
+      "current_main_reproduction": "launcher/process ownership remains a LOCAL-B surface; untouched by this branch (git diff evidence)",
+      "current_status": "NOT_EXERCISED",
+      "disposition": "Out of LOCAL-A scope by dispatch.",
+      "evidence": "ADVERSARIAL_MATRIX.json STATIC-01, tests/redteam139/test_b8_runtime_boundary.py::test_b8_09"
+    },
+    {
+      "id": "ADV-GAP-04",
+      "old_status": "NOT_EXERCISED / NO-WIND",
+      "current_main_reproduction": "no Wind/iFinD/Tushare capability in this window; providers remain disabled in config",
+      "current_status": "NOT_EXERCISED",
+      "disposition": "Explicit non-blocking cell; MISSING != ZERO respected.",
+      "evidence": "ADVERSARIAL_MATRIX.json STATIC-03..05"
+    },
+    {
+      "id": "ADV-P2-11 (new)",
+      "old_status": "n/a (new finding this task)",
+      "current_main_reproduction": "_validate_registry rejects duplicate canonical series within one binding but not across bindings; two factors binding the same canonical series double-weights it in family aggregates",
+      "current_status": "NEW / OPEN (P2)",
+      "disposition": "Ledger item; binding-config authority decision (WEB-CONTROL). Documented by test, not fixed unilaterally.",
+      "evidence": "tests/redteam139/test_c2_emergent.py::test_c2_10"
+    }
+  ]
+}
