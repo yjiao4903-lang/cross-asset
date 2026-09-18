@@ -19,7 +19,7 @@ from cross_asset.providers.monitoring import FREDMonitoringProvider, YahooMonito
 PROVIDERS = {
     "fred": {
         "host": "fred.stlouisfed.org",
-        "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10&cosd=2026-09-01",
+        "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFII10&cosd=2026-09-01",
         "series": "US_REAL_10Y",
     },
     "yahoo": {
