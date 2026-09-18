@@ -52,7 +52,7 @@ def _markdown(payload: dict) -> str:
         "",
         "## Runtime roots",
         "",
-        f"- DB: `{payload['paths']['dc']}`",
+        f"- DB: `{payload['paths']['db']}`",
         f"- Workbench: `{payload['paths']['runs_root']}`",
         f"- Snapshots: `{payload['paths']['snapshot_root']}`",
         "",
@@ -144,7 +144,7 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[2]
     artifact_root = (repo_root / args.artifact_root).resolve() if not Path(args.artifact_root).is_absolute() else Path(args.artifact_root).resolve()
     artifact_root.mkdir(parents=True, exist_ok=True)
-    db_path = artifact_root / "monitoring.duckdb"
+    db_path = artifact_root / f"monitoring-{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}.duckdb"
     runs_root = artifact_root / "workbench"
     snapshot_root = artifact_root / "dashboard_snapshots"
     runs_root.mkdir(parents=True, exist_ok=True)
@@ -340,10 +340,12 @@ def main() -> int:
                 technical = snapshot_store.list_snapshots()
                 canonical = snapshot_store.list_canonical()
                 provenance = dict(snapshot.details.get("series_provenance") or {})
-                all_nonformal = all(
+                provenance_rows = [
+                    item for item in provenance.values() if isinstance(item, dict)
+                ]
+                all_nonformal = bool(provenance_rows) and all(
                     item.get("formal_admission_granted") is False
-                    for item in provenance.values()
-                    if isinstance(item, dict)
+                    for item in provenance_rows
                 )
                 dh = snapshot.data_health_summary
                 payload["snapshot"] = {
