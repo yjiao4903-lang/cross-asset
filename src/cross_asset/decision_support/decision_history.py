@@ -72,12 +72,13 @@ def canonical_prior(
 ) -> DashboardSnapshotV0 | None:
     """Return the latest canonical earlier economic week without look-ahead."""
 
-    eligible = [
+    technical_eligible = [
         snapshot
-        for snapshot in canonical_by_week(snapshots)
+        for snapshot in snapshots
         if snapshot.metadata.decision_time < decision_time
         and snapshot_economic_week_id(snapshot) < current_week_id
     ]
+    eligible = canonical_by_week(technical_eligible)
     if not eligible:
         return None
     return max(
