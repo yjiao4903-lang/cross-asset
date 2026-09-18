@@ -7,7 +7,6 @@ multi-week soak loop at the end is the seed for Phase 6 repeatability runs.
 
 from __future__ import annotations
 
-import json
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
@@ -19,7 +18,6 @@ from cross_asset.decision_support.producer import (
     build_monitoring_snapshot,
 )
 from cross_asset.decision_support.serving import SnapshotStore
-from cross_asset.decision_support.weekly import SyntheticMovementError
 from redteam139._helpers import (
     WEEK1_CUTOFF,
     WEEK1_DECISION,
@@ -27,13 +25,12 @@ from redteam139._helpers import (
     WEEK2_DECISION,
     cpi_values,
     governed_store,
+    mechanics_registry,
     month_rows,
     payroll_values,
     workbench_run,
     write_monitoring_run,
 )
-
-from redteam139._helpers import mechanics_registry
 
 REG = mechanics_registry()
 WEEK3_CUTOFF = date(2026, 9, 18)
@@ -193,7 +190,7 @@ def test_c2_07_no_formal_contamination_across_weeks():
 def test_c2_08_identical_recapture_is_not_new_information():
     world = WeekWorld()
     world.capture(end_month=date(2026, 8, 1), capture=datetime(2026, 9, 5, tzinfo=UTC), run_id="run-c2-08a")
-    week1 = world.week(cutoff=WEEK1_CUTOFF, decision=WEEK1_DECISION, run_id="wb-c2-08a")
+    world.week(cutoff=WEEK1_CUTOFF, decision=WEEK1_DECISION, run_id="wb-c2-08a")
     # week 2 re-captures the exact same monthly world with a new capture stamp
     world.capture(end_month=date(2026, 8, 1), capture=WEEK2_DECISION.replace(hour=0), run_id="run-c2-08b")
     week2 = world.week(cutoff=WEEK2_CUTOFF, decision=WEEK2_DECISION, run_id="wb-c2-08b")
@@ -204,7 +201,7 @@ def test_c2_08_identical_recapture_is_not_new_information():
 def test_c2_09_late_backfill_reports_older_observation_date():
     world = WeekWorld()
     world.capture(end_month=date(2026, 8, 1), capture=datetime(2026, 9, 5, tzinfo=UTC), run_id="run-c2-09a")
-    week1 = world.week(cutoff=WEEK1_CUTOFF, decision=WEEK1_DECISION, run_id="wb-c2-09a")
+    world.week(cutoff=WEEK1_CUTOFF, decision=WEEK1_DECISION, run_id="wb-c2-09a")
     # week 2 backfills June/July vintages plus the new September month
     world._month_len = 50
     world.capture(end_month=date(2026, 9, 1), capture=WEEK2_DECISION.replace(hour=0), run_id="run-c2-09b",

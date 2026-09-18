@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import json
-from datetime import UTC, date, datetime
+from datetime import date
 
 import pytest
 
@@ -78,7 +77,7 @@ def test_b8_04_direct_writes_record_no_attempts():
     attempts = store.conn.execute("SELECT status FROM provider_attempts").fetchall()
     assert attempts == []
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b8-04"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.observations or series.status in {"BLOCKED", "MISSING", "STALE"}
 
 
@@ -93,7 +92,7 @@ def test_b8_05_failed_then_successful_run():
         run_id="run-b8-05b",
     )
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b8-05"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert len(series.observations) == 40
 
 
@@ -103,7 +102,9 @@ def test_b8_06_corrupted_snapshot_file_typed_failure(snapshot_root):
     store = SnapshotStore(snapshot_root)
     store.persist(week1)
     (snapshot_root / f"{week1.metadata.snapshot_id}.json").write_text("{ truncated", encoding="utf-8")
-    with pytest.raises(Exception):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
         store.list_snapshots()
 
 
@@ -141,7 +142,7 @@ def test_b8_10_api_binds_loopback(snapshot_root):
     from cross_asset.decision_support.serving import make_server
 
     server = make_server(SnapshotStore(snapshot_root), host="127.0.0.1", port=0)
-    host, port = server.server_address[:2]
+    host = server.server_address[0]
     server.server_close()
     assert str(host) in {"127.0.0.1", "::1", "localhost"}
 
@@ -155,7 +156,7 @@ def test_b8_11_no_formal_admission_from_monitoring():
         run_id="run-b8-11",
     )
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b8-11"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.provenance["formal_admission_granted"] is False
     assert series.provenance["origin"] == "MONITORING_DB"
 

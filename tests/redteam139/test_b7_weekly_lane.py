@@ -8,7 +8,10 @@ import pytest
 
 from cross_asset.decision_support.enums import InformationSetStatus, ReleaseEventType
 from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
-from cross_asset.decision_support.producer import MonitoringSnapshotBlocked, build_monitoring_snapshot
+from cross_asset.decision_support.producer import (
+    MonitoringSnapshotBlocked,
+    build_monitoring_snapshot,
+)
 from cross_asset.decision_support.weekly import SyntheticMovementError
 from redteam139._helpers import (
     WEEK1_CUTOFF,

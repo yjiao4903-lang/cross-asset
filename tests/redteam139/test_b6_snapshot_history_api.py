@@ -7,13 +7,12 @@ latest-pointer finding against merged #135.
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timedelta, UTC
+from datetime import UTC, date, datetime, timedelta
 from http.client import HTTPConnection
 
 import pytest
 
 from cross_asset.decision_support.decision_history import (
-    canonical_by_week,
     snapshot_economic_week_id,
 )
 from cross_asset.decision_support.producer import build_monitoring_snapshot

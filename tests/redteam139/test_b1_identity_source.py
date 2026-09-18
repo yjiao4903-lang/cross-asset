@@ -7,11 +7,9 @@ import pytest
 from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
 from cross_asset.decision_support.producer import build_monitoring_snapshot
 from redteam139._helpers import (
-    WEEK2_CUTOFF,
     WEEK2_DECISION,
     cpi_values,
     governed_store,
-    mechanics_registry,
     month_rows,
     workbench_run,
     write_monitoring_run,
@@ -38,7 +36,7 @@ def test_b1_01_governed_identity_is_accepted_without_formal_authority():
         run_id="monitoring-fred-b1-01",
     )
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b1-01"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.observations
     assert series.provenance["source_refs"] == ["fred:CPILFESL"]
     assert series.provenance["formal_admission_granted"] is False
@@ -53,7 +51,7 @@ def test_b1_02_wrong_source_series_id_is_blocked():
         run_id="monitoring-fred-b1-02",
     )
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b1-02"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.status == "BLOCKED"
     assert series.observations == []
     assert "monitoring_source_series_id_mismatch:PAYEMS" in series.provenance["identity_blockers"]
@@ -71,7 +69,7 @@ def test_b1_03_row_source_mismatch_is_blocked():
         run_id="monitoring-fred-b1-03",
     )
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b1-03"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.status == "BLOCKED"
     assert "monitoring_source_mismatch:wind" in series.provenance["identity_blockers"]
 
@@ -85,7 +83,7 @@ def test_b1_04_series_without_enabled_mapping_is_blocked():
         run_id="monitoring-fred-b1-04",
     )
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b1-04"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.status == "BLOCKED"
     assert "monitoring_source_mapping_missing" in series.provenance["identity_blockers"]
 
@@ -284,7 +282,7 @@ def test_b1_11_formal_rows_are_not_monitoring_evidence():
     )
     store.finish_run("formal-run-b1-11", "success", success_series=1, failed_series=0)
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b1-11"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.observations == []
 
 
@@ -298,7 +296,7 @@ def test_b1_12_unresolvable_run_provider_is_blocked():
     )
     store.finish_run("monitoring-b1-12", "success", success_series=1, failed_series=0)
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b1-12"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.status == "BLOCKED"
     assert "monitoring_run_provider_unresolved" in series.provenance["identity_blockers"]
 
@@ -357,7 +355,7 @@ def test_b1_16_read_model_revalidates_directly_persisted_rows():
     store.insert_observations(rows, run_id="monitoring-fred-b1-16")
     store.finish_run("monitoring-fred-b1-16", "success", success_series=1, failed_series=0)
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b1-16"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.status == "BLOCKED"
     assert series.provenance["identity_blockers"]
 
@@ -370,7 +368,7 @@ def test_b1_17_direct_persist_healthy_row_still_served():
     store.insert_observations(rows, run_id="monitoring-fred-b1-17")
     store.finish_run("monitoring-fred-b1-17", "success", success_series=1, failed_series=0)
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b1-17"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.status in {"FRESH", "STALE"}
     assert series.observations
 

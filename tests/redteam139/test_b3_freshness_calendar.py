@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
 from cross_asset.decision_support.producer import build_monitoring_snapshot
 from cross_asset.reports.monitoring_health import monitoring_data_health
@@ -52,7 +50,7 @@ def test_b3_02_calendar_mapping_missing_maps_to_stale_with_limitation():
             if reason == "calendar_mapping_missing":
                 assert row["monitoring_status"] == "BLOCKED"
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b3-02"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     if series.status == "STALE":
         assert series.provenance["freshness_verified"] is False
         assert series.provenance["freshness_limitation"] == "calendar_mapping_missing"
@@ -64,7 +62,7 @@ def test_b3_03_identity_failure_stays_blocked():
     rows = month_rows("US_CORE_CPI", "PAYEMS", cpi_values(40), capture_time=CAPTURE)
     write_monitoring_run(store, rows, run_id="run-b3-03")
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b3-03"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.status == "BLOCKED"
     assert series.provenance["freshness_verified"] is True or series.provenance["identity_blockers"]
 
@@ -73,7 +71,7 @@ def test_b3_03_identity_failure_stays_blocked():
 def test_b3_04_stale_is_not_missing():
     store = _full_store()
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b3-04"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     if series.status == "STALE":
         assert series.observations, "stale series must retain its observations"
     assert series.status != "MISSING"
@@ -85,7 +83,7 @@ def test_b3_05_missing_series_is_explicit():
     rows = month_rows("US_NONFARM_PAYROLLS", "PAYEMS", payroll_values(40), capture_time=CAPTURE)
     write_monitoring_run(store, rows, run_id="run-b3-05")
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b3-05"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.status in {"MISSING", "BLOCKED"}
     assert series.observations == []
 
@@ -94,7 +92,7 @@ def test_b3_05_missing_series_is_explicit():
 def test_b3_06_calendar_lag_recorded_when_configured():
     store = _full_store()
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b3-06"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert "calendar" in series.provenance
     assert "calendar_lag_sessions" in series.provenance
 
@@ -103,7 +101,7 @@ def test_b3_06_calendar_lag_recorded_when_configured():
 def test_b3_07_no_weekday_heuristic_fallback():
     store = _full_store()
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b3-07"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     if series.provenance.get("calendar") in (None, "", "unknown"):
         # Without governed calendar authority the series may not claim FRESH.
         assert series.status != "FRESH" or series.provenance["freshness_verified"] is True

@@ -4,26 +4,23 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 
-import pandas as pd
 import pytest
 
 from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
 from cross_asset.decision_support.producer import (
     MonitoringObservation,
     MonitoringObservationPack,
-    MonitoringRunLineage,
-    MonitoringSeries,
     build_monitoring_snapshot,
 )
 from cross_asset.decision_support.weekly import ReleaseEvent
 from redteam139._helpers import (
     WEEK2_CUTOFF,
-    payroll_values,
     WEEK2_DECISION,
     cpi_values,
     governed_store,
     mechanics_registry,
     month_rows,
+    payroll_values,
     workbench_run,
     write_monitoring_run,
 )
@@ -50,7 +47,7 @@ def test_b2_01_observation_available_after_decision_time_is_rejected():
     store.insert_observations(rows, run_id="run-b2-01")
     store.finish_run("run-b2-01", "success", success_series=1, failed_series=0)
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b2-01"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.observations == []
 
 
@@ -61,7 +58,7 @@ def test_b2_02_observation_after_cutoff_never_served_by_read_model():
     rows = [dict(row, observation_date=date(2026, 9, 20)) if row["observation_date"] == date(2026, 9, 1) else row for row in rows]
     write_monitoring_run(store, rows, run_id="run-b2-02")
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b2-02"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert all(obs.observation_date <= WEEK2_CUTOFF for obs in series.observations)
 
 
@@ -74,7 +71,7 @@ def test_b2_03_duplicate_dates_resolve_to_latest_vintage():
     store.insert_observations(rows + [revised], run_id="run-b2-03")
     store.finish_run("run-b2-03", "success", success_series=1, failed_series=0)
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b2-03"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     dates = [obs.observation_date for obs in series.observations]
     assert len(dates) == len(set(dates))
     target = [obs for obs in series.observations if obs.observation_date == rows[0]["observation_date"]]
@@ -84,7 +81,7 @@ def test_b2_03_duplicate_dates_resolve_to_latest_vintage():
 # --- RT139-B2-04: direct pack duplicate dates stay unguarded (P2-02 doc) ---
 def test_b2_04_direct_pack_duplicate_dates_not_guarded():
     base = _direct_pack_with_cpi_end(date(2026, 9, 1))
-    cpi = [item for item in base.series if item.series_id == "T_CPI"][0]
+    cpi = [item for item in base.series if item.series_id == "T_CPI"][0]  # noqa: RUF015
     dup = MonitoringObservation(
         observation_date=cpi.observations[0].observation_date,
         available_at=cpi.observations[0].available_at + timedelta(hours=2),
@@ -110,7 +107,7 @@ def test_b2_05_late_arriving_row_within_cutoff_is_admitted():
                       capture_time=WEEK2_DECISION - timedelta(hours=1), end=date(2026, 9, 1))
     write_monitoring_run(store, rows, run_id="run-b2-05")
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b2-05"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert any(obs.observation_date == date(2026, 9, 1) for obs in series.observations)
 
 
@@ -130,7 +127,9 @@ def test_b2_06_stale_series_keeps_score_with_reduced_confidence():
 
 # --- RT139-B2-07: missing available_at is rejected (availability mandatory) ---
 def test_b2_07_missing_available_at_is_rejected():
-    with pytest.raises(Exception):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
         MonitoringObservation(
             observation_date=date(2026, 9, 1),
             available_at=None,
@@ -145,7 +144,7 @@ def test_b2_08_capture_time_history_never_grants_formal_status():
     rows = month_rows("US_CORE_CPI", "CPILFESL", cpi_values(40), capture_time=CAPTURE)
     write_monitoring_run(store, rows, run_id="run-b2-08")
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b2-08"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.provenance["formal_admission_granted"] is False
     assert series.provenance["formal_readiness"] != "FORMAL_ADMITTED"
 
@@ -153,7 +152,7 @@ def test_b2_08_capture_time_history_never_grants_formal_status():
 # --- RT139-B2-09: out-of-order rows are served ordered ---
 def test_b2_09_out_of_order_direct_pack_is_rejected():
     base = _direct_pack_with_cpi_end(date(2026, 9, 1))
-    cpi = [item for item in base.series if item.series_id == "T_CPI"][0]
+    cpi = [item for item in base.series if item.series_id == "T_CPI"][0]  # noqa: RUF015
     observations = list(reversed(cpi.observations[:10])) + cpi.observations[10:]
     reordered = base.model_copy(deep=True)
     reordered.series = [
@@ -173,7 +172,7 @@ def test_b2_10_same_observation_two_runs_deduplicated():
     write_monitoring_run(store, rows, run_id="run-b2-10a")
     write_monitoring_run(store, rows, run_id="run-b2-10b")
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b2-10"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     dates = [obs.observation_date for obs in series.observations]
     assert len(dates) == len(set(dates))
 
@@ -185,7 +184,7 @@ def test_b2_11_available_at_equal_to_decision_time_boundary():
     rows = month_rows("US_CORE_CPI", "CPILFESL", cpi_values(40), capture_time=boundary)
     write_monitoring_run(store, rows, run_id="run-b2-11")
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b2-11"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert series.observations
 
 
@@ -196,7 +195,7 @@ def test_b2_12_observation_date_past_cutoff_not_served():
     rows = [dict(row, observation_date=date(2026, 9, 30)) if row["observation_date"] == date(2026, 9, 1) else row for row in rows]
     write_monitoring_run(store, rows, run_id="run-b2-12")
     pack = build_monitoring_pack_from_db(store, workbench_run("wb-b2-12"))
-    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]
+    series = [item for item in pack.series if item.series_id == "US_CORE_CPI"][0]  # noqa: RUF015
     assert all(obs.observation_date <= WEEK2_CUTOFF for obs in series.observations)
 
 

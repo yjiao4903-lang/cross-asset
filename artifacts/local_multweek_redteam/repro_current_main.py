@@ -6,9 +6,9 @@ Run from repo root: python artifacts/local_multweek_redteam/repro_current_main.p
 """
 from __future__ import annotations
 
+import pathlib
 import tempfile
 from datetime import UTC, date, datetime
-import pathlib
 
 import pandas as pd
 

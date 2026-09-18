@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -135,7 +134,7 @@ def main() -> None:
     lines = [
         "# ADVERSARIAL MATRIX — MULTIWEEK-MONITORING-CLOSURE-REDTEAM-V1",
         "",
-        f"- Owner lane: `LOCAL-DEV-A` (#139)",
+        "- Owner lane: `LOCAL-DEV-A` (#139)",
         f"- Baseline main: `{BASELINE}`",
         f"- Total cases: **{len(cases)}**",
         f"- Status counts: {json.dumps(counts)}",

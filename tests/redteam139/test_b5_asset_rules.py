@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 
 from cross_asset.decision_support.producer import build_monitoring_snapshot
 from redteam139._helpers import (
@@ -54,7 +54,7 @@ def test_b5_03_prior_stance_chains():
 
 # --- RT139-B5-04: same-week retry copies the prior asset delta (P2-08 doc) ---
 def test_b5_04_same_week_retry_copies_delta_documented():
-    week1, week2 = _two_weeks()
+    _week1, week2 = _two_weeks()
     retry_pack = direct_pack(as_of=WEEK2_CUTOFF,
                              decision=WEEK2_DECISION + timedelta(hours=2),
                              run_id="wb-b5-w2-retry")
@@ -82,7 +82,7 @@ def test_b5_06_counter_signals_and_invalidator_typed():
 
 # --- RT139-B5-07: stance change in week 2 has reason tags ---
 def test_b5_07_stance_change_has_reason_tags():
-    week1, week2 = _two_weeks()
+    _week1, week2 = _two_weeks()
     for view in week2.asset_views:
         if view.stance != view.prior_stance:
             assert view.drivers or view.counter_signals
@@ -90,7 +90,7 @@ def test_b5_07_stance_change_has_reason_tags():
 
 # --- RT139-B5-08: asset view delta entries are well-formed ---
 def test_b5_08_asset_delta_entries_wellformed():
-    week1, week2 = _two_weeks()
+    _week1, week2 = _two_weeks()
     for entry in week2.weekly_change.asset_view_delta.entries:
         assert entry.delta == entry.current_stance - entry.previous_stance
 
