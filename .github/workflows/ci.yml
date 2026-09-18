@@ -1,23 +1,40 @@
 name: CI
 
+# Gate-Driven CI v1:
+# - PR / push main 只跑 Ubuntu 快检（install + compile + Ruff + full pytest）。
+# - 最终 G4 candidate（exact head）使用 gate.yml（Ubuntu + Windows，workflow_dispatch）。
+# - docs-only 修改不触发代码全量测试。
 on:
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        # 绑定 PR exact head，而不是默认的 merge commit，
+        # 使 CI 证据与 Governance 的 exact-head 规则一致。
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Record exact head
+        run: |
+          echo "exact head: $(git rev-parse HEAD)" | tee "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
