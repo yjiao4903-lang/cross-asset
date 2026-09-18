@@ -1,0 +1,4 @@
+# Launcher runtime state and logs are generated locally, never committed.
+.runtime/
+logs/
+*.log
