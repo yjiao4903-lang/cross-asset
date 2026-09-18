@@ -209,6 +209,42 @@ def test_causal_prior_for_backfill_never_reads_future_snapshot(tmp_path):
     assert prior.metadata.snapshot_id == "w1"
 
 
+def test_causal_prior_canonicalizes_only_snapshots_visible_as_of_decision_time(tmp_path):
+    store = SnapshotStore(tmp_path)
+    for snapshot in [
+        _snapshot(
+            "w1",
+            week="2026-08-31",
+            decision_time="2026-09-04T06:00:00+00:00",
+            run_id="r1",
+        ),
+        _snapshot(
+            "w2-visible",
+            week="2026-09-07",
+            decision_time="2026-09-11T06:00:00+00:00",
+            run_id="r2-visible",
+        ),
+        _snapshot(
+            "w2-future-retry",
+            week="2026-09-07",
+            decision_time="2026-09-16T06:00:00+00:00",
+            run_id="r2-future",
+        ),
+    ]:
+        store.persist(snapshot)
+
+    # For a historical 2026-09-15 decision, the later retry is not yet visible.
+    # The prior week must therefore canonicalize to the visible technical snapshot,
+    # rather than disappearing because the global same-week canonical is future.
+    prior = store.prior_for(
+        decision_time=datetime(2026, 9, 15, 6, tzinfo=UTC),
+        current_week_id="2026-09-14",
+    )
+
+    assert prior is not None
+    assert prior.metadata.snapshot_id == "w2-visible"
+
+
 def test_asset_stance_history_is_producer_owned_and_auditable(tmp_path):
     store = SnapshotStore(tmp_path)
     store.persist(_snapshot("w1", week="2026-08-31", decision_time="2026-09-04T06:00:00+00:00", run_id="r1", stance=0))
