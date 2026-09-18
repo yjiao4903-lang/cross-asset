@@ -24,6 +24,12 @@ $FrontendStderrLog = Join-Path $RuntimeDir 'frontend-stderr.log'
 $BackendStdoutLog = Join-Path $RuntimeDir 'backend-stdout.log'
 $BackendStderrLog = Join-Path $RuntimeDir 'backend-stderr.log'
 $ServerScript = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'server.mjs'))
+$DefaultSnapshotRoot = Join-Path $RepoRoot 'artifacts\dashboard_snapshots'
+$SnapshotRoot = if ([string]::IsNullOrWhiteSpace($env:MACRO_WORKBENCH_SNAPSHOT_ROOT)) {
+    [System.IO.Path]::GetFullPath($DefaultSnapshotRoot)
+} else {
+    [System.IO.Path]::GetFullPath($env:MACRO_WORKBENCH_SNAPSHOT_ROOT)
+}
 $MutexName = 'Local\CrossAssetWorkbenchLauncher'
 
 # Locate a viable Python runtime: repo-local venv first, then PATH/canonical launcher.
@@ -289,8 +295,9 @@ function Start-Backend {
     if (Test-Path -LiteralPath $BackendStderrLog) { Remove-Item -LiteralPath $BackendStderrLog -Force -ErrorAction SilentlyContinue }
 
     $env:PYTHONPATH = if ($env:PYTHONPATH) { $env:PYTHONPATH } else { (Join-Path $RepoRoot 'src') }
+    $quotedSnapshotRoot = '"' + $SnapshotRoot + '"'
     $argsBackend = @('-m', 'cross_asset.decision_support.snapshot_cli', 'serve',
-        '--host', $HostAddress, '--port', "$BackendPort")
+        '--root', $quotedSnapshotRoot, '--host', $HostAddress, '--port', "$BackendPort")
     $process = Start-Process -FilePath $PythonPath -ArgumentList $argsBackend `
         -WorkingDirectory $RepoRoot -WindowStyle Hidden `
         -RedirectStandardOutput $BackendStdoutLog -RedirectStandardError $BackendStderrLog -PassThru
@@ -342,13 +349,38 @@ function Write-PidMetadata {
         created_at = (Get-Date).ToString('o')
         repo_root   = $RepoRoot
         frontend    = @{ pid = $FrontendPid; port = $Port; host = $HostAddress; script = $ServerScript }
-        backend     = @{ pid = $BackendPid; port = $BackendPort; host = $HostAddress; module = 'decision_support.snapshot_cli serve' }
+        backend     = @{ pid = $BackendPid; port = $BackendPort; host = $HostAddress; module = 'decision_support.snapshot_cli serve'; snapshot_root = $SnapshotRoot }
     }
     $meta | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $PidFile -Encoding UTF8
 }
 
+function Stop-OwnedStackForRecovery {
+    $live = Get-LiveOwnedPids
+    foreach ($procId in $live) {
+        if (Test-OwnedProcess -ProcessId $procId) {
+            try {
+                Stop-Process -Id $procId -ErrorAction Stop
+                try { Wait-Process -Id $procId -Timeout 5 -ErrorAction SilentlyContinue } catch { }
+                Write-LauncherLog "Stopped launcher-owned partial-stack process PID $procId for deterministic recovery." 'WARN'
+            } catch {
+                Write-LauncherLog "Failed to stop launcher-owned partial-stack PID $($procId): $($_.Exception.Message)" 'ERROR'
+                return $false
+            }
+        }
+    }
+    Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
+    for ($i = 0; $i -lt 20; $i++) {
+        if (-not (Test-PortOpen -PortNumber $Port) -and -not (Test-PortOpen -PortNumber $BackendPort)) {
+            return $true
+        }
+        Start-Sleep -Milliseconds 250
+    }
+    Write-LauncherLog 'Owned partial stack was stopped but one or more ports remain occupied; refusing to kill any unverified process.' 'ERROR'
+    return $false
+}
+
 function Invoke-LauncherMain {
-    Write-LauncherLog "Launcher start. repo=$RepoRoot frontend=${HostAddress}:$Port backend=${HostAddress}:$BackendPort"
+    Write-LauncherLog "Launcher start. repo=$RepoRoot frontend=${HostAddress}:$Port backend=${HostAddress}:$BackendPort snapshot_root=$SnapshotRoot"
 
     $mutex = New-Object System.Threading.Mutex($false, $MutexName)
     $hasMutex = $false
@@ -371,7 +403,11 @@ function Invoke-LauncherMain {
             [void](Open-WorkbenchBrowser)
             return 0
         }
-        Write-LauncherLog "No launcher-owned healthy stack detected (owned_live=$($ownedLive.Count)); starting a fresh stack."
+        if ($ownedLive.Count -gt 0) {
+            Write-LauncherLog "Launcher metadata identifies a partial/unhealthy owned stack (owned_live=$($ownedLive.Count)); recycling only verified owned processes." 'WARN'
+            if (-not (Stop-OwnedStackForRecovery)) { return 15 }
+        }
+        Write-LauncherLog 'No launcher-owned healthy stack detected; starting a fresh stack.'
 
         # Fail closed BEFORE starting anything if a frontend/backend port is occupied by a
         # process that is not our own healthy stack. Never kill or replace a foreign process.
