@@ -99,6 +99,13 @@ def _review_time(config: dict[str, Any] | None) -> time:
     return time(hour, minute)
 
 
+def _optional_identity(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
 @dataclass(frozen=True)
 class Observation:
     series_id: str
@@ -106,6 +113,8 @@ class Observation:
     value: float | None
     available_at: datetime
     source: str = "unspecified"
+    source_series_id: str | None = None
+    unit: str | None = None
 
 
 def parse_observations(rows: list[dict[str, Any]]) -> list[Observation]:
@@ -118,6 +127,8 @@ def parse_observations(rows: list[dict[str, Any]]) -> list[Observation]:
                 value=None if row.get("value") is None else float(row["value"]),
                 available_at=to_beijing(row["available_at"]),
                 source=str(row.get("source", "unspecified")),
+                source_series_id=_optional_identity(row.get("source_series_id")),
+                unit=_optional_identity(row.get("unit")),
             )
         )
         if out[-1].value is not None and not math.isfinite(out[-1].value):
@@ -141,6 +152,36 @@ def latest_on_or_before(
     if not eligible:
         return None
     return max(eligible, key=lambda row: (row.observation_date, to_beijing(row.available_at)))
+
+
+def _semantic_comparability_reason(current: Observation, prior: Observation) -> str | None:
+    """Return why two observations cannot support arithmetic, failing closed."""
+    if current.series_id != prior.series_id:
+        return "SOURCE_IDENTITY_MISMATCH"
+
+    current_source = _optional_identity(current.source)
+    prior_source = _optional_identity(prior.source)
+    if (
+        current_source is None
+        or prior_source is None
+        or current_source.lower() == "unspecified"
+        or prior_source.lower() == "unspecified"
+        or current.source_series_id is None
+        or prior.source_series_id is None
+    ):
+        return "SOURCE_IDENTITY_MISSING"
+    if current_source.lower() != prior_source.lower():
+        return "SOURCE_IDENTITY_MISMATCH"
+    if current.source_series_id != prior.source_series_id:
+        return "SOURCE_IDENTITY_MISMATCH"
+
+    current_unit = _optional_identity(current.unit)
+    prior_unit = _optional_identity(prior.unit)
+    if current_unit is None or prior_unit is None:
+        return "UNIT_SEMANTICS_MISSING"
+    if current_unit.lower() != prior_unit.lower():
+        return "UNIT_SEMANTICS_MISMATCH"
+    return None
 
 
 def _change(current: Observation | None, prior: Observation | None, kind: str) -> float | None:
@@ -171,6 +212,9 @@ def _comparison_reason(
         return "LOOKBACK_SLIPPAGE_EXCEEDED"
     if prior.value is None:
         return "PRIOR_VALUE_MISSING"
+    semantic_reason = _semantic_comparability_reason(current, prior)
+    if semantic_reason is not None:
+        return semantic_reason
     if kind != "yield" and prior.value == 0:
         return "PRIOR_VALUE_ZERO"
     return None

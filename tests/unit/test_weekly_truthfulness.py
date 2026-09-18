@@ -9,13 +9,23 @@ from cross_asset.research.weekly_review import (
 )
 
 
-def _obs(day: str, value: float, *, available: str | None = None, source: str = "manual") -> Observation:
+def _obs(
+    day: str,
+    value: float,
+    *,
+    available: str | None = None,
+    source: str = "manual",
+    source_series_id: str | None = "US_EQ_MANUAL",
+    unit: str | None = "index_points",
+) -> Observation:
     return Observation(
         series_id="US_EQ",
         observation_date=date.fromisoformat(day),
         value=value,
         available_at=to_beijing(available or f"{day}T16:00:00+08:00"),
         source=source,
+        source_series_id=source_series_id,
+        unit=unit,
     )
 
 
@@ -94,11 +104,93 @@ def test_future_available_at_prior_cannot_leak_into_lookback():
 
 
 def test_provider_mismatch_stays_unverified_and_blocks_required_match():
-    table = _table([_obs("2026-08-28", 100.0, source="other"), _obs("2026-09-04", 110.0, source="other")])
+    table = _table(
+        [
+            _obs("2026-08-28", 100.0, source="other"),
+            _obs("2026-09-04", 110.0, source="other"),
+        ]
+    )
 
     assert table["status"] == "DATA_BLOCKED"
     assert table["facts"][0]["source_status"] == "UNVERIFIED"
     assert table["unverified_sources"] == ["US_EQ"]
+
+
+def test_cross_provider_lookback_is_non_comparable_even_under_same_canonical_id():
+    table = _table(
+        [
+            _obs(
+                "2026-08-28",
+                4.5,
+                source="yahoo",
+                source_series_id="^TNX",
+                unit="yield_percent",
+            ),
+            _obs(
+                "2026-09-04",
+                4.6,
+                source="fred",
+                source_series_id="DGS10",
+                unit="yield_percent",
+            ),
+        ]
+    )
+    change = table["facts"][0]["changes"]["1w"]
+    assert change["status"] == "NON_COMPARABLE"
+    assert change["reason"] == "SOURCE_IDENTITY_MISMATCH"
+    assert change["value"] is None
+
+
+def test_same_provider_different_source_series_is_non_comparable():
+    table = _table(
+        [
+            _obs("2026-08-28", 100.0, source_series_id="SERIES_A"),
+            _obs("2026-09-04", 110.0, source_series_id="SERIES_B"),
+        ]
+    )
+    change = table["facts"][0]["changes"]["1w"]
+    assert change["status"] == "NON_COMPARABLE"
+    assert change["reason"] == "SOURCE_IDENTITY_MISMATCH"
+    assert change["value"] is None
+
+
+def test_unit_mismatch_is_non_comparable():
+    table = _table(
+        [
+            _obs("2026-08-28", 100.0, unit="index_points"),
+            _obs("2026-09-04", 110.0, unit="percent"),
+        ]
+    )
+    change = table["facts"][0]["changes"]["1w"]
+    assert change["status"] == "NON_COMPARABLE"
+    assert change["reason"] == "UNIT_SEMANTICS_MISMATCH"
+    assert change["value"] is None
+
+
+def test_missing_source_identity_fails_closed():
+    table = _table(
+        [
+            _obs("2026-08-28", 100.0, source_series_id=None),
+            _obs("2026-09-04", 110.0),
+        ]
+    )
+    change = table["facts"][0]["changes"]["1w"]
+    assert change["status"] == "NON_COMPARABLE"
+    assert change["reason"] == "SOURCE_IDENTITY_MISSING"
+    assert change["value"] is None
+
+
+def test_missing_unit_semantics_fails_closed():
+    table = _table(
+        [
+            _obs("2026-08-28", 100.0, unit=None),
+            _obs("2026-09-04", 110.0),
+        ]
+    )
+    change = table["facts"][0]["changes"]["1w"]
+    assert change["status"] == "NON_COMPARABLE"
+    assert change["reason"] == "UNIT_SEMANTICS_MISSING"
+    assert change["value"] is None
 
 
 def test_non_adjacent_snapshots_are_not_presented_as_prior_week():

@@ -57,7 +57,8 @@ def test_weekly_review_top_level_cli_smoke(tmp_path: Path):
             ],
         )
     )
-    assert payload["status"] == "READY"
+    assert payload["status"] == "PARTIAL"
+    assert any("SOURCE_IDENTITY_MISSING" in item for item in payload["missing_lookbacks"])
     assert payload["usage"] == "PERSONAL_WEEKLY"
     assert payload["admission"] == "DEVELOPMENT_PRIOR"
     assert payload["stance"]["stance"] == "HOLD"
