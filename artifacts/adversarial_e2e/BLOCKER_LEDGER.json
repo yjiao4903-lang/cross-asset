@@ -3,7 +3,7 @@
   "task": "ADVERSARIAL-E2E-VALIDATION-V1",
   "owner_lane": "WEEKEND-REDTEAM",
   "baseline_main": "5cac5c44b08e43760888362636cadbf3ffb40f1e",
-  "item_count": 15,
+  "item_count": 16,
   "items": [
     {
       "id": "ADV-P1-01",
@@ -198,6 +198,25 @@
       "fixability": "NOT FIXED \u2014 no authority currently defines a machine-checkable unit contract for the monitoring lane.",
       "owner": "PROVIDER-CALENDAR-V1 owner (ONLINE-DEV-B)",
       "status": "OPEN / DIAGNOSABILITY",
+      "overlap_check": "no overlap with PR #135/#132/#136."
+    },
+    {
+      "id": "ADV-P2-10",
+      "severity": "P2",
+      "invariant": "test collection must not change the meaning of an existing import",
+      "title": "A second un-packaged tests/**/conftest.py silently shadows tests/conftest.py (FIXED)",
+      "exact_reproduction": [
+        "add tests/<newdir>/conftest.py without tests/<newdir>/__init__.py",
+        "run: python -m pytest tests/<newdir> tests/integration/test_formal_consumption_gate.py",
+        "ImportError: cannot import name 'approve_test_series' from 'conftest'",
+        "the same suite passes when tests/integration is collected first, so the breakage is ordering-dependent"
+      ],
+      "affected_path": "tests/**/conftest.py import identity; affects tests/integration/test_formal_consumption_gate.py, tests/unit/integration/test_marco_provider.py and tests/integration/test_first_real_marco_cross_e2e.py",
+      "current_evidence": "reproduced on commit 98c3d488 with the plain `pytest -q` collection order; fixed in d08aed91 by adding tests/adversarial/__init__.py",
+      "root_cause_hypothesis": "pytest's prepend import mode imports a conftest.py from a directory without __init__.py under the bare name `conftest`; two such files cannot coexist, and only the first collected wins.",
+      "fixability": "FIXED in this task: the new test directory is now an importable package, so its conftest gets a qualified module name. Any future lane adding tests under a new directory should do the same.",
+      "owner": "WEEKEND-REDTEAM (this task); relevant to any lane adding a new tests/ subdirectory",
+      "status": "FIXED / REGRESSION-TESTED",
       "overlap_check": "no overlap with PR #135/#132/#136."
     },
     {

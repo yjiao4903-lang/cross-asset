@@ -4,7 +4,7 @@
   "owner_lane": "WEEKEND-REDTEAM",
   "baseline_main": "5cac5c44b08e43760888362636cadbf3ffb40f1e",
   "no_wind_window": true,
-  "case_count": 127,
+  "case_count": 128,
   "cases": [
     {
       "case_id": "ADV-B1-01",
@@ -1517,6 +1517,18 @@
       "evidence": "tests/adversarial/test_c2_emergent.py::test_adv_e2_10_full_chain_from_governed_db_to_http_after_identity_fix",
       "severity": "none",
       "fix_owner": "n/a"
+    },
+    {
+      "case_id": "ADV-B8-09",
+      "layer": "B8_runtime_launcher",
+      "setup": "a second tests/**/conftest.py added by a future lane",
+      "invariant": "test collection must not change the meaning of an existing import",
+      "expected": "existing `from conftest import ...` keeps resolving to tests/conftest.py",
+      "observed": "a second un-packaged conftest.py is imported as top-level `conftest` and shadows the repository one; existing tests break as soon as the new directory is collected first",
+      "status": "FAIL_FIXED",
+      "evidence": "tests/adversarial/__init__.py documents the fix; reproducible with `pytest tests/adversarial tests/integration/test_formal_consumption_gate.py` without it",
+      "severity": "P2",
+      "fix_owner": "WEEKEND-REDTEAM (fixed in this task)"
     },
     {
       "case_id": "ADV-E2-11",

@@ -2,9 +2,9 @@
 
 - Owner lane: `WEEKEND-REDTEAM`
 - Baseline main: `5cac5c44b08e43760888362636cadbf3ffb40f1e`
-- Total cases: **127**
-- Status counts: {"BLOCKED_POLICY": 1, "FAIL_BLOCKER": 10, "FAIL_FIXED": 2, "GAP_ADJACENT_WIP": 3, "NOT_EXERCISED": 3, "PASS": 108}
-- Per-layer counts: {"B1_identity_source": 17, "B2_time_causality": 15, "B3_freshness_calendar": 12, "B4_factor_regime": 21, "B5_asset_rules": 14, "B6_snapshot_history_api": 17, "B7_weekly_comparability_lane": 12, "B8_runtime_launcher": 8, "PASS2_emergent_cross_layer": 11}
+- Total cases: **128**
+- Status counts: {"BLOCKED_POLICY": 1, "FAIL_BLOCKER": 10, "FAIL_FIXED": 3, "GAP_ADJACENT_WIP": 3, "NOT_EXERCISED": 3, "PASS": 108}
+- Per-layer counts: {"B1_identity_source": 17, "B2_time_causality": 15, "B3_freshness_calendar": 12, "B4_factor_regime": 21, "B5_asset_rules": 14, "B6_snapshot_history_api": 17, "B7_weekly_comparability_lane": 12, "B8_runtime_launcher": 9, "PASS2_emergent_cross_layer": 11}
 - Environment: NO WIND / NO WindPy / no proprietary local files; such cells are NOT_EXERCISED or BLOCKED.
 
 Status vocabulary: `PASS` (invariant holds), `FAIL_FIXED` (violated on baseline, narrow fix shipped here),
@@ -139,4 +139,5 @@ Status vocabulary: `PASS` (invariant holds), `FAIL_FIXED` (violated on baseline,
 | ADV-E2-08 | PASS2_emergent_cross_layer | fixing identity validation must not create formal authority | formal stays BLOCKED end to end | record formal.status BLOCKED; lane MONITORING | **PASS** | none | n/a | `tests/adversarial/test_c2_emergent.py::test_adv_e2_08_identity_fix_does_not_grant_formal_authority` |
 | ADV-E2-09 | PASS2_emergent_cross_layer | CLI previous selection must never look ahead | no previous snapshot selected | None for the earlier run; selected for the later run | **PASS** | none | n/a | `tests/adversarial/test_c2_emergent.py::test_adv_e2_09_cli_previous_selection_rejects_a_look_ahead_latest_pointer` |
 | ADV-E2-10 | PASS2_emergent_cross_layer | the full chain stays truthful after a narrow fix | identity_verified true end to end and health PARTIAL | observed | **PASS** | none | n/a | `tests/adversarial/test_c2_emergent.py::test_adv_e2_10_full_chain_from_governed_db_to_http_after_identity_fix` |
+| ADV-B8-09 | B8_runtime_launcher | test collection must not change the meaning of an existing import | existing `from conftest import ...` keeps resolving to tests/conftest.py | a second un-packaged conftest.py is imported as top-level `conftest` and shadows the repository one; existing tests break as soon as the new directory is collected first | **FAIL_FIXED** | P2 | WEEKEND-REDTEAM (fixed in this task) | `tests/adversarial/__init__.py documents the fix; reproducible with `pytest tests/adversarial tests/integration/test_formal_consumption_gate.py` without it` |
 | ADV-E2-11 | PASS2_emergent_cross_layer | deciding what counts as new information is a product-policy choice | not decided by this window | requires first-release/vintage semantics that the MONITORING lane does not claim | **BLOCKED_POLICY** | P1 | WEB-CONTROL / REAL-SNAPSHOT-V1 owner | `Phase D analysis, see REDTEAM_PASSES.md pass 2` |

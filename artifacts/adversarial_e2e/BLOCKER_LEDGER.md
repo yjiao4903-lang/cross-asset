@@ -2,7 +2,7 @@
 
 - Owner lane: `WEEKEND-REDTEAM`
 - Baseline main: `5cac5c44b08e43760888362636cadbf3ffb40f1e`
-- Items: **15**
+- Items: **16**
 - Severity: P0 fabricates/overwrites authority or crosses lanes; P1 misstates data/decision/history or breaks
   normal use; P2 diagnosability/maintenance gap without current decision corruption.
 - No severity was inflated to consume work: no P0 was found by this window.
@@ -245,6 +245,29 @@ FRED_MONITORING_CONTRACTS declares the same unit, but no code compares them; upd
 **Current evidence:** static review; tests/adversarial/test_b1_identity_source.py covers identity but no unit case exists
 
 **Root-cause hypothesis:** Monitoring factor transforms are unit-free (z-scores / trends), so a unit divergence has no decision impact today; it would matter for any level-based consumer.
+
+## ADV-P2-10 — A second un-packaged tests/**/conftest.py silently shadows tests/conftest.py (FIXED)
+
+- **Severity:** P2
+- **Invariant:** test collection must not change the meaning of an existing import
+- **Affected path:** `tests/**/conftest.py import identity; affects tests/integration/test_formal_consumption_gate.py, tests/unit/integration/test_marco_provider.py and tests/integration/test_first_real_marco_cross_e2e.py`
+- **Owner:** WEEKEND-REDTEAM (this task); relevant to any lane adding a new tests/ subdirectory
+- **Status:** FIXED / REGRESSION-TESTED
+- **Fixability:** FIXED in this task: the new test directory is now an importable package, so its conftest gets a qualified module name. Any future lane adding tests under a new directory should do the same.
+- **Overlap check:** no overlap with PR #135/#132/#136.
+
+**Exact reproduction**
+
+```text
+add tests/<newdir>/conftest.py without tests/<newdir>/__init__.py
+run: python -m pytest tests/<newdir> tests/integration/test_formal_consumption_gate.py
+ImportError: cannot import name 'approve_test_series' from 'conftest'
+the same suite passes when tests/integration is collected first, so the breakage is ordering-dependent
+```
+
+**Current evidence:** reproduced on commit 98c3d488 with the plain `pytest -q` collection order; fixed in d08aed91 by adding tests/adversarial/__init__.py
+
+**Root-cause hypothesis:** pytest's prepend import mode imports a conftest.py from a directory without __init__.py under the bare name `conftest`; two such files cannot coexist, and only the first collected wins.
 
 ## ADV-GAP-01 — No history-enumeration or current/prior diff surface on baseline main
 

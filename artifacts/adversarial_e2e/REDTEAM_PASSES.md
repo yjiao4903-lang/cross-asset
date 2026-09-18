@@ -119,3 +119,19 @@ Why this fix and nothing else:
 Everything else that failed was recorded in the ledger instead, because it needed a policy decision
 (ADV-P1-01, ADV-P2-02/03/04/06/08), needed new authority (ADV-P2-09), or lives inside an adjacent PR's
 active edit surface (ADV-P1-02, ADV-P2-05, ADV-P2-07, ADV-GAP-01/02/03).
+
+---
+
+## Addendum — harness self-inflicted finding (ADV-P2-10)
+
+The first committed version of this harness added `tests/adversarial/conftest.py` without an
+`__init__.py`. Pytest then imported that file as the top-level module `conftest`, shadowing the
+repository-level `tests/conftest.py`. Three existing suites that do `from conftest import
+approve_test_series` broke — but only when `tests/adversarial` was collected first, which is exactly
+what a plain `pytest -q` does. Two separate invocations (`pytest tests/unit`, `pytest tests/integration`)
+stayed green, so the defect was invisible unless the whole suite ran as one invocation.
+
+This is recorded in the ledger as ADV-P2-10 and fixed by making `tests/adversarial` an importable
+package, which gives its conftest a qualified module name. Any future lane adding tests under a new
+subdirectory should do the same. The lesson is also a red-team lesson: a task that adds test surfaces
+must verify the *whole* suite in a single invocation, not only the suites it touches.
