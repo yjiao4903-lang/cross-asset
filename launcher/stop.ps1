@@ -72,8 +72,12 @@ function Invoke-StopMain {
     $meta = $null
     try { $meta = Get-Content -LiteralPath $PidFile -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
     if ($null -eq $meta) {
+        if (Test-Health -or ((Test-Url -Uri $BackendHealthUrl) -eq 200)) {
+            Write-StopLog 'PID metadata is corrupted while a Workbench health endpoint still responds. Refusing to delete ownership evidence or kill any process.' 'ERROR'
+            return 43
+        }
         Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
-        Write-StopLog 'Invalid/stale PID metadata removed; no process was killed.' 'WARN'
+        Write-StopLog 'Invalid/stale PID metadata removed only after health endpoints were confirmed down; no process was killed.' 'WARN'
         return 0
     }
 
