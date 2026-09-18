@@ -24,6 +24,10 @@ data/.run.lock
 OPENSOURCE_REUSE_EVALUATION_20260901.md
 artifacts/*
 !artifacts/.gitkeep
+# Committed task evidence (issue #137): dependency map, adversarial matrix and
+# blocker ledger are review deliverables, not generated/live outputs.
+!artifacts/adversarial_e2e/
+!artifacts/adversarial_e2e/**
 
 # Keep deterministic test fixtures, ignore generated/live outputs.
 !tests/golden/

@@ -1,0 +1,272 @@
+{
+  "schema": "cross_asset.adversarial_e2e.blocker_ledger.v1",
+  "task": "ADVERSARIAL-E2E-VALIDATION-V1",
+  "owner_lane": "WEEKEND-REDTEAM",
+  "baseline_main": "5cac5c44b08e43760888362636cadbf3ffb40f1e",
+  "item_count": 15,
+  "items": [
+    {
+      "id": "ADV-P1-01",
+      "severity": "P1",
+      "invariant": "capture_time != first_release_time; MONITORING != FORMAL_OOS",
+      "title": "Real multi-week monitoring loop cannot produce week 2 once new monthly data arrives",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_c2_emergent.py -k e2_01",
+        "or: build_monitoring_pack_from_db(store, workbench_run(week1)) -> build_monitoring_snapshot -> ok",
+        "then: build_monitoring_pack_from_db(store, workbench_run(week2 with a new monthly row)) ->",
+        "build_monitoring_snapshot(pack2, previous_snapshot=snapshot1) raises SyntheticMovementError"
+      ],
+      "affected_path": "src/cross_asset/decision_support/monitoring_adapter.py -> producer.build_monitoring_snapshot -> weekly.build_macro_state_delta",
+      "current_evidence": "tests/adversarial/test_c2_emergent.py::test_adv_e2_01...; tests/adversarial/test_b7_weekly_lane.py::test_adv_b7_04...",
+      "root_cause_hypothesis": "build_monitoring_pack_from_db never populates release_events/expected_releases, so information_set_delta.status is always NO_NEW_INFORMATION while cyclical factor scores genuinely move; the producer's synthetic-movement guard then (correctly) refuses to emit the week.",
+      "fixability": "NOT FIXED BY THIS WINDOW \u2014 requires a product-policy decision about what constitutes a new release for the monitoring lane (first-release vs capture-time, revision handling). Any narrow implementation would invent that policy.",
+      "owner": "REAL-SNAPSHOT-V1 owner (ONLINE-DEV-A) with WEB-CONTROL coordination",
+      "status": "OPEN / BLOCKER",
+      "overlap_check": "monitoring_adapter.py and producer.py are not touched by PR #135/#132/#136; the policy decision is adjacent to #133/#135 multi-week continuity, so it must not be fixed unilaterally."
+    },
+    {
+      "id": "ADV-P1-02",
+      "severity": "P1",
+      "invariant": "late technical creation != economic latest",
+      "title": "SnapshotStore.persist has no economic monotonicity guard on the latest pointer",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_b6_snapshot_api.py -k b6_06",
+        "persist a snapshot with as_of 2026-09-18, then persist a backfilled snapshot with as_of 2026-09-11",
+        "SnapshotStore.load_latest() now returns the older snapshot"
+      ],
+      "affected_path": "src/cross_asset/decision_support/serving.py (SnapshotStore.persist/load_latest)",
+      "current_evidence": "tests/adversarial/test_b6_snapshot_api.py::test_adv_b6_06_backfilled_older_snapshot_must_not_become_latest",
+      "root_cause_hypothesis": "latest.json is written unconditionally on every persist; the pointer is ordered by write time, not by (as_of, decision_time).",
+      "fixability": "NOT FIXED BY THIS WINDOW \u2014 serving.py is inside PR #135's active edit surface.",
+      "owner": "PR #135 / issue #133 (DECISION-HISTORY-V1)",
+      "status": "OPEN / BLOCKER",
+      "overlap_check": "serving.py is modified by PR #135; a competing edit would create a real conflict. The CLI mitigates by never looking ahead (ADV-E2-09) but direct store use does not."
+    },
+    {
+      "id": "ADV-P2-01",
+      "severity": "P2",
+      "invariant": "provider/source identity mismatch != comparable series",
+      "title": "Monitoring read model did not re-validate persisted row identity (FIXED)",
+      "exact_reproduction": [
+        "before the fix: persist US_CORE_CPI rows with source_series_id=PAYEMS under a MONITORING:fred run",
+        "build_monitoring_pack_from_db -> US_CORE_CPI accepted with source_refs ['fred:PAYEMS']"
+      ],
+      "affected_path": "src/cross_asset/decision_support/monitoring_adapter.py",
+      "current_evidence": "tests/adversarial/test_b1_identity_source.py::test_adv_b1_02, ::test_adv_b1_03, ::test_adv_b1_15",
+      "root_cause_hypothesis": "MonitoringRunner._validate_rows enforces identity at ingestion, but the read model is a separate boundary where rows may have been written directly or by another window.",
+      "fixability": "FIXED \u2014 narrow fail-closed validation reusing the accepted catalog.expected_source_identities authority; violating series are represented as BLOCKED with explicit identity_blockers, mirroring MONITORING_SCHEMA_ERROR -> FAILED -> BLOCKED.",
+      "owner": "WEEKEND-REDTEAM (this task)",
+      "status": "FIXED / REGRESSION-TESTED",
+      "overlap_check": "monitoring_adapter.py is not in any of PR #135/#132/#136; no product/economic policy changed."
+    },
+    {
+      "id": "ADV-P2-02",
+      "severity": "P2",
+      "invariant": "duplicate observation dates are not comparable evidence",
+      "title": "Direct MonitoringObservationPack contract has no duplicate-observation-date guard",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_b2_time_causality.py -k b2_04",
+        "append two rows with the same observation_date and different available_at to a hand-built pack",
+        "build_monitoring_snapshot accepts it"
+      ],
+      "affected_path": "src/cross_asset/decision_support/producer.py (_validate_pack)",
+      "current_evidence": "tests/adversarial/test_b2_time_causality.py::test_adv_b2_04_duplicate_dates_in_direct_pack_are_not_guarded",
+      "root_cause_hypothesis": "The ordering check does not imply de-duplication; the DB read model resolves duplicates by latest vintage (ADV-B2-03), so only hand-built packs are affected.",
+      "fixability": "NOT FIXED \u2014 the correct resolution (reject vs latest-vintage-wins) is a contract decision, and the affected surface is the diagnostic --input path.",
+      "owner": "REAL-SNAPSHOT-V1 owner",
+      "status": "OPEN / LOW-IMPACT",
+      "overlap_check": "producer.py not in PR #135/#132/#136."
+    },
+    {
+      "id": "ADV-P2-03",
+      "severity": "P2",
+      "invariant": "one snapshot identity must correspond to one economic state",
+      "title": "metadata.as_of may diverge from details.data_cutoff in the pack contract",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_b2_time_causality.py -k b2_14",
+        "build a pack whose as_of is 30 days before lineage.data_cutoff",
+        "the snapshot is accepted; metadata.as_of is the older date while details.data_cutoff is the newer one"
+      ],
+      "affected_path": "src/cross_asset/decision_support/producer.py + monitoring_adapter.py",
+      "current_evidence": "tests/adversarial/test_b2_time_causality.py::test_adv_b2_14_as_of_cutoff_divergence_is_visible_in_the_snapshot",
+      "root_cause_hypothesis": "as_of is treated as a display field while data_cutoff carries the evidence boundary; the runtime adapter always sets them equal, so only hand-built packs diverge.",
+      "fixability": "NOT FIXED \u2014 needs a decision on whether as_of is derived from data_cutoff or independently meaningful.",
+      "owner": "REAL-SNAPSHOT-V1 owner",
+      "status": "OPEN / LOW-IMPACT",
+      "overlap_check": "producer.py not in PR #135/#132/#136."
+    },
+    {
+      "id": "ADV-P2-04",
+      "severity": "P2",
+      "invariant": "NO_GUESSED_SOURCE_SEMANTICS / MISSING != ZERO",
+      "title": "First snapshot with both regime axes inside the deadband resolves to a named quadrant",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_b4_factor_regime.py -k b4_20",
+        "RegimeEngine(axis_threshold=0.25).candidate_quadrant(0.0, 0.0, prior=None) -> GOLDILOCKS"
+      ],
+      "affected_path": "src/cross_asset/decision_support/regime.py (candidate_quadrant default prior)",
+      "current_evidence": "tests/adversarial/test_b4_factor_regime.py::test_adv_b4_20_first_snapshot_all_deadband_resolves_via_the_documented_default; tests/unit/decision_support/test_regime.py::test_initial_state_without_prior",
+      "root_cause_hypothesis": "Deadband hysteresis inherits a prior quadrant; with no prior it defaults to GOLDILOCKS, so an ambiguous first reading becomes a specific economic label.",
+      "fixability": "NOT FIXED \u2014 changing the first-snapshot label changes product semantics and would invalidate accepted Scope E behaviour.",
+      "owner": "Decision-Support-V2 owner / WEB-CONTROL",
+      "status": "OPEN / DIAGNOSABILITY",
+      "overlap_check": "regime.py not in PR #135/#132/#136."
+    },
+    {
+      "id": "ADV-P2-05",
+      "severity": "P2",
+      "invariant": "failure semantics must be typed and must not leak internals",
+      "title": "A corrupted latest.json surfaces a raw pydantic ValidationError",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_b6_snapshot_api.py -k b6_04",
+        "write '{ not json' to <root>/latest.json, then call SnapshotReadService.health()",
+        "a pydantic ValidationError propagates (the HTTP layer turns it into a 404 carrying that text)"
+      ],
+      "affected_path": "src/cross_asset/decision_support/serving.py",
+      "current_evidence": "tests/adversarial/test_b6_snapshot_api.py::test_adv_b6_04..., ::test_adv_b6_05..., ::test_adv_b6_12b...",
+      "root_cause_hypothesis": "health() only guards FileNotFoundError; parse/validation failures fall through the generic ValueError handler and lose their severity semantics.",
+      "fixability": "NOT FIXED \u2014 serving.py is inside PR #135's active edit surface.",
+      "owner": "PR #135 / issue #133",
+      "status": "OPEN / BLOCKER (overlap)",
+      "overlap_check": "serving.py is modified by PR #135."
+    },
+    {
+      "id": "ADV-P2-06",
+      "severity": "P2",
+      "invariant": "one snapshot id == one snapshot body",
+      "title": "snapshot_id does not cover previous_snapshot, so distinct bodies can collide",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_b6_snapshot_api.py -k b6_07",
+        "build the same pack with and without previous_snapshot",
+        "identical snapshot_id, different serialized bodies"
+      ],
+      "affected_path": "src/cross_asset/decision_support/producer.py (_snapshot_id)",
+      "current_evidence": "tests/adversarial/test_b6_snapshot_api.py::test_adv_b6_07_snapshot_id_ignores_previous_snapshot_lineage",
+      "root_cause_hypothesis": "The hash covers the pack, registry version, taxonomy version and model version, but not the lineage inputs that change regime dwell and weekly deltas.",
+      "fixability": "NOT FIXED \u2014 changing the identity formula alters persisted snapshot ids and interacts with #133/#135 history.",
+      "owner": "REAL-SNAPSHOT-V1 owner with PR #133/#135",
+      "status": "OPEN / LOW-IMPACT (store would silently overwrite)",
+      "overlap_check": "producer.py not in PR #135/#132/#136, but the identity contract is shared with decision history."
+    },
+    {
+      "id": "ADV-P2-07",
+      "severity": "P2",
+      "invariant": "documented serialization contract must match behaviour",
+      "title": "to_json documents 'sorted keys' but preserves details insertion order; the HTTP layer sorts",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_b6_snapshot_api.py -k b6_12b",
+        "compare snapshot.to_json() bytes with the /api/snapshot/latest payload bytes for the same snapshot"
+      ],
+      "affected_path": "src/cross_asset/decision_support/snapshot.py (to_json) and serving.py (_Handler._json)",
+      "current_evidence": "tests/adversarial/test_b6_snapshot_api.py::test_adv_b6_12b_http_layer_sorts_keys_while_the_model_does_not",
+      "root_cause_hypothesis": "pydantic model_dump_json preserves mapping order; the docstring overstates the guarantee.",
+      "fixability": "NOT FIXED \u2014 either the docstring or the serializer must change, and serving.py overlaps PR #135.",
+      "owner": "PR #135 (serving.py) / REAL-SNAPSHOT-V1 owner (docstring)",
+      "status": "OPEN / DIAGNOSABILITY",
+      "overlap_check": "both files touch PR #135's surface or its neighbours."
+    },
+    {
+      "id": "ADV-P2-08",
+      "severity": "P2",
+      "invariant": "weekly-change surfaces must describe real week-over-week movement",
+      "title": "Same-week retry copies the prior asset delta while recomputing the asset views",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_c2_emergent.py -k e2_03",
+        "build week W, then a same-week retry whose market confirmation flips",
+        "the retry's asset views change while its copied asset_view_delta stays empty"
+      ],
+      "affected_path": "src/cross_asset/decision_support/producer.py (build_monitoring_snapshot same_week_retry branch)",
+      "current_evidence": "tests/adversarial/test_c2_emergent.py::test_adv_e2_03_same_week_retry_can_desynchronise_delta_and_views",
+      "root_cause_hypothesis": "Carrying the prior weekly deltas forward is correct for 'a retry is not a new week', but the recomputed views are then not represented anywhere, so an intra-week information change becomes invisible.",
+      "fixability": "NOT FIXED \u2014 requires deciding whether an intra-week revision is a new weekly-change event; overlaps decision-history semantics.",
+      "owner": "REAL-SNAPSHOT-V1 owner / PR #133-#135",
+      "status": "OPEN / DIAGNOSABILITY",
+      "overlap_check": "producer.py not in PR #135/#132/#136, but the semantic overlaps #133's multi-week continuity."
+    },
+    {
+      "id": "ADV-P2-09",
+      "severity": "P2",
+      "invariant": "unit semantics are part of the source-identity contract",
+      "title": "No unit cross-check between the provider contract and the series catalog",
+      "exact_reproduction": [
+        "config/series.yml declares US_NONFARM_PAYROLLS as thousands_persons",
+        "FRED_MONITORING_CONTRACTS declares the same unit, but no code compares them; update_catalog_from_monitoring_rows only fills empty fields"
+      ],
+      "affected_path": "src/cross_asset/decision_support/monitoring_adapter.py, src/cross_asset/ingestion/monitoring.py, src/cross_asset/storage/catalog.py",
+      "current_evidence": "static review; tests/adversarial/test_b1_identity_source.py covers identity but no unit case exists",
+      "root_cause_hypothesis": "Monitoring factor transforms are unit-free (z-scores / trends), so a unit divergence has no decision impact today; it would matter for any level-based consumer.",
+      "fixability": "NOT FIXED \u2014 no authority currently defines a machine-checkable unit contract for the monitoring lane.",
+      "owner": "PROVIDER-CALENDAR-V1 owner (ONLINE-DEV-B)",
+      "status": "OPEN / DIAGNOSABILITY",
+      "overlap_check": "no overlap with PR #135/#132/#136."
+    },
+    {
+      "id": "ADV-GAP-01",
+      "severity": "P2",
+      "invariant": "decision history must exist for the product",
+      "title": "No history-enumeration or current/prior diff surface on baseline main",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_b6_snapshot_api.py -k b6_15",
+        "SnapshotStore exposes only load/load_latest/persist"
+      ],
+      "affected_path": "src/cross_asset/decision_support/serving.py",
+      "current_evidence": "tests/adversarial/test_b6_snapshot_api.py::test_adv_b6_15_history_and_diff_surfaces_are_absent_on_current_main",
+      "root_cause_hypothesis": "Intentionally unmerged: PR #135 implements it.",
+      "fixability": "NOT FIXED BY DESIGN \u2014 dedicated adjacent WIP.",
+      "owner": "PR #135 / issue #133",
+      "status": "GAP / ADJACENT-WIP",
+      "overlap_check": "explicit non-overlap rule for this task."
+    },
+    {
+      "id": "ADV-GAP-02",
+      "severity": "P2",
+      "invariant": "lookback/source changes must stay comparable",
+      "title": "Weekly semantic-comparability gate absent on baseline main",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_b7_weekly_lane.py -k b7_12",
+        "cross_asset.research.weekly_core has no source/semantic comparability gate"
+      ],
+      "affected_path": "src/cross_asset/research/weekly_core.py",
+      "current_evidence": "tests/adversarial/test_b7_weekly_lane.py::test_adv_b7_12_weekly_comparability_gate_is_owned_by_131_132",
+      "root_cause_hypothesis": "Intentionally unmerged: PR #132 implements it.",
+      "fixability": "NOT FIXED BY DESIGN \u2014 dedicated adjacent WIP.",
+      "owner": "PR #132 / issue #131",
+      "status": "GAP / ADJACENT-WIP",
+      "overlap_check": "explicit non-overlap rule for this task."
+    },
+    {
+      "id": "ADV-GAP-03",
+      "severity": "P2",
+      "invariant": "native runtime behaviour needs native evidence",
+      "title": "Windows launcher / process-ownership scenarios not exercisable in this window",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_b8_runtime_boundary.py -k b8_07",
+        "launcher/ and START_MACRO_WORKBENCH.cmd are absent from baseline main"
+      ],
+      "affected_path": "PR #136 files",
+      "current_evidence": "tests/adversarial/test_b8_runtime_boundary.py::test_adv_b8_07_native_windows_process_semantics_are_not_exercised_here",
+      "root_cause_hypothesis": "PR #136 is the owner of native process proof; CI/Linux cannot prove Windows process semantics.",
+      "fixability": "NOT FIXED BY DESIGN \u2014 EXTERNAL_EVIDENCE.",
+      "owner": "PR #136 / issue #134",
+      "status": "NOT_EXERCISED",
+      "overlap_check": "explicit non-overlap rule for this task."
+    },
+    {
+      "id": "ADV-GAP-04",
+      "severity": "NONE",
+      "invariant": "no-Wind window must be explicit",
+      "title": "Wind / iFinD / Tushare / CN proprietary identity lanes not exercised",
+      "exact_reproduction": [
+        "python -m pytest tests/adversarial/test_b1_identity_source.py -k b1_12",
+        "config/sources.yml keeps wind/ifind/tushare disabled"
+      ],
+      "affected_path": "config/sources.yml, config/wind_canonical_mapping.yml",
+      "current_evidence": "tests/adversarial/test_b1_identity_source.py::test_adv_b1_12_wind_only_identity_is_not_exercisable_in_this_window; tests/adversarial/test_b3_freshness_calendar.py honours the same limit",
+      "root_cause_hypothesis": "Hard environment assumption of this dispatch window.",
+      "fixability": "NOT APPLICABLE \u2014 must remain NOT_EXERCISED/BLOCKED.",
+      "owner": "LOCAL-DEV-A / issue #93 (only when real files exist)",
+      "status": "NOT_EXERCISED / NO-WIND",
+      "overlap_check": "no code or config was changed to manufacture Wind-equivalent data."
+    }
+  ]
+}

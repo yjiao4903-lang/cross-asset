@@ -1,0 +1,185 @@
+{
+  "schema": "cross_asset.adversarial_e2e.dependency_map.v1",
+  "task": "ADVERSARIAL-E2E-VALIDATION-V1",
+  "owner_lane": "WEEKEND-REDTEAM",
+  "baseline_main": "5cac5c44b08e43760888362636cadbf3ffb40f1e",
+  "no_wind_window": true,
+  "target_chain": [
+    "monitoring provider/input",
+    "canonical identity / source mapping",
+    "monitoring ingestion / DB",
+    "catalog / freshness / data-health",
+    "WorkbenchRun lineage",
+    "governed factor binding / causal transforms",
+    "climate / regime / asset rules",
+    "DashboardSnapshotV0",
+    "SnapshotStore / history",
+    "read-only API",
+    "frontend/runtime consumption"
+  ],
+  "components": [
+    {
+      "authority": "providers/monitoring.py",
+      "role": "provider adapter (FRED public CSV / Yahoo) writing MONITORING-only rows",
+      "inputs": "DataRequest(series_ids, start, end)",
+      "outputs": "list[Observation] with origin=MONITORING, available_at=capture time",
+      "persisted_identity": "series_id + source + source_series_id",
+      "time_semantics": "available_at = monitoring capture time (explicitly non-PIT)",
+      "failure_semantics": "ProviderError -> _failure(...); no fallback, no formal admission",
+      "formal_monitoring_boundary": "MONITORING only; never writes acceptance registry",
+      "existing_coverage": "tests/unit/providers, tests/integration/test_fred_monitoring_source_expansion.py"
+    },
+    {
+      "authority": "ingestion/monitoring.py",
+      "role": "MonitoringRunner: validate + persist monitoring observations",
+      "inputs": "provider rows, request, run_id",
+      "outputs": "observations rows, provider_attempts, data_quality_events",
+      "persisted_identity": "run provider 'MONITORING:<name>' + row identity",
+      "time_semantics": "available_at required; ingested_at = now",
+      "failure_semantics": "fail the whole run on identity/origin/available_at violations",
+      "formal_monitoring_boundary": "formal_admission_attempted=False always",
+      "existing_coverage": "tests/unit/ingestion, tests/integration/test_monitoring_provider_calendar.py"
+    },
+    {
+      "authority": "storage/catalog.py + storage/duckdb.py",
+      "role": "series catalog, source mappings, observation persistence",
+      "inputs": "config/series.yml, config/sources.yml, observation dicts",
+      "outputs": "series_catalog, source_mapping, observations",
+      "persisted_identity": "series_id, provider, source_series_id",
+      "time_semantics": "available_at / vintage_date / ingested_at",
+      "failure_semantics": "idempotent insert; no identity validation at the storage boundary",
+      "formal_monitoring_boundary": "sync_series_catalog never writes the acceptance registry",
+      "existing_coverage": "tests/unit/storage"
+    },
+    {
+      "authority": "engines/freshness.py + reports/monitoring_health.py",
+      "role": "calendar freshness and monitoring read-model health",
+      "inputs": "series_calendars.yml, calendars.yml, observations, quality events",
+      "outputs": "FreshnessResult(OK/STALE/BLOCKED) and monitoring_data_health rows",
+      "persisted_identity": "series_id",
+      "time_semantics": "session-lag against market_data_cutoff; no weekday/hour heuristic",
+      "failure_semantics": "fail closed to BLOCKED for any missing mapping/coverage",
+      "formal_monitoring_boundary": "formal_readiness reported separately; monitoring never implies formal",
+      "existing_coverage": "tests/unit/test_calendar_coverage.py, tests/integration/test_monitoring_provider_calendar.py"
+    },
+    {
+      "authority": "operations/workbench_run.py",
+      "role": "canonical WorkbenchRun lineage and formal previous-valid selection",
+      "inputs": "pipeline payload / explicit run object",
+      "outputs": "persisted run JSON under artifacts/workbench/runs",
+      "persisted_identity": "run_id + decision_time + source_mode + provenance",
+      "time_semantics": "economic decision_time ordering; created_at only breaks ties",
+      "failure_semantics": "FIXTURE/SIMULATED can never be formal previous-valid",
+      "formal_monitoring_boundary": "formal eligibility requires LIVE + formal_gate provenance",
+      "existing_coverage": "tests/unit/operations, tests/unit/test_workbench_cli.py"
+    },
+    {
+      "authority": "decision_support/binding.py + config/decision_support_v2_bindings.yml",
+      "role": "lane-aware factor binding governance",
+      "inputs": "bindings yml, series.yml, sources.yml, taxonomy",
+      "outputs": "FactorBindingRegistry",
+      "persisted_identity": "factor_id -> canonical_series_ids",
+      "time_semantics": "n/a (config authority)",
+      "failure_semantics": "import-time rejection of ungoverned / non-equivalent / wrong-transform bindings",
+      "formal_monitoring_boundary": "monitoring BOUND requires exact governed identity; formal independently BLOCKED",
+      "existing_coverage": "tests/unit/decision_support/test_binding_governance.py"
+    },
+    {
+      "authority": "decision_support/monitoring_adapter.py",
+      "role": "MONITORING DB read-model -> canonical observation pack",
+      "inputs": "store, WorkbenchRun, binding registry, calendar configs",
+      "outputs": "MonitoringObservationPack",
+      "persisted_identity": "series_id + source + source_series_id (re-validated since this task)",
+      "time_semantics": "available_at <= decision_time; observation_date <= data_cutoff; one vintage per date",
+      "failure_semantics": "identity violation -> series BLOCKED with explicit blockers; never silently consumed",
+      "formal_monitoring_boundary": "validate() requires lane=MONITORING, origin=CANONICAL_MONITORING, source_mode=LIVE",
+      "existing_coverage": "tests/integration/test_real_snapshot_monitoring_adapter.py, tests/adversarial/test_b1_identity_source.py"
+    },
+    {
+      "authority": "decision_support/producer.py",
+      "role": "canonical observations -> DashboardSnapshotV0",
+      "inputs": "MonitoringObservationPack + optional previous snapshot",
+      "outputs": "DashboardSnapshotV0 (MONITORING lane)",
+      "persisted_identity": "snapshot_id = sha256(pack + registry version + taxonomy version + model version)",
+      "time_semantics": "economic week id = Monday of data_cutoff; previous must precede by decision_time",
+      "failure_semantics": "MonitoringSnapshotBlocked for missing regime axes; SyntheticMovementError for uncaused movement",
+      "formal_monitoring_boundary": "lane is MONITORING only; formal_admission_granted always False",
+      "existing_coverage": "tests/unit/decision_support/test_real_snapshot.py, tests/adversarial/*"
+    },
+    {
+      "authority": "decision_support/{taxonomy,horizon,climate,regime,asset_rules,weekly}.py",
+      "role": "horizon separation, climate, interpretable regime, asset gates, weekly-change surfaces",
+      "inputs": "bound subfactor scores, release events, market moves",
+      "outputs": "clusters, regime state, asset views, four weekly-change surfaces",
+      "persisted_identity": "factor_id / family / horizon",
+      "time_semantics": "deadband + dwell hysteresis; de-duplicated economic weeks",
+      "failure_semantics": "missing never becomes zero; horizon mixing raises; structural context excluded",
+      "formal_monitoring_boundary": "no formal OOS path; no fitted weights",
+      "existing_coverage": "tests/unit/decision_support/*"
+    },
+    {
+      "authority": "decision_support/serving.py",
+      "role": "SnapshotStore + read-only HTTP API",
+      "inputs": "root directory of snapshot JSON files",
+      "outputs": "latest/by-id/factors/asset/data-health/health payloads",
+      "persisted_identity": "snapshot_id filename + latest.json pointer",
+      "time_semantics": "no monotonicity guard on latest.json (recorded blocker)",
+      "failure_semantics": "FileNotFoundError/ValueError -> 404; corrupt payload surfaces as 404 with internal text",
+      "formal_monitoring_boundary": "read-only; no write routes; loopback default",
+      "existing_coverage": "tests/unit/decision_support/test_real_snapshot.py, tests/adversarial/test_b6_snapshot_api.py",
+      "adjacent_wip_owner": "PR #135 (DECISION-HISTORY-V1)"
+    },
+    {
+      "authority": "frontend/src/snapshot/loader.js + App.jsx",
+      "role": "API-first consumption with explicit demo/test mode",
+      "inputs": "/api/snapshot/latest",
+      "outputs": "adapted view model",
+      "persisted_identity": "metadata.snapshot_id",
+      "time_semantics": "as_of/decision_time displayed, never recomputed",
+      "failure_semantics": "fail visibly; never substitute a golden/demo fixture for a failed API",
+      "formal_monitoring_boundary": "lane badge from producer; no client-side economics",
+      "existing_coverage": "frontend/tests",
+      "adjacent_wip_owner": "PR #136 (Windows runtime), #134"
+    }
+  ],
+  "adjacent_wip_boundaries": [
+    {
+      "pr": 135,
+      "issue": 133,
+      "title": "DECISION-HISTORY-V1",
+      "files": [
+        "src/cross_asset/decision_support/decision_history.py",
+        "src/cross_asset/decision_support/serving.py",
+        "src/cross_asset/decision_support/snapshot_cli.py"
+      ],
+      "rule": "do not edit; serving.py blockers are owned here"
+    },
+    {
+      "pr": 132,
+      "issue": 131,
+      "title": "weekly semantic comparability hardening",
+      "files": [
+        "src/cross_asset/research/weekly_core.py",
+        "tests/unit/test_weekly_*.py"
+      ],
+      "rule": "do not edit; record gap only"
+    },
+    {
+      "pr": 136,
+      "issue": 134,
+      "title": "Windows REAL-runtime launcher",
+      "files": [
+        "launcher/**",
+        "START_MACRO_WORKBENCH.cmd",
+        "STOP_MACRO_WORKBENCH.cmd"
+      ],
+      "rule": "native process semantics are EXTERNAL_EVIDENCE; not exercised here"
+    }
+  ],
+  "hard_environment_assumption": {
+    "wind_available": false,
+    "windpy_available": false,
+    "proprietary_local_files": false,
+    "consequence": "Wind/manual-only cells are NOT_EXERCISED or BLOCKED; never waited for or bypassed"
+  }
+}
