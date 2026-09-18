@@ -1,4 +1,5 @@
 import csv
+import json
 import zipfile
 
 import pytest
@@ -45,6 +46,35 @@ def test_wind_semantic_candidates_do_not_silently_change_units(tmp_path):
     assert pmi == ("CN_PMI", "SEMANTIC_UNIT_REVIEW_REQUIRED")
 
 
+def test_wind_csv_accepts_update_metadata_and_marks_comex_close_for_review(tmp_path):
+    path = tmp_path / "wind.csv"
+    metadata = [
+        ["国家", "美国", "美国"],
+        ["指标名称", "期货收盘价(连续):COMEX黄金", "期货收盘价(连续):COMEX铜"],
+        ["频率", "日", "日"],
+        ["单位", "美元/盎司", "美元/磅"],
+        ["指标ID", "S0069669", "S0069672"],
+        ["时间区间", "1975-01-02:2026-09-03", "1988-12-06:2026-09-03"],
+        ["来源", "纽约金属交易所", "纽约金属交易所"],
+        ["更新时间", "2026-09-04", "2026-09-04"],
+    ]
+    with path.open("w", newline="", encoding="gb18030") as stream:
+        writer = csv.writer(stream)
+        writer.writerows(metadata + [["2026-08-31", "4432.8", "6.596"]])
+
+    store = init_db(":memory:")
+    result = stage_wind_csv(store, path)
+
+    assert result["candidate_rows"] == 2
+    rows = store.conn.execute(
+        "select source_series_id,canonical_candidate,quality_status from wind_evidence_staging order by source_series_id"
+    ).fetchall()
+    assert rows == [
+        ("S0069669", "GOLD", "SEMANTIC_FIELD_REVIEW_REQUIRED"),
+        ("S0069672", "COPPER", "SEMANTIC_FIELD_REVIEW_REQUIRED"),
+    ]
+
+
 def test_china_ten_year_bond_mapping_uses_export_metadata_id():
     assert WIND_CANONICAL["M1001654"] == "CN_BOND_10Y"
     assert "M1001646" not in WIND_CANONICAL
@@ -64,6 +94,11 @@ def test_wind_xlsx_stages_comparable_series_separately(tmp_path):
     assert result["candidate_rows"] == 2
     rows = store.conn.execute("select source_series_id,canonical_candidate from wind_evidence_staging order by source_series_id").fetchall()
     assert rows == [("H00300", "CN_EQ_LARGE"), ("H00852__COMPARABLE", None)]
+    return_types = dict(
+        store.conn.execute("select source_series_id,metadata_json from wind_evidence_staging").fetchall()
+    )
+    assert json.loads(return_types["H00300"])["return_type"] == "total_return"
+    assert json.loads(return_types["H00852__COMPARABLE"]).get("return_type") is None
     assert store.conn.execute("select count(*) from observations").fetchone()[0] == 0
 
 
