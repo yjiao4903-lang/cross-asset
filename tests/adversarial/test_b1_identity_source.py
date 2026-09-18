@@ -2,31 +2,26 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 import pytest
 import yaml
 
+from adversarial._helpers import (
+    AS_OF,
+    month_rows,
+    workbench_run,
+)
 from cross_asset.decision_support.binding import (
-    FactorBinding,
     FactorBindingRegistry,
-    FactorTransform,
-    LaneBinding,
     load_factor_bindings,
 )
 from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
 from cross_asset.decision_support.producer import (
-    build_monitoring_snapshot,
     score_monitoring_factors,
 )
 from cross_asset.reports.monitoring_health import monitoring_data_health
-
-from _helpers import (
-    AS_OF,
-    governed_store,
-    month_rows,
-    workbench_run,
-)
+from cross_asset.storage._time import utc_naive
 
 
 def _registry(bindings):
@@ -58,7 +53,7 @@ def _sources_file(entries):
 
 
 def test_adv_b1_01_governed_identity_is_accepted_without_formal_authority(
-    monitoring_store
+    governed_store
 ):
     store = governed_store()
     try:
@@ -313,7 +308,7 @@ def test_adv_b1_07_ungoverned_canonical_series_is_rejected(tmp_path):
         )
 
 
-def test_adv_b1_08_bound_binding_requires_transform(tmp_path):
+def test_adv_b1_08_bound_binding_requires_transform(governed_store, tmp_path):
     series_path = _write(tmp_path, "series.yml", _series_file("US_EQ"))
     sources_path = _write(
         tmp_path,
@@ -357,7 +352,7 @@ def test_adv_b1_08_bound_binding_requires_transform(tmp_path):
 
 
 def test_adv_b1_09_formal_acceptance_does_not_leak_into_monitoring_pack(
-    governed_store,
+    governed_store
 ):
     from cross_asset.storage import latest_formal_observations_asof
 
@@ -369,7 +364,8 @@ def test_adv_b1_09_formal_acceptance_does_not_leak_into_monitoring_pack(
         store.insert_observations(rows, run_id=run_id)
         store.finish_run(run_id, "success", success_series=1, failed_series=0)
 
-        captured = datetime(2026, 9, 12, 0)
+        # The read model compares naive UTC timestamps, so normalise explicitly.
+        captured = utc_naive(datetime(2026, 9, 12, 0, tzinfo=UTC))
         store.conn.execute(
             """INSERT INTO data_acceptance_registry
                (series_id,provider,source_series_id,status,tech_gate,legal_gate,
@@ -411,7 +407,7 @@ def test_adv_b1_09_formal_acceptance_does_not_leak_into_monitoring_pack(
 
 
 def test_adv_b1_10_provider_error_never_triggers_silent_source_fallback(
-    governed_store,
+    governed_store
 ):
     from cross_asset.domain.models import DataRequest
     from cross_asset.ingestion.monitoring import MonitoringRunner
@@ -420,7 +416,6 @@ def test_adv_b1_10_provider_error_never_triggers_silent_source_fallback(
 
     class FailingProvider:
         name = "fred"
-        last_error = {"code": "monitoring_fetch_failed", "safe_error": "synthetic"}
 
         def fetch(self, request):
             raise RuntimeError("synthetic provider failure")
@@ -478,9 +473,8 @@ def test_adv_b1_12_wind_only_identity_is_not_exercisable_in_this_window():
     repository keeps Wind disabled and that no Wind evidence is present here.
     """
 
-    sources = yaml.safe_load(
-        open("config/sources.yml", encoding="utf-8")
-    )
+    with open("config/sources.yml", encoding="utf-8") as handle:
+        sources = yaml.safe_load(handle)
     providers = sources["providers"]
     assert providers["wind"]["enabled"] is False
     assert providers["ifind"]["enabled"] is False

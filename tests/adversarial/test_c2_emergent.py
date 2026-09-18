@@ -14,6 +14,16 @@ from http.client import HTTPConnection
 
 import pytest
 
+from adversarial._helpers import (
+    AS_OF,
+    CAPTURE,
+    DECISION,
+    mechanics_registry,
+    month_rows,
+    pack,
+    workbench_run,
+    write_monitoring_run,
+)
 from cross_asset.decision_support.enums import DataHealthStatus
 from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
 from cross_asset.decision_support.producer import (
@@ -24,23 +34,11 @@ from cross_asset.decision_support.producer import (
 from cross_asset.decision_support.serving import SnapshotReadService, SnapshotStore, make_server
 from cross_asset.decision_support.weekly import SyntheticMovementError
 
-from _helpers import (
-    AS_OF,
-    CAPTURE,
-    DECISION,
-    governed_store,
-    mechanics_registry,
-    month_rows,
-    pack,
-    workbench_run,
-    write_monitoring_run,
-)
-
 
 def _real_pack(store, *, end_month: date, capture: datetime, decision: datetime, cutoff: date, run_id):
     """Insert a monitoring capture and build the pack exactly as production does."""
 
-    from _helpers import month_rows as rows_for
+    from adversarial._helpers import month_rows as rows_for
 
     months = 49 if end_month.month == 9 else 48
     payroll = [
@@ -66,7 +64,7 @@ def _real_pack(store, *, end_month: date, capture: datetime, decision: datetime,
 
 
 def test_adv_e2_01_real_second_week_with_new_data_raises_synthetic_movement(
-    governed_store,
+    governed_store
 ):
     """LEDGER ADV-P1-01: cross-layer break in the normal monitoring loop.
 
@@ -106,7 +104,7 @@ def test_adv_e2_01_real_second_week_with_new_data_raises_synthetic_movement(
 
 
 def test_adv_e2_02_real_second_week_without_new_data_is_still_producible(
-    governed_store,
+    governed_store
 ):
     """The same week-2 call succeeds when no cyclical observation changes, which
     confirms the failure above is data-driven and not a lineage/argument error."""
@@ -151,7 +149,7 @@ def test_adv_e2_03_same_week_retry_can_desynchronise_delta_and_views():
     def _equity_trend(direction_up: bool, *, decision: datetime):
         import pandas as pd
 
-        from _helpers import series as build_series
+        from adversarial._helpers import series as build_series
 
         bundle = pack(decision=decision)
         daily = pd.bdate_range(end=AS_OF, periods=90)
@@ -236,7 +234,7 @@ def test_adv_e2_04_legacy_unkeyed_regime_rows_are_not_replayed_as_many_weeks():
 def test_adv_e2_05_degenerate_flat_input_blocks_instead_of_reading_neutral():
     import pandas as pd
 
-    from _helpers import series as build_series
+    from adversarial._helpers import series as build_series
 
     monthly = pd.date_range(end=date(2026, 9, 1), periods=40, freq="MS")
     flat = pack().model_copy(
@@ -261,7 +259,7 @@ def test_adv_e2_05_degenerate_flat_input_blocks_instead_of_reading_neutral():
 
 
 def test_adv_e2_06_missing_calendar_downgrade_does_not_fabricate_coverage(
-    governed_store,
+    governed_store
 ):
     store = governed_store(("US_CORE_CPI",))
     try:
@@ -286,7 +284,7 @@ def test_adv_e2_06_missing_calendar_downgrade_does_not_fabricate_coverage(
 
 
 def test_adv_e2_07_identity_blocked_series_remains_visible_as_blocked(
-    governed_store,
+    governed_store
 ):
     store = governed_store()
     try:
@@ -304,7 +302,7 @@ def test_adv_e2_07_identity_blocked_series_remains_visible_as_blocked(
         assert "US_CORE_CPI" in {
             item.series_id for item in bundle.series
         }
-        scores, statuses = score_monitoring_factors(bundle)
+        _scores, statuses = score_monitoring_factors(bundle)
         assert statuses["US_CORE_CPI_TREND"]["missing"] is True
     finally:
         store.close()
@@ -375,9 +373,7 @@ def test_adv_e2_09_cli_previous_selection_rejects_a_look_ahead_latest_pointer(
 # --- E2-10: end-to-end read chain after the identity fix ------------------------
 
 
-def test_adv_e2_10_full_chain_from_governed_db_to_http_after_identity_fix(
-    governed_store, tmp_path
-):
+def test_adv_e2_10_full_chain_from_governed_db_to_http_after_identity_fix(governed_store, tmp_path):
     store = governed_store()
     try:
         payroll = [

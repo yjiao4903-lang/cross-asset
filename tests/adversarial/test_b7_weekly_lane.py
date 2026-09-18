@@ -7,14 +7,27 @@ their implementation.
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import timedelta
 
 import pytest
 
-from cross_asset.decision_support.enums import InformationSetStatus, ReleaseEventType
+from adversarial._helpers import (
+    AS_OF,
+    DECISION,
+    mechanics_registry,
+    month_rows,
+    pack,
+    workbench_run,
+    write_monitoring_run,
+)
+from cross_asset.decision_support.enums import (
+    InformationSetStatus,
+    MarketMetricClass,
+    ReleaseEventType,
+)
+from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
 from cross_asset.decision_support.producer import (
     build_monitoring_snapshot,
-    score_monitoring_factors,
 )
 from cross_asset.decision_support.weekly import (
     ReleaseEvent,
@@ -23,18 +36,12 @@ from cross_asset.decision_support.weekly import (
     build_macro_state_delta,
     build_market_move,
 )
-from cross_asset.decision_support.enums import MarketMetricClass
 from cross_asset.operations.workbench_run import (
     WorkbenchRun,
     is_formal_previous_valid_eligible,
     load_formal_previous_valid,
     persist_run,
 )
-
-from _helpers import AS_OF, CAPTURE, DECISION, governed_store, mechanics_registry, month_rows, pack, workbench_run, write_monitoring_run
-
-from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
-
 
 # --- B7-01: information-set status classification -------------------------------
 
@@ -109,7 +116,7 @@ def test_adv_b7_03_same_week_retry_preserves_weekly_change_surfaces():
 
 
 def test_adv_b7_04_real_db_adapter_supplies_no_release_or_market_evidence(
-    governed_store,
+    governed_store
 ):
     """LEDGER ADV-P1-01: build_monitoring_pack_from_db never populates
     release_events / expected_releases / market_moves / pulse, so every real
@@ -287,8 +294,10 @@ def test_adv_b7_10_product_monitoring_bindings_are_exactly_the_accepted_seven():
 
 
 def test_adv_b7_11_frontend_normal_path_cannot_fall_back_to_demo_fixtures():
-    loader = open("frontend/src/snapshot/loader.js", encoding="utf-8").read()
-    app = open("frontend/src/App.jsx", encoding="utf-8").read()
+    with open("frontend/src/snapshot/loader.js", encoding="utf-8") as handle:
+        loader = handle.read()
+    with open("frontend/src/App.jsx", encoding="utf-8") as handle:
+        app = handle.read()
     assert "MODE === 'test' ? 'demo' : 'api'" in loader
     assert "Never substitute a golden/demo fixture for a failed API" in app
     assert "setBundle(null)" in app

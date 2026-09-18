@@ -7,22 +7,18 @@ from datetime import date
 import pytest
 import yaml
 
+from adversarial._helpers import (
+    CAPTURE,
+    month_rows,
+    workbench_run,
+    write_monitoring_run,
+)
+from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
 from cross_asset.engines.freshness import (
     evaluate_freshness,
     evaluate_series_freshness,
     load_series_calendar_mapping,
 )
-
-from _helpers import (
-    CAPTURE,
-    governed_store,
-    month_rows,
-    workbench_run,
-    write_monitoring_run,
-)
-
-from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
-
 
 # --- B3-01: valid exchange calendar -------------------------------------------
 
@@ -134,7 +130,8 @@ def test_adv_b3_06_health_states_are_not_collapsed():
 
 
 def test_adv_b3_07_no_weekday_heuristic_in_the_freshness_path():
-    source = open("src/cross_asset/engines/freshness.py", encoding="utf-8").read()
+    with open("src/cross_asset/engines/freshness.py", encoding="utf-8") as handle:
+        source = handle.read()
     assert "weekday" not in source
     assert "isoweekday" not in source
     # An unmapped series is BLOCKED even when the observation equals the cutoff.
@@ -176,7 +173,7 @@ def test_adv_b3_08_invalid_calendar_entries_fail_closed(entry, tmp_path):
 # --- B3-09: publication series without a governed publication calendar ---------
 
 
-def test_adv_b3_09_unverified_project_calendar_is_blocked(tmp_path):
+def test_adv_b3_09_unverified_project_calendar_is_blocked(governed_store, tmp_path):
     """A configured but unverified project calendar must never report fresh."""
 
     entry = {
@@ -203,7 +200,7 @@ def test_adv_b3_09_unverified_project_calendar_is_blocked(tmp_path):
 
 
 def test_adv_b3_10_adapter_only_downgrades_the_governed_missing_calendar_reason(
-    governed_store,
+    governed_store
 ):
     store = governed_store(("US_CORE_CPI", "US_EQ"))
     try:
@@ -242,7 +239,7 @@ def test_adv_b3_10_adapter_only_downgrades_the_governed_missing_calendar_reason(
 # --- B3-11: calendar mapping file is the only freshness authority --------------
 
 
-def test_adv_b3_11_mapping_loader_is_explicit_and_fail_closed(tmp_path):
+def test_adv_b3_11_mapping_loader_is_explicit_and_fail_closed():
     assert load_series_calendar_mapping("does/not/exist.yml") == {}
     mapping = load_series_calendar_mapping("config/series_calendars.yml")
     assert set(mapping) == {"US_EQ", "HK_EQ"}

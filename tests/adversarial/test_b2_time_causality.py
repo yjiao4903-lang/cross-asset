@@ -2,27 +2,24 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import timedelta
 
 import pytest
 
-from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
-from cross_asset.decision_support.producer import (
-    MonitoringSnapshotBlocked,
-    build_monitoring_snapshot,
-    score_monitoring_factors,
-)
-
-from _helpers import (
+from adversarial._helpers import (
     AS_OF,
     CAPTURE,
     DECISION,
-    governed_store,
     mechanics_registry,
     month_rows,
     pack,
-    write_monitoring_run,
     workbench_run,
+    write_monitoring_run,
+)
+from cross_asset.decision_support.monitoring_adapter import build_monitoring_pack_from_db
+from cross_asset.decision_support.producer import (
+    build_monitoring_snapshot,
+    score_monitoring_factors,
 )
 
 
@@ -171,7 +168,7 @@ def test_adv_b2_06_stale_series_reduces_confidence_without_dropping_evidence():
 def test_adv_b2_07_missing_available_at_is_rejected():
     bundle = pack()
     payroll = next(item for item in bundle.series if item.series_id == "T_PAYROLL")
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         # The canonical observation contract has no disclosure-only mode: a row
         # without available_at cannot be constructed at all.
         MonitoringObservationFactory.drop_available_at(payroll)
@@ -217,7 +214,6 @@ def test_adv_b2_08_capture_time_history_never_grants_formal_or_pit_status(govern
 
 def test_adv_b2_09_out_of_order_observations_are_rejected():
     bundle = pack()
-    payroll = next(item for item in bundle.series if item.series_id == "T_PAYROLL")
     mutated = bundle.model_copy(
         update={
             "series": [

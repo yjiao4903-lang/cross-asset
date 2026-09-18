@@ -8,17 +8,16 @@ NOT_EXERCISED rather than asserted.
 from __future__ import annotations
 
 import json
-import re
 import threading
 from http.client import HTTPConnection
 from pathlib import Path
 
-import pytest
-
+from adversarial._helpers import (
+    mechanics_registry,
+    pack,
+)
 from cross_asset.decision_support.producer import build_monitoring_snapshot
 from cross_asset.decision_support.serving import SnapshotStore, make_server
-
-from _helpers import mechanics_registry, pack
 
 
 def _snapshot():
@@ -29,7 +28,6 @@ def _snapshot():
 
 
 def test_adv_b8_01_api_defaults_to_loopback_and_is_not_publicly_exposed():
-    import argparse
     import inspect
 
     from cross_asset.decision_support import serving

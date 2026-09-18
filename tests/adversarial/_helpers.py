@@ -7,6 +7,8 @@ as real market evidence.
 
 from __future__ import annotations
 
+import pathlib
+import shutil
 from datetime import UTC, date, datetime, timedelta
 
 import pandas as pd
@@ -138,7 +140,7 @@ def pack(
     )
 
 
-def governed_store(series_ids=("US_NONFARM_PAYROLLS", "US_CORE_CPI"), provider="fred"):
+def make_governed_store(series_ids=("US_NONFARM_PAYROLLS", "US_CORE_CPI"), provider="fred"):
     """Monitoring store seeded with the accepted canonical series mappings."""
 
     store = DuckDBStore(":memory:")
@@ -197,3 +199,11 @@ def write_monitoring_run(store, rows, *, run_id="monitoring-fred-adv", requested
     store.insert_observations(rows, run_id=run_id)
     store.finish_run(run_id, "success", success_series=requested or 1, failed_series=0)
     return run_id
+
+
+def make_snapshot_root(tmp_path):
+    """Return a clean snapshot-store directory under a pytest tmp_path."""
+
+    root = pathlib.Path(tmp_path) / "snapshots"
+    shutil.rmtree(root, ignore_errors=True)
+    return root

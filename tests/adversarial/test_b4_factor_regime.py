@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 
-import pandas as pd
 import pytest
 
+from adversarial._helpers import (
+    AS_OF,
+    BLOCKED_LANE,
+    DECISION,
+    MONITORING_LANE,
+    mechanics_registry,
+    pack,
+)
 from cross_asset.decision_support.binding import (
     FactorBinding,
     FactorBindingRegistry,
@@ -31,16 +38,6 @@ from cross_asset.decision_support.regime import (
     evaluate_lens_disagreement,
 )
 from cross_asset.decision_support.taxonomy import load_taxonomy, signed_score
-
-from _helpers import (
-    AS_OF,
-    BLOCKED_LANE,
-    DECISION,
-    MONITORING_LANE,
-    mechanics_registry,
-    pack,
-)
-
 
 # --- B4-01/02: missing regime axes ---------------------------------------------
 
@@ -68,7 +65,7 @@ def test_adv_b4_02_missing_inflation_axis_blocks_the_snapshot_instead_of_default
 
 def test_adv_b4_03_one_bound_factor_stale_keeps_reduced_confidence_only():
     bundle = pack(statuses={"T_PAYROLL": "STALE"})
-    scores, statuses = score_monitoring_factors(bundle, registry=mechanics_registry())
+    scores, _statuses = score_monitoring_factors(bundle, registry=mechanics_registry())
     assert scores["US_PAYROLLS_TREND"].stale is True
     assert scores["US_PAYROLLS_TREND"].confidence == 0.5
     assert scores["US_CORE_CPI_TREND"].confidence == 1.0
@@ -352,7 +349,7 @@ def test_adv_b4_18_structural_context_never_enters_a_macro_aggregate():
 # --- B4-19: wrong arity for a spread transform ---------------------------------
 
 
-def test_adv_b4_19_spread_transform_requires_exactly_two_series(tmp_path):
+def test_adv_b4_19_spread_transform_requires_exactly_two_series():
     registry = FactorBindingRegistry(
         version=1,
         contract="ADVERSARIAL",
