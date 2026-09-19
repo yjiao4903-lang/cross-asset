@@ -639,6 +639,111 @@ def _snapshot_id(pack: MonitoringObservationPack, registry_version: int, taxonom
     return f"dsv0-monitoring-{pack.as_of.isoformat().replace('-', '')}-{digest}"
 
 
+def _series_observation_identities(series: MonitoringSeries) -> list[dict[str, Any]]:
+    """Capture-time observation identities for one canonical series.
+
+    DB-built packs record the authoritative identity (source, source_series_id)
+    in provenance; hand-built diagnostic packs fall back to their observations.
+    """
+    recorded = series.provenance.get("observations")
+    if isinstance(recorded, list) and recorded:
+        return [item for item in recorded if isinstance(item, dict)]
+    return [
+        {
+            "observation_date": observation.observation_date.isoformat(),
+            "available_at": observation.available_at.isoformat(),
+            "value": observation.value,
+            "source_ref": observation.source_ref,
+        }
+        for observation in series.observations
+    ]
+
+
+def _observation_key(identity: dict[str, Any]) -> tuple[date, float]:
+    """Information identity of one observation (#139 Phase 4).
+
+    Only (observation_date, value) is information-bearing for the capture-time
+    decision set: re-capturing the same value with a later available_at is not
+    a new information event, while any newly visible value for a real
+    observation_date is. available_at stays recorded as capture provenance.
+    """
+    return (
+        date.fromisoformat(str(identity["observation_date"])),
+        round(float(identity["value"]), 6),
+    )
+
+
+def _observed_update_events(
+    pack: MonitoringObservationPack,
+    previous_snapshot: DashboardSnapshotV0 | None,
+    registry: FactorBindingRegistry,
+) -> tuple[list[ReleaseEvent], set[str]]:
+    """Derive monitoring-only OBSERVED_UPDATE events (#139 Phase 4).
+
+    The only event capture-time monitoring may truthfully assert is that a new
+    observation/value became visible to this monitoring decision set, derived
+    from canonical observation-identity differences between the current pack
+    and the causal prior snapshot. No publication/first-release timestamp is
+    invented; observation_date and available_at stay real capture-time fields.
+
+    Fail-closed: if the causal prior snapshot does not record what was visible
+    to it (e.g. a snapshot produced before this contract existed), no update is
+    claimed for that series and genuine factor movement keeps raising
+    SyntheticMovementError instead of being silently excused.
+    """
+    if previous_snapshot is None:
+        return [], set()
+    prior_provenance = previous_snapshot.details.get("series_provenance")
+    if not isinstance(prior_provenance, dict):
+        return [], set()
+    series_factors: dict[str, list[str]] = {}
+    for binding in registry.bindings:
+        if binding.monitoring.status != "BOUND":
+            continue
+        for series_id in binding.canonical_series_ids:
+            series_factors.setdefault(series_id, []).append(binding.factor_id)
+    events: list[ReleaseEvent] = []
+    for series in pack.series:
+        prior_recorded = prior_provenance.get(series.series_id)
+        if not isinstance(prior_recorded, dict) or not isinstance(
+            prior_recorded.get("observations"), list
+        ):
+            continue
+        prior_keys = {
+            _observation_key(item)
+            for item in prior_recorded["observations"]
+            if isinstance(item, dict)
+        }
+        factors = sorted(set(series_factors.get(series.series_id, [])))
+        if not factors:
+            continue
+        for identity in _series_observation_identities(series):
+            try:
+                key = _observation_key(identity)
+            except (KeyError, TypeError, ValueError):
+                continue
+            if key in prior_keys:
+                continue
+            observation_date, _ = key
+            captured_at = str(identity.get("available_at") or "unknown")
+            for factor_id in factors:
+                events.append(
+                    ReleaseEvent(
+                        factor_id=factor_id,
+                        series_id=series.series_id,
+                        event_type=ReleaseEventType.OBSERVED_UPDATE,
+                        observation_date=observation_date,
+                        note=(
+                            "monitoring_observed_update: a new observation/value became "
+                            f"visible to this monitoring decision set at {captured_at}; "
+                            "capture-time semantics, no publication timestamp asserted"
+                        ),
+                    )
+                )
+    events.sort(key=lambda event: (event.series_id, event.factor_id, str(event.observation_date)))
+    return events, {event.factor_id for event in events}
+
+
 def build_monitoring_snapshot(
     pack: MonitoringObservationPack,
     *,
@@ -726,8 +831,11 @@ def build_monitoring_snapshot(
             if event.resolved_event_type() is not ReleaseEventType.OVERDUE
         }
     else:
+        observed_events, observed_factors = _observed_update_events(
+            pack, previous_snapshot, registry
+        )
         info_delta = build_information_set_delta(
-            pack.release_events,
+            [*pack.release_events, *observed_events],
             expected_releases=pack.expected_releases,
             as_of=pack.as_of,
         )
@@ -751,7 +859,7 @@ def build_monitoring_snapshot(
             event.factor_id
             for event in pack.release_events
             if event.resolved_event_type() is not ReleaseEventType.OVERDUE
-        }
+        } | observed_factors
         macro_delta = build_macro_state_delta(
             previous_cyclical,
             current_raw,
@@ -834,7 +942,11 @@ def build_monitoring_snapshot(
         "family_information_status": family_information_status,
         "regime_input_history": regime_history,
         "series_provenance": {
-            series.series_id: series.provenance for series in pack.series
+            series.series_id: {
+                **series.provenance,
+                "observations": _series_observation_identities(series),
+            }
+            for series in pack.series
         },
         "workbench_lineage": {
             "run_id": pack.lineage.run_id,

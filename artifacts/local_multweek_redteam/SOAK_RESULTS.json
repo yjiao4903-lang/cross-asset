@@ -1,0 +1,47 @@
+{
+  "iterations": 10,
+  "weeks": 5,
+  "runs": [
+    {
+      "iteration": 0,
+      "verdict": "DETERMINISTIC"
+    },
+    {
+      "iteration": 1,
+      "verdict": "DETERMINISTIC"
+    },
+    {
+      "iteration": 2,
+      "verdict": "DETERMINISTIC"
+    },
+    {
+      "iteration": 3,
+      "verdict": "DETERMINISTIC"
+    },
+    {
+      "iteration": 4,
+      "verdict": "DETERMINISTIC"
+    },
+    {
+      "iteration": 5,
+      "verdict": "DETERMINISTIC"
+    },
+    {
+      "iteration": 6,
+      "verdict": "DETERMINISTIC"
+    },
+    {
+      "iteration": 7,
+      "verdict": "DETERMINISTIC"
+    },
+    {
+      "iteration": 8,
+      "verdict": "DETERMINISTIC"
+    },
+    {
+      "iteration": 9,
+      "verdict": "DETERMINISTIC"
+    }
+  ],
+  "final_verdict": "SOAK_PASS_DETERMINISTIC"
+}
