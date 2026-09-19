@@ -1,0 +1,194 @@
+{
+  "contract": "WINDOWS-REAL-SNAPSHOT-SOAK-UAT-V2",
+  "generated_at": "2026-09-19T01:28:46.085341+00:00",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "<local-b-worktree>\\.venv\\Scripts\\python.exe",
+  "proxy_environment": {
+    "HTTP_PROXY": null,
+    "HTTPS_PROXY": null,
+    "NO_PROXY": null,
+    "http_proxy": null,
+    "https_proxy": null,
+    "no_proxy": null
+  },
+  "providers": {
+    "fred": {
+      "host": "fred.stlouisfed.org",
+      "dns": {
+        "ok": true,
+        "error": null,
+        "ipv4": [
+          "198.18.0.5"
+        ],
+        "ipv6": []
+      },
+      "tcp_family_diagnostics": {
+        "ipv4": {
+          "attempted": true,
+          "address": "198.18.0.5",
+          "ok": true,
+          "error": null
+        },
+        "ipv6": {
+          "attempted": false,
+          "ok": null,
+          "address": null,
+          "error": null
+        }
+      },
+      "tls": {
+        "ok": true,
+        "version": "TLSv1.3",
+        "subject": [
+          [
+            [
+              "countryName",
+              "US"
+            ]
+          ],
+          [
+            [
+              "stateOrProvinceName",
+              "Missouri"
+            ]
+          ],
+          [
+            [
+              "localityName",
+              "St. Louis"
+            ]
+          ],
+          [
+            [
+              "organizationName",
+              "Federal Reserve Bank of St Louis"
+            ]
+          ],
+          [
+            [
+              "commonName",
+              "research.stlouisfed.org"
+            ]
+          ]
+        ],
+        "not_after": "Jan 21 23:59:59 2027 GMT",
+        "error": null
+      },
+      "https_trust_env": {
+        "ok": false,
+        "status": null,
+        "bytes": 0,
+        "content_type": null,
+        "error": "HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=8.0)"
+      },
+      "https_no_proxy": {
+        "ok": false,
+        "status": null,
+        "bytes": 0,
+        "content_type": null,
+        "error": "HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=8.0)"
+      },
+      "repository_provider_path": {
+        "ok": true,
+        "row_count": 28,
+        "latest_observation_date": "2026-09-17",
+        "source_series_ids": [
+          "DFII10"
+        ],
+        "error_code": null,
+        "error": null
+      },
+      "classification": "LIVE_REACHABLE",
+      "classification_reason": "repository provider path returned real rows"
+    },
+    "yahoo": {
+      "host": "query1.finance.yahoo.com",
+      "dns": {
+        "ok": true,
+        "error": null,
+        "ipv4": [
+          "198.18.0.6"
+        ],
+        "ipv6": []
+      },
+      "tcp_family_diagnostics": {
+        "ipv4": {
+          "attempted": true,
+          "address": "198.18.0.6",
+          "ok": true,
+          "error": null
+        },
+        "ipv6": {
+          "attempted": false,
+          "ok": null,
+          "address": null,
+          "error": null
+        }
+      },
+      "tls": {
+        "ok": true,
+        "version": "TLSv1.3",
+        "subject": [
+          [
+            [
+              "countryName",
+              "US"
+            ]
+          ],
+          [
+            [
+              "stateOrProvinceName",
+              "New York"
+            ]
+          ],
+          [
+            [
+              "localityName",
+              "New York"
+            ]
+          ],
+          [
+            [
+              "organizationName",
+              "Yahoo Holdings Inc."
+            ]
+          ],
+          [
+            [
+              "commonName",
+              "*.www.yahoo.com"
+            ]
+          ]
+        ],
+        "not_after": "Oct  7 23:59:59 2026 GMT",
+        "error": null
+      },
+      "https_trust_env": {
+        "ok": true,
+        "status": 200,
+        "bytes": 1677,
+        "content_type": "application/json;charset=utf-8",
+        "error": null
+      },
+      "https_no_proxy": {
+        "ok": true,
+        "status": 200,
+        "bytes": 1677,
+        "content_type": "application/json;charset=utf-8",
+        "error": null
+      },
+      "repository_provider_path": {
+        "ok": true,
+        "row_count": 2514,
+        "latest_observation_date": "2026-09-18",
+        "source_series_ids": [
+          "^GSPC"
+        ],
+        "error_code": null,
+        "error": null
+      },
+      "classification": "LIVE_REACHABLE",
+      "classification_reason": "repository provider path returned real rows"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "health": {
+    "latest_snapshot_id": "dsv0-monitoring-20260919-8258e11a5b5065b8",
+    "model_version": "decision-support-v2-real-snapshot-v1",
+    "snapshot_version": "DashboardSnapshotV0",
+    "status": "OK"
+  },
+  "latest_snapshot_id": "dsv0-monitoring-20260919-8258e11a5b5065b8",
+  "run_id": "wb-live-windows-uat-v2-20260919T013300Z",
+  "lane": "MONITORING",
+  "canonical_week_count": 1,
+  "technical_snapshot_count": 1
+}

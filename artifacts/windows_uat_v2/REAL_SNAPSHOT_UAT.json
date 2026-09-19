@@ -1,0 +1,796 @@
+{
+  "contract": "WINDOWS-REAL-SNAPSHOT-SOAK-UAT-V2",
+  "generated_at": "2026-09-19T01:33:00.908546+00:00",
+  "status": "REAL_SNAPSHOT_PERSISTED_PARTIAL",
+  "paths": {
+    "db": "runtime-local: monitoring-20260919T013300907545Z.duckdb",
+    "runs_root": "runtime-local: workbench/",
+    "snapshot_root": "runtime-local: dashboard_snapshots/",
+    "note": "runtime DuckDB/snapshot bytes stay local (not committed)"
+  },
+  "providers": {
+    "fred": {
+      "run_id": "monitoring-fred-windows-uat-v2-20260919T013300Z",
+      "lane": "MONITORING",
+      "status": "success",
+      "requested_series_count": 3,
+      "returned_series_count": 3,
+      "rows_written": 1873,
+      "raw_file": null,
+      "formal_admission_attempted": false,
+      "errors": {},
+      "series_catalog_rows": 3,
+      "source_mapping_rows": 3,
+      "acceptance_registry_writes": 0
+    },
+    "yahoo": {
+      "run_id": "monitoring-yahoo-windows-uat-v2-20260919T013300Z",
+      "lane": "MONITORING",
+      "status": "success",
+      "requested_series_count": 1,
+      "returned_series_count": 1,
+      "rows_written": 2514,
+      "raw_file": null,
+      "formal_admission_attempted": false,
+      "errors": {},
+      "series_catalog_rows": 1,
+      "source_mapping_rows": 1,
+      "acceptance_registry_writes": 0
+    }
+  },
+  "blockers": [
+    "bound_series_real_source_unavailable:CN_EQ_LARGE",
+    "bound_series_real_source_unavailable:COPPER",
+    "bound_series_real_source_unavailable:GOLD"
+  ],
+  "observation_identities": [
+    {
+      "series_id": "US_CORE_CPI",
+      "source": "fred",
+      "source_series_id": "CPILFESL",
+      "row_count": 81,
+      "first_observation_date": "2019-11-01",
+      "last_observation_date": "2026-08-01",
+      "first_available_at": "2026-09-19 01:33:02.446827",
+      "last_available_at": "2026-09-19 01:33:02.446827",
+      "run_id": "monitoring-fred-windows-uat-v2-20260919T013300Z"
+    },
+    {
+      "series_id": "US_EQ",
+      "source": "yahoo",
+      "source_series_id": "^GSPC",
+      "row_count": 2514,
+      "first_observation_date": "2016-09-19",
+      "last_observation_date": "2026-09-18",
+      "first_available_at": "2026-09-19 01:33:24.021391",
+      "last_available_at": "2026-09-19 01:33:24.069861",
+      "run_id": "monitoring-yahoo-windows-uat-v2-20260919T013300Z"
+    },
+    {
+      "series_id": "US_NONFARM_PAYROLLS",
+      "source": "fred",
+      "source_series_id": "PAYEMS",
+      "row_count": 82,
+      "first_observation_date": "2019-11-01",
+      "last_observation_date": "2026-08-01",
+      "first_available_at": "2026-09-19 01:33:02.446827",
+      "last_available_at": "2026-09-19 01:33:02.446827",
+      "run_id": "monitoring-fred-windows-uat-v2-20260919T013300Z"
+    },
+    {
+      "series_id": "US_REAL_10Y",
+      "source": "fred",
+      "source_series_id": "DFII10",
+      "row_count": 1710,
+      "first_observation_date": "2019-11-15",
+      "last_observation_date": "2026-09-17",
+      "first_available_at": "2026-09-19 01:33:02.446827",
+      "last_available_at": "2026-09-19 01:33:02.446827",
+      "run_id": "monitoring-fred-windows-uat-v2-20260919T013300Z"
+    }
+  ],
+  "catalog_identities": [
+    {
+      "series_id": "US_CORE_CPI",
+      "frequency": "monthly",
+      "unit": "index_1982_1984_100",
+      "currency": null,
+      "provider": "fred",
+      "source_series_id": "CPILFESL",
+      "enabled": true,
+      "semantic_equivalence": true
+    },
+    {
+      "series_id": "US_EQ",
+      "frequency": "daily",
+      "unit": "index_points",
+      "currency": "USD",
+      "provider": "yahoo",
+      "source_series_id": "^GSPC",
+      "enabled": true,
+      "semantic_equivalence": true
+    },
+    {
+      "series_id": "US_NONFARM_PAYROLLS",
+      "frequency": "monthly",
+      "unit": "thousands_persons",
+      "currency": null,
+      "provider": "fred",
+      "source_series_id": "PAYEMS",
+      "enabled": true,
+      "semantic_equivalence": true
+    },
+    {
+      "series_id": "US_REAL_10Y",
+      "frequency": "daily",
+      "unit": "yield_percent",
+      "currency": "USD",
+      "provider": "fred",
+      "source_series_id": "DFII10",
+      "enabled": true,
+      "semantic_equivalence": true
+    }
+  ],
+  "real_observation_rows": 4387,
+  "acceptance_registry_rows": 0,
+  "ingestion_runs": [
+    {
+      "run_id": "monitoring-fred-windows-uat-v2-20260919T013300Z",
+      "provider": "MONITORING:fred",
+      "status": "success",
+      "rows_written": 1873,
+      "error_summary": null
+    },
+    {
+      "run_id": "monitoring-yahoo-windows-uat-v2-20260919T013300Z",
+      "provider": "MONITORING:yahoo",
+      "status": "success",
+      "rows_written": 2514,
+      "error_summary": null
+    }
+  ],
+  "all_ingestion_lineage_monitoring": true,
+  "identity_checks": [
+    {
+      "series_id": "US_NONFARM_PAYROLLS",
+      "status": "PASS",
+      "expected": {
+        "provider": "fred",
+        "source_series_id": "PAYEMS",
+        "unit": "thousands_persons"
+      },
+      "observation": {
+        "series_id": "US_NONFARM_PAYROLLS",
+        "source": "fred",
+        "source_series_id": "PAYEMS",
+        "row_count": 82,
+        "first_observation_date": "2019-11-01",
+        "last_observation_date": "2026-08-01",
+        "first_available_at": "2026-09-19 01:33:02.446827",
+        "last_available_at": "2026-09-19 01:33:02.446827",
+        "run_id": "monitoring-fred-windows-uat-v2-20260919T013300Z"
+      },
+      "catalog": {
+        "series_id": "US_NONFARM_PAYROLLS",
+        "frequency": "monthly",
+        "unit": "thousands_persons",
+        "currency": null,
+        "provider": "fred",
+        "source_series_id": "PAYEMS",
+        "enabled": true,
+        "semantic_equivalence": true
+      }
+    },
+    {
+      "series_id": "US_CORE_CPI",
+      "status": "PASS",
+      "expected": {
+        "provider": "fred",
+        "source_series_id": "CPILFESL",
+        "unit": "index_1982_1984_100"
+      },
+      "observation": {
+        "series_id": "US_CORE_CPI",
+        "source": "fred",
+        "source_series_id": "CPILFESL",
+        "row_count": 81,
+        "first_observation_date": "2019-11-01",
+        "last_observation_date": "2026-08-01",
+        "first_available_at": "2026-09-19 01:33:02.446827",
+        "last_available_at": "2026-09-19 01:33:02.446827",
+        "run_id": "monitoring-fred-windows-uat-v2-20260919T013300Z"
+      },
+      "catalog": {
+        "series_id": "US_CORE_CPI",
+        "frequency": "monthly",
+        "unit": "index_1982_1984_100",
+        "currency": null,
+        "provider": "fred",
+        "source_series_id": "CPILFESL",
+        "enabled": true,
+        "semantic_equivalence": true
+      }
+    },
+    {
+      "series_id": "US_REAL_10Y",
+      "status": "PASS",
+      "expected": {
+        "provider": "fred",
+        "source_series_id": "DFII10",
+        "unit": "yield_percent"
+      },
+      "observation": {
+        "series_id": "US_REAL_10Y",
+        "source": "fred",
+        "source_series_id": "DFII10",
+        "row_count": 1710,
+        "first_observation_date": "2019-11-15",
+        "last_observation_date": "2026-09-17",
+        "first_available_at": "2026-09-19 01:33:02.446827",
+        "last_available_at": "2026-09-19 01:33:02.446827",
+        "run_id": "monitoring-fred-windows-uat-v2-20260919T013300Z"
+      },
+      "catalog": {
+        "series_id": "US_REAL_10Y",
+        "frequency": "daily",
+        "unit": "yield_percent",
+        "currency": "USD",
+        "provider": "fred",
+        "source_series_id": "DFII10",
+        "enabled": true,
+        "semantic_equivalence": true
+      }
+    },
+    {
+      "series_id": "US_EQ",
+      "status": "PASS",
+      "expected": {
+        "provider": "yahoo",
+        "source_series_id": "^GSPC",
+        "unit": "index_points"
+      },
+      "observation": {
+        "series_id": "US_EQ",
+        "source": "yahoo",
+        "source_series_id": "^GSPC",
+        "row_count": 2514,
+        "first_observation_date": "2016-09-19",
+        "last_observation_date": "2026-09-18",
+        "first_available_at": "2026-09-19 01:33:24.021391",
+        "last_available_at": "2026-09-19 01:33:24.069861",
+        "run_id": "monitoring-yahoo-windows-uat-v2-20260919T013300Z"
+      },
+      "catalog": {
+        "series_id": "US_EQ",
+        "frequency": "daily",
+        "unit": "index_points",
+        "currency": "USD",
+        "provider": "yahoo",
+        "source_series_id": "^GSPC",
+        "enabled": true,
+        "semantic_equivalence": true
+      }
+    }
+  ],
+  "identity_checks_passed": true,
+  "bound_series": [
+    "CN_EQ_LARGE",
+    "COPPER",
+    "GOLD",
+    "US_CORE_CPI",
+    "US_EQ",
+    "US_NONFARM_PAYROLLS",
+    "US_REAL_10Y"
+  ],
+  "available_real_series": [
+    "US_CORE_CPI",
+    "US_EQ",
+    "US_NONFARM_PAYROLLS",
+    "US_REAL_10Y"
+  ],
+  "unavailable_bound_series": [
+    "CN_EQ_LARGE",
+    "COPPER",
+    "GOLD"
+  ],
+  "workbench_run": {
+    "run_id": "wb-live-windows-uat-v2-20260919T013300Z",
+    "run_kind": "shadow",
+    "source_mode": "LIVE",
+    "status": "PARTIAL",
+    "model_version": "workbench_v0.1",
+    "config_identity": "windows-real-snapshot-soak-uat-v2",
+    "data_cutoff": "2026-09-19",
+    "decision_time": "2026-09-19T01:34:18.748382+00:00",
+    "allocation_status": null,
+    "previous_valid_run_id": null,
+    "previous_valid_source": null,
+    "freeze_reason": null,
+    "components": {
+      "monitoring_ingestion_runs": [
+        "monitoring-fred-windows-uat-v2-20260919T013300Z",
+        "monitoring-yahoo-windows-uat-v2-20260919T013300Z"
+      ]
+    },
+    "warnings": [
+      "REAL_MONITORING_PARTIAL_COVERAGE"
+    ],
+    "blockers": [
+      "bound_series_real_source_unavailable:CN_EQ_LARGE",
+      "bound_series_real_source_unavailable:COPPER",
+      "bound_series_real_source_unavailable:GOLD"
+    ],
+    "provenance": {
+      "origin": "MONITORING",
+      "formal_gate": false,
+      "ingestion_run_ids": [
+        "monitoring-fred-windows-uat-v2-20260919T013300Z",
+        "monitoring-yahoo-windows-uat-v2-20260919T013300Z"
+      ]
+    },
+    "weights": null,
+    "created_at": "2026-09-19T01:34:18.748382+00:00",
+    "artifact_path": "<local-b-worktree>\\artifacts\\windows_uat_v2\\workbench\\runs\\wb-live-windows-uat-v2-20260919T013300Z.json"
+  },
+  "snapshot_build_cli": {
+    "command": [
+      "<local-b-worktree>\\.venv\\Scripts\\python.exe",
+      "-m",
+      "cross_asset.decision_support.snapshot_cli",
+      "build",
+      "--db",
+      "<local-b-worktree>\\artifacts\\windows_uat_v2\\monitoring-20260919T013300907545Z.duckdb",
+      "--run-id",
+      "wb-live-windows-uat-v2-20260919T013300Z",
+      "--runs-root",
+      "<local-b-worktree>\\artifacts\\windows_uat_v2\\workbench",
+      "--root",
+      "<local-b-worktree>\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+    ],
+    "exit_code": 0,
+    "stdout": "snapshot_id=dsv0-monitoring-20260919-8258e11a5b5065b8 lane=MONITORING run_id=wb-live-windows-uat-v2-20260919T013300Z path=<local-b-worktree>\\artifacts\\windows_uat_v2\\dashboard_snapshots\\dsv0-monitoring-20260919-8258e11a5b5065b8.json\n",
+    "stderr": ""
+  },
+  "snapshot": {
+    "snapshot_id": "dsv0-monitoring-20260919-8258e11a5b5065b8",
+    "run_id": "wb-live-windows-uat-v2-20260919T013300Z",
+    "economic_week_id": "2026-09-14",
+    "lane": "MONITORING",
+    "as_of": "2026-09-19",
+    "decision_time": "2026-09-19T01:34:18.748382+00:00",
+    "data_cutoff": "2026-09-19",
+    "technical_history_count": 1,
+    "canonical_history_count": 1,
+    "data_health_overall": "PARTIAL",
+    "missing_components": [
+      "BREAKEVEN_5Y5Y",
+      "CFTC_RISK_POSITIONING",
+      "CN_BOND_TREND_63D",
+      "CN_CREDIT_IMPULSE",
+      "CN_DR007",
+      "CN_EQ_TREND_63D",
+      "CN_EQ_VALUATION",
+      "CN_M1_M2_GAP",
+      "CN_MFG_PMI",
+      "CN_NEW_LOANS_TREND",
+      "COPPER_TREND_63D",
+      "FED_POLICY_STANCE",
+      "GOLD_REAL_RATE_OVERLAY",
+      "GOLD_TREND_63D",
+      "USD_BROAD_MOMENTUM",
+      "US_EQ_ERP_PROXY",
+      "US_FIN_COND_TREND",
+      "US_HY_SPREAD",
+      "US_ISM_PMI",
+      "US_PPI_TREND",
+      "US_WAGE_PRESSURE",
+      "US_YIELD_CURVE_10Y2Y",
+      "VIX_LEVEL"
+    ],
+    "stale_components": [
+      "US_10Y_REAL_YIELD",
+      "US_CORE_CPI_TREND",
+      "US_PAYROLLS_TREND"
+    ],
+    "blockers": [
+      "CASH: POLICY_LIQUIDITY — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "CASH: FINANCIAL_CONDITIONS — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "CASH: VIX_LEVEL — market confirmation input unavailable; reported as UNKNOWN, not as observed divergence",
+      "CN_BOND: POLICY_LIQUIDITY — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "CN_BOND: CHINA_CYCLE — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "CN_BOND: CN_BOND_TREND_63D — market confirmation input unavailable; reported as UNKNOWN, not as observed divergence",
+      "CN_EQ: CHINA_CYCLE — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "CN_EQ: POLICY_LIQUIDITY — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "CN_EQ: CN_EQ_TREND_63D — market confirmation input unavailable; reported as UNKNOWN, not as observed divergence",
+      "CN_EQ: CN_EQ_VALUATION — valuation overlay unavailable; cap/cushion not applied",
+      "COPPER: CHINA_CYCLE — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "COPPER: COPPER_TREND_63D — market confirmation input unavailable; reported as UNKNOWN, not as observed divergence",
+      "GOLD: POLICY_LIQUIDITY — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "GOLD: FINANCIAL_CONDITIONS — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "GOLD: GOLD_TREND_63D — market confirmation input unavailable; reported as UNKNOWN, not as observed divergence",
+      "GOLD: GOLD_REAL_RATE_OVERLAY — valuation overlay unavailable; cap/cushion not applied",
+      "HK_EQ: CHINA_CYCLE — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "HK_EQ: FINANCIAL_CONDITIONS — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "HK_EQ: CN_EQ_TREND_63D — market confirmation input unavailable; reported as UNKNOWN, not as observed divergence",
+      "USD_CNY: FINANCIAL_CONDITIONS — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "USD_CNY: POLICY_LIQUIDITY — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "USD_CNY: USD_BROAD_MOMENTUM — market confirmation input unavailable; reported as UNKNOWN, not as observed divergence",
+      "US_EQ: POLICY_LIQUIDITY — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "US_EQ: FINANCIAL_CONDITIONS — cyclical cluster score unavailable; excluded from stance, not zero-filled",
+      "US_EQ: US_EQ_ERP_PROXY — valuation overlay unavailable; cap/cushion not applied"
+    ],
+    "binding_counts": {
+      "total_factors": 27,
+      "monitoring_bound": 7,
+      "monitoring_unbound": 20,
+      "formal_blocked": 7,
+      "missing": 23,
+      "stale": 3
+    },
+    "factor_statuses": {
+      "US_PAYROLLS_TREND": {
+        "monitoring": "BOUND",
+        "formal": "BLOCKED",
+        "missing": false,
+        "stale": true,
+        "reason": "",
+        "confidence": 0.5
+      },
+      "US_ISM_PMI": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "CN_MFG_PMI": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "US_CORE_CPI_TREND": {
+        "monitoring": "BOUND",
+        "formal": "BLOCKED",
+        "missing": false,
+        "stale": true,
+        "reason": "",
+        "confidence": 0.5
+      },
+      "US_PPI_TREND": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "US_WAGE_PRESSURE": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "BREAKEVEN_5Y5Y": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "FED_POLICY_STANCE": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "US_YIELD_CURVE_10Y2Y": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "CN_DR007": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "CN_CREDIT_IMPULSE": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "CN_M1_M2_GAP": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "CN_NEW_LOANS_TREND": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "US_HY_SPREAD": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "US_10Y_REAL_YIELD": {
+        "monitoring": "BOUND",
+        "formal": "BLOCKED",
+        "missing": false,
+        "stale": true,
+        "reason": "",
+        "confidence": 0.5
+      },
+      "USD_BROAD_MOMENTUM": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "US_FIN_COND_TREND": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "US_EQ_TREND_63D": {
+        "monitoring": "BOUND",
+        "formal": "BLOCKED",
+        "missing": false,
+        "stale": false,
+        "reason": "",
+        "confidence": 1.0
+      },
+      "CN_EQ_TREND_63D": {
+        "monitoring": "BOUND",
+        "formal": "BLOCKED",
+        "missing": true,
+        "stale": false,
+        "reason": "canonical series unavailable: CN_EQ_LARGE",
+        "confidence": 0.0
+      },
+      "CN_BOND_TREND_63D": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "GOLD_TREND_63D": {
+        "monitoring": "BOUND",
+        "formal": "BLOCKED",
+        "missing": true,
+        "stale": false,
+        "reason": "canonical series unavailable: GOLD",
+        "confidence": 0.0
+      },
+      "COPPER_TREND_63D": {
+        "monitoring": "BOUND",
+        "formal": "BLOCKED",
+        "missing": true,
+        "stale": false,
+        "reason": "canonical series unavailable: COPPER",
+        "confidence": 0.0
+      },
+      "VIX_LEVEL": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "CFTC_RISK_POSITIONING": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "US_EQ_ERP_PROXY": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "CN_EQ_VALUATION": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      },
+      "GOLD_REAL_RATE_OVERLAY": {
+        "monitoring": "UNBOUND",
+        "formal": "UNBOUND",
+        "missing": true,
+        "stale": false,
+        "reason": "monitoring binding unbound",
+        "confidence": 0.0
+      }
+    },
+    "series_provenance": {
+      "CN_EQ_LARGE": {
+        "origin": "MONITORING_DB",
+        "ingestion_run_ids": [],
+        "source_refs": [],
+        "monitoring_status": null,
+        "monitoring_reason": null,
+        "freshness_verified": true,
+        "freshness_limitation": null,
+        "calendar": null,
+        "calendar_lag_sessions": null,
+        "formal_readiness": null,
+        "formal_admission_granted": false,
+        "identity_verified": true,
+        "identity_blockers": [],
+        "identity_blocked_rows": 0,
+        "observations_omitted": true,
+        "observation_rows_omitted": 0
+      },
+      "COPPER": {
+        "origin": "MONITORING_DB",
+        "ingestion_run_ids": [],
+        "source_refs": [],
+        "monitoring_status": null,
+        "monitoring_reason": null,
+        "freshness_verified": true,
+        "freshness_limitation": null,
+        "calendar": null,
+        "calendar_lag_sessions": null,
+        "formal_readiness": null,
+        "formal_admission_granted": false,
+        "identity_verified": true,
+        "identity_blockers": [],
+        "identity_blocked_rows": 0,
+        "observations_omitted": true,
+        "observation_rows_omitted": 0
+      },
+      "GOLD": {
+        "origin": "MONITORING_DB",
+        "ingestion_run_ids": [],
+        "source_refs": [],
+        "monitoring_status": null,
+        "monitoring_reason": null,
+        "freshness_verified": true,
+        "freshness_limitation": null,
+        "calendar": null,
+        "calendar_lag_sessions": null,
+        "formal_readiness": null,
+        "formal_admission_granted": false,
+        "identity_verified": true,
+        "identity_blockers": [],
+        "identity_blocked_rows": 0,
+        "observations_omitted": true,
+        "observation_rows_omitted": 0
+      },
+      "US_CORE_CPI": {
+        "origin": "MONITORING_DB",
+        "ingestion_run_ids": [
+          "monitoring-fred-windows-uat-v2-20260919T013300Z"
+        ],
+        "source_refs": [
+          "fred:CPILFESL"
+        ],
+        "monitoring_status": "BLOCKED",
+        "monitoring_reason": "calendar_mapping_missing",
+        "freshness_verified": false,
+        "freshness_limitation": "calendar_mapping_missing",
+        "calendar": null,
+        "calendar_lag_sessions": null,
+        "formal_readiness": "FORMAL_BLOCKED",
+        "formal_admission_granted": false,
+        "identity_verified": true,
+        "identity_blockers": [],
+        "identity_blocked_rows": 0,
+        "observations_omitted": true,
+        "observation_rows_omitted": 81
+      },
+      "US_EQ": {
+        "origin": "MONITORING_DB",
+        "ingestion_run_ids": [
+          "monitoring-yahoo-windows-uat-v2-20260919T013300Z"
+        ],
+        "source_refs": [
+          "yahoo:^GSPC"
+        ],
+        "monitoring_status": "OK",
+        "monitoring_reason": "fresh_within_calendar_lag",
+        "freshness_verified": true,
+        "freshness_limitation": null,
+        "calendar": "XNYS",
+        "calendar_lag_sessions": 0,
+        "formal_readiness": "FORMAL_BLOCKED",
+        "formal_admission_granted": false,
+        "identity_verified": true,
+        "identity_blockers": [],
+        "identity_blocked_rows": 0,
+        "observations_omitted": true,
+        "observation_rows_omitted": 2514
+      },
+      "US_NONFARM_PAYROLLS": {
+        "origin": "MONITORING_DB",
+        "ingestion_run_ids": [
+          "monitoring-fred-windows-uat-v2-20260919T013300Z"
+        ],
+        "source_refs": [
+          "fred:PAYEMS"
+        ],
+        "monitoring_status": "BLOCKED",
+        "monitoring_reason": "calendar_mapping_missing",
+        "freshness_verified": false,
+        "freshness_limitation": "calendar_mapping_missing",
+        "calendar": null,
+        "calendar_lag_sessions": null,
+        "formal_readiness": "FORMAL_BLOCKED",
+        "formal_admission_granted": false,
+        "identity_verified": true,
+        "identity_blockers": [],
+        "identity_blocked_rows": 0,
+        "observations_omitted": true,
+        "observation_rows_omitted": 82
+      },
+      "US_REAL_10Y": {
+        "origin": "MONITORING_DB",
+        "ingestion_run_ids": [
+          "monitoring-fred-windows-uat-v2-20260919T013300Z"
+        ],
+        "source_refs": [
+          "fred:DFII10"
+        ],
+        "monitoring_status": "BLOCKED",
+        "monitoring_reason": "calendar_mapping_missing",
+        "freshness_verified": false,
+        "freshness_limitation": "calendar_mapping_missing",
+        "calendar": null,
+        "calendar_lag_sessions": null,
+        "formal_readiness": "FORMAL_BLOCKED",
+        "formal_admission_granted": false,
+        "identity_verified": true,
+        "identity_blockers": [],
+        "identity_blocked_rows": 0,
+        "observations_omitted": true,
+        "observation_rows_omitted": 1710
+      }
+    },
+    "all_provenance_nonformal": true,
+    "observation_payload_omitted": true,
+    "observation_payload_rows_omitted": 4387
+  }
+}
