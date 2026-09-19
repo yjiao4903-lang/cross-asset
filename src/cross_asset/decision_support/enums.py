@@ -35,6 +35,12 @@ class ReleaseEventType(StrEnum):
     NEW_OBSERVATION = "NEW_OBSERVATION"
     REVISION = "REVISION"
     OVERDUE = "OVERDUE"
+    # MONITORING capture-time lane only (#139 Phase 4). Asserts only that a new
+    # observation/value became visible to the monitoring decision set, derived
+    # from canonical observation-identity differences against the causal prior
+    # snapshot. It never claims a historical first-release/publication timestamp
+    # and never enters the FORMAL_OOS lane.
+    OBSERVED_UPDATE = "OBSERVED_UPDATE"
 
 
 class SurpriseMethod(StrEnum):

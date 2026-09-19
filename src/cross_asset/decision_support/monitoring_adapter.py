@@ -13,6 +13,7 @@ from typing import Any
 from cross_asset.operations.workbench_run import WorkbenchRun
 from cross_asset.reports.monitoring_health import monitoring_data_health
 from cross_asset.storage._time import utc_naive
+from cross_asset.storage.catalog import expected_source_identities
 
 from .binding import FactorBindingRegistry, load_factor_bindings
 from .producer import (
@@ -74,7 +75,7 @@ def _monitoring_rows(conn, series_ids: list[str], decision_time: datetime, cutof
     return _rows(
         conn,
         f"""SELECT series_id,observation_date,available_at,value,source,
-                   source_series_id,raw_file,run_id,ingested_at
+                   source_series_id,raw_file,run_id,ingested_at,r.provider AS run_provider
             FROM observations o
             JOIN ingestion_runs r USING(run_id)
             WHERE o.series_id IN ({placeholders})
@@ -88,6 +89,53 @@ def _monitoring_rows(conn, series_ids: list[str], decision_time: datetime, cutof
             ORDER BY o.series_id,o.observation_date,o.available_at""",
         [*series_ids, utc_naive(decision_time), cutoff],
     )
+
+
+def _identity_violations(conn, rows: list[dict[str, Any]]) -> dict[str, list[str]]:
+    """Re-check persisted row identity against the governed enabled mappings.
+
+    The accepted monitoring ingestion path (``MonitoringRunner._validate_rows``)
+    already rejects a run whose rows carry a provider or provider-symbol identity
+    that does not belong to the governed mapping. The read model is a separate
+    boundary: rows can be persisted directly, or by another window, so the
+    adapter must not treat a mis-identified row as evidence for the canonical
+    series it is filed under. Provider/source identity mismatch is never a
+    comparable series, so violations fail closed per series instead of being
+    silently consumed.
+    """
+
+    violations: dict[str, list[str]] = {}
+    expected_cache: dict[tuple[str, str], set[str]] = {}
+    for row in rows:
+        series_id = str(row.get("series_id") or "")
+        run_provider = str(row.get("run_provider") or "")
+        lane, _, provider = run_provider.partition(":")
+        provider = provider.strip().lower()
+        reasons: list[str] = []
+        if lane.strip().upper() != "MONITORING" or not provider:
+            reasons.append("monitoring_run_provider_unresolved")
+        else:
+            observed_source = str(row.get("source") or "").strip().lower()
+            if observed_source != provider:
+                reasons.append(
+                    f"monitoring_source_mismatch:{observed_source or 'missing'}"
+                )
+            cache_key = (provider, series_id)
+            if cache_key not in expected_cache:
+                expected_cache[cache_key] = set(
+                    expected_source_identities(conn, provider, [series_id]).get(series_id) or set()
+                )
+            allowed = expected_cache[cache_key]
+            observed_symbol = str(row.get("source_series_id") or "")
+            if not allowed:
+                reasons.append("monitoring_source_mapping_missing")
+            elif observed_symbol not in allowed:
+                reasons.append(
+                    f"monitoring_source_series_id_mismatch:{observed_symbol or 'missing'}"
+                )
+        if reasons:
+            violations.setdefault(series_id, []).extend(reasons)
+    return {key: sorted(set(value)) for key, value in violations.items()}
 
 
 def _freshness_unverified(health_row: dict[str, Any], rows: list[dict[str, Any]]) -> bool:
@@ -146,16 +194,21 @@ def build_monitoring_pack_from_db(
     )
     health = {str(row["series_id"]): row for row in health_rows}
     db_rows = _monitoring_rows(store.conn, series_ids, decision_time, cutoff)
+    identity_violations = _identity_violations(store.conn, db_rows)
     by_series: dict[str, list[dict[str, Any]]] = {series_id: [] for series_id in series_ids}
     for row in db_rows:
         by_series.setdefault(str(row["series_id"]), []).append(row)
 
     series: list[MonitoringSeries] = []
     for series_id in series_ids:
-        rows = by_series.get(series_id, [])
+        raw_rows = by_series.get(series_id, [])
+        identity_blockers = identity_violations.get(series_id, [])
+        # Mis-identified rows are never usable evidence for this canonical series;
+        # the series is represented as BLOCKED, mirroring MONITORING_SCHEMA_ERROR.
+        rows = [] if identity_blockers else raw_rows
         health_row = health.get(series_id, {})
         freshness_unverified = _freshness_unverified(health_row, rows)
-        status = _pack_status(health_row, rows)
+        status = "BLOCKED" if identity_blockers else _pack_status(health_row, rows)
         observations = [
             MonitoringObservation(
                 observation_date=row["observation_date"],
@@ -171,14 +224,28 @@ def build_monitoring_pack_from_db(
             )
             for row in rows
         ]
-        ingestion_run_ids = sorted({str(row["run_id"]) for row in rows if row.get("run_id")})
+        ingestion_run_ids = sorted({str(row["run_id"]) for row in raw_rows if row.get("run_id")})
         source_refs = sorted(
             {
                 f"{row.get('source') or 'unknown'}:{row.get('source_series_id') or 'unknown'}"
-                for row in rows
+                for row in raw_rows
             }
         )
         monitoring_reason = health_row.get("monitoring_reason")
+        # #139 Phase 4: capture-time observation identities for the decision set.
+        # The producer diffs these against the causal prior snapshot to derive
+        # monitoring-only OBSERVED_UPDATE events. observation_date/available_at
+        # stay real capture-time fields; no publication timestamp is invented.
+        observation_identities = [
+            {
+                "observation_date": observation.observation_date.isoformat(),
+                "available_at": observation.available_at.isoformat(),
+                "value": observation.value,
+                "source": str(row.get("source") or "unknown"),
+                "source_series_id": str(row.get("source_series_id") or "unknown"),
+            }
+            for observation, row in zip(observations, rows, strict=True)
+        ]
         series.append(
             MonitoringSeries(
                 series_id=series_id,
@@ -188,6 +255,7 @@ def build_monitoring_pack_from_db(
                     "origin": "MONITORING_DB",
                     "ingestion_run_ids": ingestion_run_ids,
                     "source_refs": source_refs,
+                    "observations": observation_identities,
                     "monitoring_status": health_row.get("monitoring_status"),
                     "monitoring_reason": monitoring_reason,
                     "freshness_verified": not freshness_unverified,
@@ -196,6 +264,9 @@ def build_monitoring_pack_from_db(
                     "calendar_lag_sessions": health_row.get("calendar_lag_sessions"),
                     "formal_readiness": health_row.get("formal_readiness"),
                     "formal_admission_granted": False,
+                    "identity_verified": not identity_blockers,
+                    "identity_blockers": identity_blockers,
+                    "identity_blocked_rows": len(raw_rows) if identity_blockers else 0,
                 },
             )
         )

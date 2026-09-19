@@ -1,0 +1,62 @@
+{
+  "schema": "multweek-information-set-analysis-v1",
+  "task": "#139 Phase 4 — truthful week-2 monitoring information semantics",
+  "owner_lane": "LOCAL-DEV-A",
+  "frozen_semantic_rule": "Monitoring capture history MUST NOT claim a historical first-release timestamp it does not know. The only event capture-time monitoring may assert is: A NEW OBSERVATION / VALUE BECAME VISIBLE TO THIS MONITORING DECISION SET.",
+  "analysis": {
+    "reproduced_behavior_on_current_main": [
+      "build_monitoring_pack_from_db never populated release_events/expected_releases",
+      "build_information_set_delta therefore classified every week NO_NEW_INFORMATION",
+      "a genuinely newer monthly observation moved cyclical factor scores",
+      "build_macro_state_delta correctly raised SyntheticMovementError",
+      "the real multi-week monitoring loop could never produce week 2 once data changed"
+    ],
+    "semantic_options_considered": [
+      {
+        "option": "release_time = captured_at",
+        "verdict": "REJECTED",
+        "reason": "invents a first-release timestamp the source never supplied; violates capture_time != first_release_time"
+      },
+      {
+        "option": "emit NEW_OBSERVATION events from capture-time data",
+        "verdict": "REJECTED",
+        "reason": "NEW_OBSERVATION is read downstream as first-release evidence; capture-time monitoring cannot know it is the first release"
+      },
+      {
+        "option": "relax the synthetic-movement guard for the monitoring lane",
+        "verdict": "REJECTED",
+        "reason": "destroys the accepted protection against fabricated movement; Missing/Unknown would become tunable"
+      },
+      {
+        "option": "no-op: keep week-2 blocked until a formal release-events authority exists",
+        "verdict": "REJECTED",
+        "reason": "the monitoring product is dead in week 2 while its information truthfully changed; the ledger item explicitly asked for closure"
+      },
+      {
+        "option": "derive a monitoring-only OBSERVED_UPDATE event from canonical observation-identity differences between the current decision set and the causal prior snapshot",
+        "verdict": "IMPLEMENTED",
+        "reason": "truthful (visibility, not release), derived from persisted canonical state, needs no invented timestamp, preserves the guard"
+      }
+    ],
+    "implemented_contract": {
+      "event_type": "ReleaseEventType.OBSERVED_UPDATE (new enum member, MONITORING capture-time lane only)",
+      "derivation": "producer-side diff of per-series observation identities: current pack vs previous_snapshot.details['series_provenance'][series_id]['observations']",
+      "information_key": "(observation_date, value) — a re-capture of the same value with a later available_at is NOT a new information event; any newly visible value for a real observation_date is",
+      "recorded_identity": "{observation_date, available_at, value, source, source_series_id} for DB packs; {observation_date, available_at, value, source_ref} fallback for hand-built diagnostic packs",
+      "note_format": "monitoring_observed_update: a new observation/value became visible to this monitoring decision set at <available_at>; capture-time semantics, no publication timestamp asserted",
+      "guard_interplay": "observed-update factor ids join changed_by_release, so build_macro_state_delta keeps refusing any movement without an observed information event",
+      "same_week_retry": "unchanged: a retry copies the prior weekly deltas wholesale, so the same observation can never become a second information event",
+      "fail_closed": "if the causal prior snapshot does not record observation identities (pre-#139 snapshot), no update is claimed and genuine movement keeps raising SyntheticMovementError",
+      "formal_lane": "untouched: no formal ingestion, admission, or OOS surface reads or emits OBSERVED_UPDATE; MONITORING != FORMAL_OOS preserved"
+    },
+    "invariants_checked": [
+      "observation_date is real (taken from the canonical row)",
+      "captured/available_at semantics remain capture-time/non-PIT",
+      "source/provider/source_series_id preserved (also re-validated for identity by the ported #138 fix)",
+      "no publication timestamp is invented (asserted by test b7_07)",
+      "same-week retry never becomes a second information event (b7_03, c2_14)",
+      "a newly visible observation in a later week supports a truthful information-set update (b7_02, b2_14, c2_06)",
+      "FORMAL_OOS semantics untouched (b7_13, c2_07)"
+    ]
+  }
+}
