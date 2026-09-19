@@ -28,6 +28,19 @@ if (-not $OpenBrowserAllowed) { $env:MACRO_WORKBENCH_NO_BROWSER = '1' }
 $env:CROSS_ASSET_PYTHON = $Python
 
 $results = New-Object System.Collections.Generic.List[object]
+# Start-Process -Wait waits for process exit only; `& script | Out-Null` would also wait for
+# stdout EOF, which the launcher's redirected grandchildren keep open for the whole session.
+function Invoke-LauncherWait {
+    # Poll HasExited: Start-Process -Wait waits for the whole descendant tree.
+    $proc = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$Launcher`"") -WindowStyle Hidden -PassThru
+    while (-not $proc.HasExited) { Start-Sleep -Milliseconds 250 }
+    return $proc.ExitCode
+}
+function Invoke-StopperWait {
+    $proc = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$Stopper`"") -WindowStyle Hidden -PassThru
+    while (-not $proc.HasExited) { Start-Sleep -Milliseconds 250 }
+    return $proc.ExitCode
+}
 function Record-Pass($scenario, $detail = '') {
     $results.Add([pscustomobject]@{ scenario = $scenario; pass = $true;  detail = $detail })
     Write-Host "PASS [${scenario}] $detail" -ForegroundColor Green
@@ -45,8 +58,8 @@ function Port-Listening([int]$Port) {
 }
 
 # Scenario 1: clean start succeeds (deps/build/start)
-& $Launcher | Out-Null
-if ($LASTEXITCODE -eq 0) { Record-Pass '1-clean-start' "launcher exit=$LASTEXITCODE" } else { Record-Fail '1-clean-start' "launcher exit=$LASTEXITCODE" }
+$exitCode = Invoke-LauncherWait
+if ($exitCode -eq 0) { Record-Pass '1-clean-start' "launcher exit=$LASTEXITCODE" } else { Record-Fail '1-clean-start' "launcher exit=$LASTEXITCODE" }
 
 # Scenario 2: backend snapshot API on owned port, /api/health reachable
 $health = Url-Status 'http://127.0.0.1:8008/api/health'
@@ -59,8 +72,8 @@ $prox = Url-Status 'http://127.0.0.1:8765/api/health'
 if ($fh -eq 200 -and $idx -eq 200 -and $prox -eq 200) { Record-Pass '3-frontend-api-proxy' "dist + /api proxy OK ($fh/$idx/$prox)" } else { Record-Fail '3-frontend-api-proxy' "dist=$fh index=$idx proxy=$prox" }
 
 # Scenario 6: duplicate start deterministic (no second stack)
-& $Launcher | Out-Null
-if ($LASTEXITCODE -eq 0) { Record-Pass '6-duplicate-start' 'second start reused healthy stack (exit 0)' } else { Record-Fail '6-duplicate-start' "second launch exit=$LASTEXITCODE" }
+$exitCode = Invoke-LauncherWait
+if ($exitCode -eq 0) { Record-Pass '6-duplicate-start' 'second start reused healthy stack (exit 0)' } else { Record-Fail '6-duplicate-start' "second launch exit=$LASTEXITCODE" }
 $meta = Get-Content (Join-Path $Here '..\.runtime\servers.pid') -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
 if ($meta) {
     Record-Pass '6-owns-single-stack' "backend=$($meta.backend.pid) frontend=$($meta.frontend.pid)"
@@ -72,8 +85,8 @@ if ($latest -eq 404) { Record-Pass '9-missing-snapshot-unavailable' "/api/snapsh
 
 # Scenario 5/7: foreign occupancy of port 8008 fails closed, foreign survives
 # (stop first so the port is free and genuinely 'foreign').
-& $Stopper | Out-Null
-if ($LASTEXITCODE -ne 0) { Record-Fail '5-stop' "stop exit=$LASTEXITCODE" } else { Record-Pass '5-stop' 'launcher-owned processes stopped, health down' }
+$stopExit = Invoke-StopperWait
+if ($stopExit -ne 0) { Record-Fail '5-stop' "stop exit=$stopExit" } else { Record-Pass '5-stop' 'launcher-owned processes stopped, health down' }
 
 $foreign = $null
 try {
@@ -101,7 +114,7 @@ s=HTTPServer(("127.0.0.1",8008),H); s.serve_forever()'
 $h2 = (Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8765/api/health' -TimeoutSec 6).Content | ConvertFrom-Json
 if ($null -eq $h2.latest_snapshot_id) { Record-Pass '8-restart-no-fabrication' 'restart did not fabricate a run (latest null)' } else { Record-Fail '8-restart-no-fabrication' "latest=$( $h2.latest_snapshot_id)" }
 
-& $Stopper | Out-Null
+$null = Invoke-StopperWait
 
 Write-Host ''
 Write-Host '==== UAT SUMMARY ===='

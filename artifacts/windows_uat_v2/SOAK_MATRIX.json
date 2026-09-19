@@ -1,0 +1,644 @@
+﻿{
+    "contract":  "WINDOWS-REAL-SNAPSHOT-SOAK-UAT-V2",
+    "generated_at":  "2026-09-19T10:50:09.0464493+08:00",
+    "expected_snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+    "expected_technical_history_count":  1,
+    "expected_canonical_history_count":  1,
+    "final_stop_exit":  0,
+    "total":  18,
+    "passed":  18,
+    "failed":  0,
+    "status":  "SOAK_PASS",
+    "scenarios":  [
+                      {
+                          "scenario":  "S01-clean-start",
+                          "category":  "LIFECYCLE",
+                          "pass":  true,
+                          "detail":  "exit=0 health=200 latest=200 backend=6484 frontend=25860",
+                          "timestamp":  "2026-09-19T10:48:11.9361663+08:00",
+                          "before":  {
+                                         "health_status":  -1,
+                                         "latest_status":  -1,
+                                         "history_status":  -1,
+                                         "snapshot_id":  null,
+                                         "run_id":  null,
+                                         "technical_history_count":  null,
+                                         "canonical_history_count":  null,
+                                         "pids":  null
+                                     },
+                          "after":  {
+                                        "health_status":  200,
+                                        "latest_status":  200,
+                                        "history_status":  200,
+                                        "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                        "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                        "technical_history_count":  1,
+                                        "canonical_history_count":  1,
+                                        "pids":  {
+                                                     "created_at":  "2026-09-19T10:48:10.7110315+08:00",
+                                                     "repo_root":  "D:\\电商中台\\_localB_140",
+                                                     "frontend":  {
+                                                                      "port":  8765,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  25860,
+                                                                      "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                  },
+                                                     "backend":  {
+                                                                     "port":  8008,
+                                                                     "host":  "127.0.0.1",
+                                                                     "pid":  6484,
+                                                                     "module":  "decision_support.snapshot_cli serve",
+                                                                     "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                 }
+                                                 }
+                                    }
+                      },
+                      {
+                          "scenario":  "S02-warm-start",
+                          "category":  "LIFECYCLE",
+                          "pass":  true,
+                          "detail":  "exit=0 health=200 snapshot_id=dsv0-monitoring-20260919-8258e11a5b5065b8",
+                          "timestamp":  "2026-09-19T10:48:13.8488409+08:00",
+                          "before":  {
+                                         "health_status":  200,
+                                         "latest_status":  200,
+                                         "history_status":  200,
+                                         "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                         "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                         "technical_history_count":  1,
+                                         "canonical_history_count":  1,
+                                         "pids":  {
+                                                      "created_at":  "2026-09-19T10:48:10.7110315+08:00",
+                                                      "repo_root":  "D:\\电商中台\\_localB_140",
+                                                      "frontend":  {
+                                                                       "port":  8765,
+                                                                       "host":  "127.0.0.1",
+                                                                       "pid":  25860,
+                                                                       "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                   },
+                                                      "backend":  {
+                                                                      "port":  8008,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  6484,
+                                                                      "module":  "decision_support.snapshot_cli serve",
+                                                                      "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                  }
+                                                  }
+                                     },
+                          "after":  {
+                                        "health_status":  200,
+                                        "latest_status":  200,
+                                        "history_status":  200,
+                                        "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                        "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                        "technical_history_count":  1,
+                                        "canonical_history_count":  1,
+                                        "pids":  {
+                                                     "created_at":  "2026-09-19T10:48:10.7110315+08:00",
+                                                     "repo_root":  "D:\\电商中台\\_localB_140",
+                                                     "frontend":  {
+                                                                      "port":  8765,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  25860,
+                                                                      "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                  },
+                                                     "backend":  {
+                                                                     "port":  8008,
+                                                                     "host":  "127.0.0.1",
+                                                                     "pid":  6484,
+                                                                     "module":  "decision_support.snapshot_cli serve",
+                                                                     "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                 }
+                                                 }
+                                    }
+                      },
+                      {
+                          "scenario":  "S03-duplicate-start-reuse",
+                          "category":  "PROCESS_OWNERSHIP",
+                          "pass":  true,
+                          "detail":  "exit=0 backend_unchanged=True frontend_unchanged=True",
+                          "timestamp":  "2026-09-19T10:48:15.8129275+08:00",
+                          "before":  {
+                                         "health_status":  200,
+                                         "latest_status":  200,
+                                         "history_status":  200,
+                                         "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                         "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                         "technical_history_count":  1,
+                                         "canonical_history_count":  1,
+                                         "pids":  {
+                                                      "created_at":  "2026-09-19T10:48:10.7110315+08:00",
+                                                      "repo_root":  "D:\\电商中台\\_localB_140",
+                                                      "frontend":  {
+                                                                       "port":  8765,
+                                                                       "host":  "127.0.0.1",
+                                                                       "pid":  25860,
+                                                                       "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                   },
+                                                      "backend":  {
+                                                                      "port":  8008,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  6484,
+                                                                      "module":  "decision_support.snapshot_cli serve",
+                                                                      "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                  }
+                                                  }
+                                     },
+                          "after":  {
+                                        "health_status":  200,
+                                        "latest_status":  200,
+                                        "history_status":  200,
+                                        "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                        "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                        "technical_history_count":  1,
+                                        "canonical_history_count":  1,
+                                        "pids":  {
+                                                     "created_at":  "2026-09-19T10:48:10.7110315+08:00",
+                                                     "repo_root":  "D:\\电商中台\\_localB_140",
+                                                     "frontend":  {
+                                                                      "port":  8765,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  25860,
+                                                                      "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                  },
+                                                     "backend":  {
+                                                                     "port":  8008,
+                                                                     "host":  "127.0.0.1",
+                                                                     "pid":  6484,
+                                                                     "module":  "decision_support.snapshot_cli serve",
+                                                                     "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                 }
+                                                 }
+                                    }
+                      },
+                      {
+                          "scenario":  "S04-api-crash-actionable-and-recovery",
+                          "category":  "LIFECYCLE",
+                          "pass":  true,
+                          "detail":  "proxy_during_crash=502 recovery_exit=0 health=200 snapshot_id=dsv0-monitoring-20260919-8258e11a5b5065b8",
+                          "timestamp":  "2026-09-19T10:48:25.6030350+08:00",
+                          "before":  {
+                                         "health_status":  200,
+                                         "latest_status":  200,
+                                         "history_status":  200,
+                                         "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                         "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                         "technical_history_count":  1,
+                                         "canonical_history_count":  1,
+                                         "pids":  {
+                                                      "created_at":  "2026-09-19T10:48:10.7110315+08:00",
+                                                      "repo_root":  "D:\\电商中台\\_localB_140",
+                                                      "frontend":  {
+                                                                       "port":  8765,
+                                                                       "host":  "127.0.0.1",
+                                                                       "pid":  25860,
+                                                                       "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                   },
+                                                      "backend":  {
+                                                                      "port":  8008,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  6484,
+                                                                      "module":  "decision_support.snapshot_cli serve",
+                                                                      "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                  }
+                                                  }
+                                     },
+                          "after":  {
+                                        "health_status":  200,
+                                        "latest_status":  200,
+                                        "history_status":  200,
+                                        "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                        "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                        "technical_history_count":  1,
+                                        "canonical_history_count":  1,
+                                        "pids":  {
+                                                     "created_at":  "2026-09-19T10:48:24.6835567+08:00",
+                                                     "repo_root":  "D:\\电商中台\\_localB_140",
+                                                     "frontend":  {
+                                                                      "port":  8765,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  5972,
+                                                                      "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                  },
+                                                     "backend":  {
+                                                                     "port":  8008,
+                                                                     "host":  "127.0.0.1",
+                                                                     "pid":  22412,
+                                                                     "module":  "decision_support.snapshot_cli serve",
+                                                                     "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                 }
+                                                 }
+                                    }
+                      },
+                      {
+                          "scenario":  "S05-api-crash-readback",
+                          "category":  "PERSISTENCE",
+                          "pass":  true,
+                          "detail":  "snapshot_id=dsv0-monitoring-20260919-8258e11a5b5065b8 tech=1 canonical=1 (expected snapshot_id=dsv0-monitoring-20260919-8258e11a5b5065b8 tech=1 canonical=1)",
+                          "timestamp":  "2026-09-19T10:48:26.4863044+08:00",
+                          "before":  null,
+                          "after":  {
+                                        "health_status":  200,
+                                        "latest_status":  200,
+                                        "history_status":  200,
+                                        "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                        "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                        "technical_history_count":  1,
+                                        "canonical_history_count":  1,
+                                        "pids":  {
+                                                     "created_at":  "2026-09-19T10:48:24.6835567+08:00",
+                                                     "repo_root":  "D:\\电商中台\\_localB_140",
+                                                     "frontend":  {
+                                                                      "port":  8765,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  5972,
+                                                                      "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                  },
+                                                     "backend":  {
+                                                                     "port":  8008,
+                                                                     "host":  "127.0.0.1",
+                                                                     "pid":  22412,
+                                                                     "module":  "decision_support.snapshot_cli serve",
+                                                                     "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                 }
+                                                 }
+                                    }
+                      },
+                      {
+                          "scenario":  "S06-frontend-crash-and-recovery",
+                          "category":  "LIFECYCLE",
+                          "pass":  true,
+                          "detail":  "frontend_during_crash=-1 recovery_exit=0 health=200",
+                          "timestamp":  "2026-09-19T10:48:41.4221997+08:00",
+                          "before":  {
+                                         "health_status":  200,
+                                         "latest_status":  200,
+                                         "history_status":  200,
+                                         "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                         "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                         "technical_history_count":  1,
+                                         "canonical_history_count":  1,
+                                         "pids":  {
+                                                      "created_at":  "2026-09-19T10:48:24.6835567+08:00",
+                                                      "repo_root":  "D:\\电商中台\\_localB_140",
+                                                      "frontend":  {
+                                                                       "port":  8765,
+                                                                       "host":  "127.0.0.1",
+                                                                       "pid":  5972,
+                                                                       "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                   },
+                                                      "backend":  {
+                                                                      "port":  8008,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  22412,
+                                                                      "module":  "decision_support.snapshot_cli serve",
+                                                                      "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                  }
+                                                  }
+                                     },
+                          "after":  {
+                                        "health_status":  200,
+                                        "latest_status":  200,
+                                        "history_status":  200,
+                                        "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                        "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                        "technical_history_count":  1,
+                                        "canonical_history_count":  1,
+                                        "pids":  {
+                                                     "created_at":  "2026-09-19T10:48:40.2897073+08:00",
+                                                     "repo_root":  "D:\\电商中台\\_localB_140",
+                                                     "frontend":  {
+                                                                      "port":  8765,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  3932,
+                                                                      "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                  },
+                                                     "backend":  {
+                                                                     "port":  8008,
+                                                                     "host":  "127.0.0.1",
+                                                                     "pid":  15732,
+                                                                     "module":  "decision_support.snapshot_cli serve",
+                                                                     "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                 }
+                                                 }
+                                    }
+                      },
+                      {
+                          "scenario":  "S07-full-restart",
+                          "category":  "LIFECYCLE",
+                          "pass":  true,
+                          "detail":  "stop=0 ports_down=True start=0 snapshot_id=dsv0-monitoring-20260919-8258e11a5b5065b8",
+                          "timestamp":  "2026-09-19T10:48:54.2288083+08:00",
+                          "before":  {
+                                         "health_status":  200,
+                                         "latest_status":  200,
+                                         "history_status":  200,
+                                         "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                         "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                         "technical_history_count":  1,
+                                         "canonical_history_count":  1,
+                                         "pids":  {
+                                                      "created_at":  "2026-09-19T10:48:40.2897073+08:00",
+                                                      "repo_root":  "D:\\电商中台\\_localB_140",
+                                                      "frontend":  {
+                                                                       "port":  8765,
+                                                                       "host":  "127.0.0.1",
+                                                                       "pid":  3932,
+                                                                       "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                   },
+                                                      "backend":  {
+                                                                      "port":  8008,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  15732,
+                                                                      "module":  "decision_support.snapshot_cli serve",
+                                                                      "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                  }
+                                                  }
+                                     },
+                          "after":  {
+                                        "health_status":  200,
+                                        "latest_status":  200,
+                                        "history_status":  200,
+                                        "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                        "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                        "technical_history_count":  1,
+                                        "canonical_history_count":  1,
+                                        "pids":  {
+                                                     "created_at":  "2026-09-19T10:48:53.0142508+08:00",
+                                                     "repo_root":  "D:\\电商中台\\_localB_140",
+                                                     "frontend":  {
+                                                                      "port":  8765,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  2772,
+                                                                      "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                  },
+                                                     "backend":  {
+                                                                     "port":  8008,
+                                                                     "host":  "127.0.0.1",
+                                                                     "pid":  11540,
+                                                                     "module":  "decision_support.snapshot_cli serve",
+                                                                     "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                 }
+                                                 }
+                                    }
+                      },
+                      {
+                          "scenario":  "S08-full-restart-readback",
+                          "category":  "PERSISTENCE",
+                          "pass":  true,
+                          "detail":  "snapshot_id=dsv0-monitoring-20260919-8258e11a5b5065b8 tech=1 canonical=1 (expected snapshot_id=dsv0-monitoring-20260919-8258e11a5b5065b8 tech=1 canonical=1)",
+                          "timestamp":  "2026-09-19T10:48:55.1003463+08:00",
+                          "before":  null,
+                          "after":  {
+                                        "health_status":  200,
+                                        "latest_status":  200,
+                                        "history_status":  200,
+                                        "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                        "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                        "technical_history_count":  1,
+                                        "canonical_history_count":  1,
+                                        "pids":  {
+                                                     "created_at":  "2026-09-19T10:48:53.0142508+08:00",
+                                                     "repo_root":  "D:\\电商中台\\_localB_140",
+                                                     "frontend":  {
+                                                                      "port":  8765,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  2772,
+                                                                      "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                  },
+                                                     "backend":  {
+                                                                     "port":  8008,
+                                                                     "host":  "127.0.0.1",
+                                                                     "pid":  11540,
+                                                                     "module":  "decision_support.snapshot_cli serve",
+                                                                     "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                 }
+                                                 }
+                                    }
+                      },
+                      {
+                          "scenario":  "S09-stale-pid-metadata",
+                          "category":  "PROCESS_OWNERSHIP",
+                          "pass":  true,
+                          "detail":  "exit=0 health=200 new_backend=25708",
+                          "timestamp":  "2026-09-19T10:49:13.1305620+08:00",
+                          "before":  {
+                                         "health_status":  -1,
+                                         "latest_status":  -1,
+                                         "history_status":  -1,
+                                         "snapshot_id":  null,
+                                         "run_id":  null,
+                                         "technical_history_count":  null,
+                                         "canonical_history_count":  null,
+                                         "pids":  {
+                                                      "created_at":  "2026-09-19T10:48:58.2625980+08:00",
+                                                      "repo_root":  "D:\\电商中台\\_localB_140",
+                                                      "frontend":  {
+                                                                       "port":  8765,
+                                                                       "host":  "127.0.0.1",
+                                                                       "pid":  999981,
+                                                                       "script":  "C:\\nonexistent\\server.mjs"
+                                                                   },
+                                                      "backend":  {
+                                                                      "port":  8008,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  999982,
+                                                                      "module":  "decision_support.snapshot_cli serve",
+                                                                      "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                  }
+                                                  }
+                                     },
+                          "after":  {
+                                        "health_status":  200,
+                                        "latest_status":  200,
+                                        "history_status":  200,
+                                        "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                        "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                        "technical_history_count":  1,
+                                        "canonical_history_count":  1,
+                                        "pids":  {
+                                                     "created_at":  "2026-09-19T10:49:11.9871063+08:00",
+                                                     "repo_root":  "D:\\电商中台\\_localB_140",
+                                                     "frontend":  {
+                                                                      "port":  8765,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  24104,
+                                                                      "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                  },
+                                                     "backend":  {
+                                                                     "port":  8008,
+                                                                     "host":  "127.0.0.1",
+                                                                     "pid":  25708,
+                                                                     "module":  "decision_support.snapshot_cli serve",
+                                                                     "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                 }
+                                                 }
+                                    }
+                      },
+                      {
+                          "scenario":  "S10-foreign-frontend-port-failclosed",
+                          "category":  "PROCESS_OWNERSHIP",
+                          "pass":  true,
+                          "detail":  "exit=13 foreign_alive=True pid_file_absent=True",
+                          "timestamp":  "2026-09-19T10:49:26.8336005+08:00",
+                          "before":  {
+                                         "health_status":  -1,
+                                         "latest_status":  -1,
+                                         "history_status":  -1,
+                                         "snapshot_id":  null,
+                                         "run_id":  null,
+                                         "technical_history_count":  null,
+                                         "canonical_history_count":  null,
+                                         "pids":  null
+                                     },
+                          "after":  null
+                      },
+                      {
+                          "scenario":  "S11-foreign-backend-port-failclosed",
+                          "category":  "PROCESS_OWNERSHIP",
+                          "pass":  true,
+                          "detail":  "exit=14 foreign_alive=True",
+                          "timestamp":  "2026-09-19T10:49:30.4605863+08:00",
+                          "before":  null,
+                          "after":  null
+                      },
+                      {
+                          "scenario":  "S12-corrupted-metadata-stop-refuses",
+                          "category":  "PROCESS_OWNERSHIP",
+                          "pass":  true,
+                          "detail":  "stop=43 backend_health=200 ports_still_up=True",
+                          "timestamp":  "2026-09-19T10:49:39.7743971+08:00",
+                          "before":  {
+                                         "health_status":  200,
+                                         "latest_status":  200,
+                                         "history_status":  200,
+                                         "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                         "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                         "technical_history_count":  1,
+                                         "canonical_history_count":  1,
+                                         "pids":  {
+                                                      "created_at":  "2026-09-19T10:49:37.1432930+08:00",
+                                                      "repo_root":  "D:\\电商中台\\_localB_140",
+                                                      "frontend":  {
+                                                                       "port":  8765,
+                                                                       "host":  "127.0.0.1",
+                                                                       "pid":  14012,
+                                                                       "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                   },
+                                                      "backend":  {
+                                                                      "port":  8008,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  7412,
+                                                                      "module":  "decision_support.snapshot_cli serve",
+                                                                      "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                  }
+                                                  }
+                                     },
+                          "after":  null
+                      },
+                      {
+                          "scenario":  "S13-restored-metadata-stop-succeeds",
+                          "category":  "PROCESS_OWNERSHIP",
+                          "pass":  true,
+                          "detail":  "stop=0 ports_down=True",
+                          "timestamp":  "2026-09-19T10:49:43.6588004+08:00",
+                          "before":  null,
+                          "after":  null
+                      },
+                      {
+                          "scenario":  "S14-missing-metadata-stop-refuses",
+                          "category":  "PROCESS_OWNERSHIP",
+                          "pass":  true,
+                          "detail":  "stop=41 backend_health=200 ports_still_up=True",
+                          "timestamp":  "2026-09-19T10:49:52.0773369+08:00",
+                          "before":  null,
+                          "after":  null
+                      },
+                      {
+                          "scenario":  "S15-missing-metadata-harness-recovery",
+                          "category":  "PROCESS_OWNERSHIP",
+                          "pass":  true,
+                          "detail":  "stop_after_metadata_restore=0",
+                          "timestamp":  "2026-09-19T10:49:55.9894341+08:00",
+                          "before":  null,
+                          "after":  null
+                      },
+                      {
+                          "scenario":  "S16-browser-reopen",
+                          "category":  "LIFECYCLE",
+                          "pass":  true,
+                          "detail":  "exit=0 browser=msedge.exe run_id_found=True no_demo=True available=True",
+                          "timestamp":  "2026-09-19T10:50:04.9718271+08:00",
+                          "before":  null,
+                          "after":  {
+                                        "health_status":  200,
+                                        "latest_status":  200,
+                                        "history_status":  200,
+                                        "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                        "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                        "technical_history_count":  1,
+                                        "canonical_history_count":  1,
+                                        "pids":  {
+                                                     "created_at":  "2026-09-19T10:50:02.2730095+08:00",
+                                                     "repo_root":  "D:\\电商中台\\_localB_140",
+                                                     "frontend":  {
+                                                                      "port":  8765,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  16616,
+                                                                      "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                  },
+                                                     "backend":  {
+                                                                     "port":  8008,
+                                                                     "host":  "127.0.0.1",
+                                                                     "pid":  19244,
+                                                                     "module":  "decision_support.snapshot_cli serve",
+                                                                     "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                 }
+                                                 }
+                                    }
+                      },
+                      {
+                          "scenario":  "S17-final-readback",
+                          "category":  "PERSISTENCE",
+                          "pass":  true,
+                          "detail":  "snapshot_id=dsv0-monitoring-20260919-8258e11a5b5065b8 tech=1 canonical=1 (expected snapshot_id=dsv0-monitoring-20260919-8258e11a5b5065b8 tech=1 canonical=1)",
+                          "timestamp":  "2026-09-19T10:50:05.8026378+08:00",
+                          "before":  null,
+                          "after":  {
+                                        "health_status":  200,
+                                        "latest_status":  200,
+                                        "history_status":  200,
+                                        "snapshot_id":  "dsv0-monitoring-20260919-8258e11a5b5065b8",
+                                        "run_id":  "wb-live-windows-uat-v2-20260919T013300Z",
+                                        "technical_history_count":  1,
+                                        "canonical_history_count":  1,
+                                        "pids":  {
+                                                     "created_at":  "2026-09-19T10:50:02.2730095+08:00",
+                                                     "repo_root":  "D:\\电商中台\\_localB_140",
+                                                     "frontend":  {
+                                                                      "port":  8765,
+                                                                      "host":  "127.0.0.1",
+                                                                      "pid":  16616,
+                                                                      "script":  "D:\\电商中台\\_localB_140\\launcher\\server.mjs"
+                                                                  },
+                                                     "backend":  {
+                                                                     "port":  8008,
+                                                                     "host":  "127.0.0.1",
+                                                                     "pid":  19244,
+                                                                     "module":  "decision_support.snapshot_cli serve",
+                                                                     "snapshot_root":  "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2\\dashboard_snapshots"
+                                                                 }
+                                                 }
+                                    }
+                      },
+                      {
+                          "scenario":  "S18-unrelated-processes-survive",
+                          "category":  "PROCESS_OWNERSHIP",
+                          "pass":  true,
+                          "detail":  "python_sentinel=True node_sentinel=True",
+                          "timestamp":  "2026-09-19T10:50:05.8158342+08:00",
+                          "before":  null,
+                          "after":  null
+                      }
+                  ]
+}

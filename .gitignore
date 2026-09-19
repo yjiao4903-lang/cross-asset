@@ -32,3 +32,6 @@ artifacts/live/
 artifacts/backtests/*.parquet
 *.log
 _shots/
+
+# User-space Node.js runtime (LOCAL-DEV-B native tooling, never committed)
+tools/

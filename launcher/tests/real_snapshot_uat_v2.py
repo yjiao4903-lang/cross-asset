@@ -166,6 +166,7 @@ def main() -> int:
     }
 
     store = DuckDBStore(db_path)
+    store_open = True
     ingestion_run_ids: list[str] = []
     try:
         start = date.today() - timedelta(days=2500)
@@ -288,6 +289,11 @@ def main() -> int:
             persist_run(workbench_run, runs_root)
             payload["workbench_run"] = workbench_run.to_dict()
 
+            # Windows DuckDB holds a single-writer file lock: release the parent
+            # connection before the snapshot_cli subprocess opens the same DB.
+            store.close()
+            store_open = False
+
             command = [
                 sys.executable,
                 "-m",
@@ -377,7 +383,8 @@ def main() -> int:
                 if payload["blockers"]:
                     payload["status"] = "REAL_SNAPSHOT_PERSISTED_PARTIAL"
     finally:
-        store.close()
+        if store_open:
+            store.close()
 
     payload["blockers"] = sorted(set(payload["blockers"]))
     (artifact_root / "REAL_SNAPSHOT_UAT.json").write_text(

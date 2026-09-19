@@ -169,6 +169,7 @@ function AssetBoard({ snapshot, onSelectAsset }) {
             const numeric = v.drivers.filter((d) => d.contribution !== null)
             const topDriver = [...numeric].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))[0]
               ?? v.drivers[0]
+              ?? null
             return (
               <tr key={v.asset}
                 onClick={() => onSelectAsset(v.asset)}
@@ -182,9 +183,15 @@ function AssetBoard({ snapshot, onSelectAsset }) {
                 <td className="py-1"><ConfidenceBadge confidence={v.confidence} /></td>
                 <td className="py-1"><ConfirmationChip value={v.confirmation_display} /></td>
                 <td className="truncate py-1 text-[11.5px] text-txt-muted">
-                  <span className="text-txt-secondary">{topDriver.label.replace(/[_%]/g, ' ').toLowerCase()}</span>
-                  {topDriver.contribution !== null && (
-                    <DeltaText value={topDriver.contribution} />
+                  {topDriver ? (
+                    <>
+                      <span className="text-txt-secondary">{topDriver.label.replace(/[_%]/g, ' ').toLowerCase()}</span>
+                      {topDriver.contribution !== null && (
+                        <DeltaText value={topDriver.contribution} />
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-txt-muted">no driver data</span>
                   )}
                 </td>
                 <td className="py-1 text-right"><FreshnessChip status={v.data_health} /></td>

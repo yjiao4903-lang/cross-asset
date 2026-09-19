@@ -1,0 +1,75 @@
+{
+  "contract": "WINDOWS-REAL-SNAPSHOT-SOAK-UAT-V2",
+  "generated_at": "2026-09-19T02:57:44.601251+00:00",
+  "windows": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "release": "11",
+    "version": "10.0.26200"
+  },
+  "python": {
+    "chosen_interpreter": "D:\\电商中台\\_localB_140\\.venv\\Scripts\\python.exe",
+    "version": "3.12.10",
+    "venv_python_present": true,
+    "path_python": "C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python312\\python.EXE",
+    "py_launcher": "C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Launcher\\py.EXE"
+  },
+  "node": {
+    "tools_node": "D:\\电商中台\\_localB_140\\tools\\node\\node.exe",
+    "tools_node_present": true,
+    "tools_node_version": "v24.21.0",
+    "path_node": null
+  },
+  "npm": {
+    "tools_npm_cmd": "D:\\电商中台\\_localB_140\\tools\\node\\npm.cmd",
+    "tools_npm_present": true,
+    "path_npm": null
+  },
+  "repo": {
+    "root": "D:\\电商中台\\_localB_140",
+    "git_head": "2b91713ecee74501c098ac4f6610fbe900f154b7",
+    "venv": {
+      "exists": true,
+      "path": "D:\\电商中台\\_localB_140\\.venv"
+    },
+    "node_modules": {
+      "exists": true,
+      "path": "D:\\电商中台\\_localB_140\\frontend\\node_modules"
+    },
+    "dist": {
+      "exists": true,
+      "path": "D:\\电商中台\\_localB_140\\frontend\\dist"
+    }
+  },
+  "proxy_environment": {
+    "process_env": {},
+    "windows_registry": {
+      "proxy_enable": 1,
+      "proxy_server": "127.0.0.1:17891"
+    }
+  },
+  "ports": {
+    "frontend": {
+      "port": 8765,
+      "listening": false,
+      "owners": []
+    },
+    "backend": {
+      "port": 8008,
+      "listening": false,
+      "owners": []
+    }
+  },
+  "launcher_runtime": {
+    "pid_file": "D:\\电商中台\\_localB_140\\launcher\\.runtime\\servers.pid",
+    "pid_metadata": null,
+    "logs_present": [
+      "launcher.log"
+    ]
+  },
+  "artifact_roots": {
+    "uat_root": "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2",
+    "default_snapshot_root": "D:\\电商中台\\_localB_140\\artifacts\\dashboard_snapshots",
+    "workbench_runs_root": "D:\\电商中台\\_localB_140\\artifacts\\workbench_runs"
+  }
+}

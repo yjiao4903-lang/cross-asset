@@ -172,13 +172,17 @@ export default function App({ mode = defaultSnapshotMode(), loadLatest = fetchLa
           )}
         </nav>
 
-        <div className="flex min-w-0 items-baseline gap-1.5 whitespace-nowrap text-[11px] text-txt-muted">
-          <span className="font-medium text-txt-secondary">as of {shortDate(snapshot.metadata.as_of)}</span>
+        <div className="flex min-w-0 items-baseline gap-1.5 overflow-hidden whitespace-nowrap text-[11px] text-txt-muted">
+          <span className="font-medium shrink-0 text-txt-secondary">as of {shortDate(snapshot.metadata.as_of)}</span>
           <span aria-hidden>·</span>
-          <span>decision {snapshot.metadata.decision_time}</span>
+          <span className="truncate">decision {snapshot.metadata.decision_time}</span>
           <span aria-hidden>·</span>
           <span className="truncate" title={`run/model: ${snapshot.metadata.run_id} / ${snapshot.metadata.model_version}`}>
             {snapshot.metadata.run_id}
+          </span>
+          <span aria-hidden>·</span>
+          <span className="truncate" data-testid="snapshot-id" title={`snapshot: ${snapshot.metadata.snapshot_id}`}>
+            {snapshot.metadata.snapshot_id}
           </span>
         </div>
 

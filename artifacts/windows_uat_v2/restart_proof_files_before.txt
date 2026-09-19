@@ -1,0 +1,6 @@
+artifacts/windows_uat_v2/dashboard_snapshots/:
+dsv0-monitoring-20260919-8258e11a5b5065b8.json
+latest.json
+
+artifacts/windows_uat_v2/workbench/:
+runs
