@@ -5,7 +5,7 @@ through the single shared approved-provenance query; an unapproved source
 with fresher vintages can never leak into either entry point.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pandas as pd
 import pytest
@@ -59,6 +59,15 @@ PROTOCOL_RAW = {
         "revision_policy": "latest_released_revision_per_observation_date",
     },
 }
+
+# Fixture Fridays are stamped 23:00 UTC. The stale-overlay helper then places:
+#   older OK vintage   = Friday 23:00 + 1h = Saturday 00:00 UTC
+#   later STALE vintage = Friday 23:00 + 5h = Saturday 04:00 UTC
+# Query as-of times must be frozen against that last fixture Friday so a CI
+# run on Saturday 00:00-04:00 UTC cannot see a partial latest week.
+_LAST_FIXTURE_FRIDAY = datetime(2026, 12, 25, 23, 0, tzinfo=UTC)
+_ASOF_AFTER_LAST_OK_BEFORE_STALE = datetime(2026, 12, 26, 2, 0, tzinfo=UTC)
+_ASOF_AFTER_LAST_STALE = datetime(2026, 12, 26, 5, 0, tzinfo=UTC)
 
 
 def _protocol():
@@ -254,9 +263,13 @@ def test_executor_does_not_fall_back_to_older_ok_vintage_when_latest_is_stale():
         )
         _approve(store, provider="srcA")
 
+        # Frozen after the last fixture STALE vintage (Sat 04:00 UTC). A live
+        # wall clock on Saturday 00:00-04:00 UTC would otherwise still see the
+        # last week's older OK vintage and fail this assertion spuriously.
+        assert _ASOF_AFTER_LAST_STALE > _LAST_FIXTURE_FRIDAY
         formal = latest_formal_observations_asof(
             store.conn,
-            datetime.now(UTC),
+            _ASOF_AFTER_LAST_STALE,
             required_usage_status="RESEARCH_ADMISSIBLE",
         )
         assert formal.empty
@@ -276,6 +289,40 @@ def test_executor_does_not_fall_back_to_older_ok_vintage_when_latest_is_stale():
             assert "formal_observations_empty" in str(exc)
         else:
             raise AssertionError("executor fell back to an older ok vintage")
+    finally:
+        store.close()
+
+
+def test_older_ok_vintage_remains_valid_under_pit_before_stale_is_available():
+    store = _store()
+    try:
+        _observe_with_stale_overlay(
+            store,
+            source="srcA",
+            value_base=100.0,
+            ok_hour=1,
+            stale_hour=5,
+        )
+        _approve(store, provider="srcA")
+
+        # Last Friday OK is visible (Sat 00:00 UTC); last Friday STALE is not
+        # yet (Sat 04:00 UTC). PIT must keep that older OK vintage rather than
+        # anticipating a future stale revision.
+        assert (
+            _LAST_FIXTURE_FRIDAY
+            < _ASOF_AFTER_LAST_OK_BEFORE_STALE
+            < _ASOF_AFTER_LAST_STALE
+        )
+        formal = latest_formal_observations_asof(
+            store.conn,
+            _ASOF_AFTER_LAST_OK_BEFORE_STALE,
+            required_usage_status="RESEARCH_ADMISSIBLE",
+        )
+        assert not formal.empty
+        assert set(formal["quality"].str.lower()) == {"ok"}
+        assert set(pd.to_datetime(formal["observation_date"]).dt.date) == {
+            date(2026, 12, 25)
+        }
     finally:
         store.close()
 
