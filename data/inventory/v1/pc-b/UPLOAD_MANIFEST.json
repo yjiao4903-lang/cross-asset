@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "bytes": 4790092,
+      "path": "data/staging/v1/pc-b/public/fred/97fe693f31e522035de7b9e308543ee64ad6242222822aa4a18699ffde8cbde8.jsonl",
+      "provider": "fred",
+      "row_count": 15156,
+      "sha256": "97fe693f31e522035de7b9e308543ee64ad6242222822aa4a18699ffde8cbde8",
+      "source_policy": "public source; deterministic normalized JSONL; no original raw bytes"
+    }
+  ],
+  "forbidden_not_uploaded": [
+    "DuckDB/SQLite binaries",
+    "Wind/iFinD/manual/professional-terminal bytes",
+    "tokens/secrets/cookies"
+  ],
+  "machine": "PC-B",
+  "schema_version": "pc-b-upload-manifest-v1"
+}

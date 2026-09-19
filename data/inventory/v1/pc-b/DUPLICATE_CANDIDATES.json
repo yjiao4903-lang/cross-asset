@@ -1,0 +1,359 @@
+{
+  "authority": "#148 final cross-PC dedup/gap decisions",
+  "candidates": [
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_EFFR/2026/09/20260901T011743Z_08cae7b0ffeff97c.csv",
+        "_handoff_review/raw/fred/public_csv_EFFR/2026/09/20260901T011801Z_08cae7b0ffeff97c.csv"
+      ],
+      "sha256": "08cae7b0ffeff97cb0adfc0073a4158849cf44fc53d693501b9c7bbb64a84151"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/wind/宏观监控数据_截至20260830.csv",
+        "data/raw/wind/pc_b_manual_export/2026/09/20260913T035243Z_19f2852e6406cb12.csv"
+      ],
+      "sha256": "19f2852e6406cb12a50750f402ee0e8404f9bd1942477ab48287ba8c6bc49db1"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/wind/指数数据20100101-20260830.xlsx",
+        "data/raw/wind/pc_b_manual_export/2026/09/20260913T035243Z_1ec370b84b151540.xlsx"
+      ],
+      "sha256": "1ec370b84b151540c9a3a26f9bf956147f8aac1f53d8545e552d90b0483bf44c"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_T5YIE/2026/09/20260901T011755Z_1f55dbc59de0b51b.csv",
+        "_handoff_review/raw/fred/public_csv_T5YIE/2026/09/20260901T011810Z_1f55dbc59de0b51b.csv"
+      ],
+      "sha256": "1f55dbc59de0b51b94c3fabb9bc0675a2ad60c70fb226c1fdf5577df49a687bb"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_CPILFESL/2026/09/20260901T011750Z_29ce8cfd1543431d.csv",
+        "_handoff_review/raw/fred/public_csv_CPILFESL/2026/09/20260901T011806Z_29ce8cfd1543431d.csv"
+      ],
+      "sha256": "29ce8cfd1543431d681d6c17c92fa488dd565014a744bd36e8b8190417ddeaad"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_DFII10/2026/08/20260831T104258Z_2bb53a0a0e1ea6a3.csv",
+        "_handoff_review/raw/fred/public_csv_DFII10/2026/08/20260831T104343Z_2bb53a0a0e1ea6a3.csv",
+        "_handoff_review/raw/fred/public_csv_DFII10/2026/08/20260831T104417Z_2bb53a0a0e1ea6a3.csv"
+      ],
+      "sha256": "2bb53a0a0e1ea6a3316d6ce7db1ab1c76ee913436d4dab1fe53d9e174694baad"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "data/diagnostics/b08_cn_macro_semantic_dryrun_20260913/candidates/candidate_CN_PMI.csv",
+        "data/raw/wind/b08_cn_macro_semantic_dryrun_20260913/2026/09/20260913T073017Z_2e64fdeb1de4bc8a.csv"
+      ],
+      "sha256": "2e64fdeb1de4bc8ab6e95f52c260d43f3a7ef3ac4c29faedd714c7cb2c4ad462"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_DGS2/2026/09/20260901T011745Z_319a00bc2a9eecae.csv",
+        "_handoff_review/raw/fred/public_csv_DGS2/2026/09/20260901T011802Z_319a00bc2a9eecae.csv"
+      ],
+      "sha256": "319a00bc2a9eecaeba80fda1eb374288dd642d039f72adff63514f6b5ae969b1"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_DGS10/2026/08/20260831T104258Z_33562c04cada915b.csv",
+        "_handoff_review/raw/fred/public_csv_DGS10/2026/08/20260831T104343Z_33562c04cada915b.csv",
+        "_handoff_review/raw/fred/public_csv_DGS10/2026/08/20260831T104417Z_33562c04cada915b.csv"
+      ],
+      "sha256": "33562c04cada915bceb93baaabfab0c5631d8b2a163032d3ebef3935d7c34f28"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_DGS5/2026/09/20260901T011747Z_42b91d2465b5d81c.csv",
+        "_handoff_review/raw/fred/public_csv_DGS5/2026/09/20260901T011803Z_42b91d2465b5d81c.csv"
+      ],
+      "sha256": "42b91d2465b5d81c3b7a2b2c51268e3f8c8159a573c457900ed82c15f60cb189"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_DGS30/2026/09/20260901T011749Z_4d890059818dbf04.csv",
+        "_handoff_review/raw/fred/public_csv_DGS30/2026/09/20260901T011805Z_4d890059818dbf04.csv"
+      ],
+      "sha256": "4d890059818dbf04c20322ea5e5d16ea22f2a95505144cf1c9303a6f157bf723"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_PCEPI/2026/09/20260901T011752Z_6063ce8dc91766ca.csv",
+        "_handoff_review/raw/fred/public_csv_PCEPI/2026/09/20260901T011807Z_6063ce8dc91766ca.csv"
+      ],
+      "sha256": "6063ce8dc91766cacf4c9aec219c8d5d8f60bb8808584a30dbd06c0ada628f62"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "data/diagnostics/b08_semantic_dryrun_20260913/candidates/candidate_HK_EQ.csv",
+        "data/raw/wind/b08_canonical_candidate_20260913/2026/09/20260913T040150Z_64344907fb97f115.csv"
+      ],
+      "sha256": "64344907fb97f1156e2d11073a284662218f5b218c4e9447a82aa94895ea35e6"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "data/diagnostics/b08_semantic_dryrun_20260913/candidates/candidate_CN_BOND_10Y.csv",
+        "data/raw/wind/b08_canonical_candidate_20260913/2026/09/20260913T040151Z_6b6702f50dcaa18f.csv"
+      ],
+      "sha256": "6b6702f50dcaa18f7c71cd112f89e4e546ef5efe35a8585bc193bbbffa94669e"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "data/diagnostics/b08_cn_macro_semantic_dryrun_20260913/candidates/candidate_CN_PPI.csv",
+        "data/raw/wind/b08_cn_macro_semantic_dryrun_20260913/2026/09/20260913T073017Z_7cf16161e104a2da.csv"
+      ],
+      "sha256": "7cf16161e104a2dafef99bcdff252dae44330457e6fcb0518528cdcbc833195d"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "data/diagnostics/b08_cn_macro_semantic_dryrun_20260913/candidates/candidate_CN_M2.csv",
+        "data/raw/wind/b08_cn_macro_semantic_dryrun_20260913/2026/09/20260913T073018Z_88d69697553d24ca.csv"
+      ],
+      "sha256": "88d69697553d24ca0af4a69a91ed1741b1a6bc225eddae808c22d556fb3063f5"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "data/diagnostics/b08_cn_macro_semantic_dryrun_20260913/candidates/candidate_CN_M1.csv",
+        "data/raw/wind/b08_cn_macro_semantic_dryrun_20260913/2026/09/20260913T073017Z_8c95499fedc0129b.csv"
+      ],
+      "sha256": "8c95499fedc0129be028804cdb3978d5b154f9dcbd8593e0fe296f4fb29e98f7"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/wind/宏观监控.csv",
+        "data/raw/wind/b08_cn_macro_semantic_dryrun_20260913/2026/09/20260913T072853Z_a58586d62b2de4f4.csv",
+        "data/raw/wind/b08_cn_macro_semantic_dryrun_20260913/2026/09/20260913T072854Z_a58586d62b2de4f4.csv",
+        "data/raw/wind/b08_cn_macro_semantic_dryrun_20260913/2026/09/20260913T072855Z_a58586d62b2de4f4.csv",
+        "data/raw/wind/pc_b_manual_export/2026/09/20260913T035243Z_a58586d62b2de4f4.csv"
+      ],
+      "sha256": "a58586d62b2de4f4d27dd5187cf1856bf186e95d5f78fef5c61bb06f0f320486"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "data/diagnostics/b08_semantic_dryrun_20260913/candidates/candidate_CN_EQ_LARGE.csv",
+        "data/raw/wind/b08_canonical_candidate_20260913/2026/09/20260913T040150Z_a6e7b3c468d1367a.csv"
+      ],
+      "sha256": "a6e7b3c468d1367af60c67589f5facdfe13cd982f9968412debd40a73b504821"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/wind/指数数据20100101-20260830.xls",
+        "data/raw/wind/pc_b_manual_export/2026/09/20260913T035243Z_b17d3cb09c9d1ce2.xls"
+      ],
+      "sha256": "b17d3cb09c9d1ce2348aac40ba5e24b7c914447ecd83156840740b8024cabf53"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "data/diagnostics/b08_cn_macro_semantic_dryrun_20260913/candidates/candidate_CN_CPI.csv",
+        "data/raw/wind/b08_cn_macro_semantic_dryrun_20260913/2026/09/20260913T073016Z_c3162a50799929f4.csv"
+      ],
+      "sha256": "c3162a50799929f43329405f7d73539f8c6425e22de423cc20707c6ab6c13660"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "data/diagnostics/b08_cn_macro_semantic_dryrun_20260913/candidates/candidate_CN_DR007.csv",
+        "data/raw/wind/b08_cn_macro_semantic_dryrun_20260913/2026/09/20260913T073018Z_e7163c46e2d5ec69.csv"
+      ],
+      "sha256": "e7163c46e2d5ec6983a02a66edd6688880b31a7349d823c3f5bfdb1700c7f5b0"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "data/diagnostics/b08_semantic_dryrun_20260913/candidates/candidate_GOLD.csv",
+        "data/raw/wind/b08_canonical_candidate_20260913/2026/09/20260913T040151Z_e9e7e1a8184d27f3.csv"
+      ],
+      "sha256": "e9e7e1a8184d27f324e87d7f80175c906424fffb78f43389c23f7ab6a015dfe2"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/fred/alfred_CPIAUCSL_output_type_4/2026/09/20260901T013106Z_ec29a7325c015745.json",
+        "_handoff_review/raw/fred/alfred_CPIAUCSL_output_type_4/2026/09/20260901T013336Z_ec29a7325c015745.json"
+      ],
+      "sha256": "ec29a7325c0157455882d3e6656c514ca0a78ece9fd9a1a01f564178476b995a"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_T10YIE/2026/09/20260901T011754Z_fc485b9bf354946e.csv",
+        "_handoff_review/raw/fred/public_csv_T10YIE/2026/09/20260901T011808Z_fc485b9bf354946e.csv"
+      ],
+      "sha256": "fc485b9bf354946e46fb89f0899ff04d657e88596dfb16bb2a47bd7d9d748385"
+    },
+    {
+      "duplicate_type": "EXACT_FILE_BYTES",
+      "paths": [
+        "data/diagnostics/b08_semantic_dryrun_20260913/candidates/candidate_COPPER.csv",
+        "data/raw/wind/b08_canonical_candidate_20260913/2026/09/20260913T040152Z_fdd856a2ab3c02df.csv"
+      ],
+      "sha256": "fdd856a2ab3c02dffadc5f2f259cdeaa2c25908b1998c9c4dd8b21b227b73ffa"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/alfred_CPIAUCSL_output_type_4/2026/09/20260901T013106Z_ec29a7325c015745.json",
+        "_handoff_review/raw/fred/alfred_CPIAUCSL_output_type_4/2026/09/20260901T013336Z_ec29a7325c015745.json",
+        "_handoff_review/raw/fred/public_csv_CPIAUCSL/2026/09/20260901T005743Z_af936351ceed203e.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "CPIAUCSL"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_CPILFESL/2026/09/20260901T011750Z_29ce8cfd1543431d.csv",
+        "_handoff_review/raw/fred/public_csv_CPILFESL/2026/09/20260901T011806Z_29ce8cfd1543431d.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "CPILFESL"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_DFII10/2026/08/20260831T104258Z_2bb53a0a0e1ea6a3.csv",
+        "_handoff_review/raw/fred/public_csv_DFII10/2026/08/20260831T104343Z_2bb53a0a0e1ea6a3.csv",
+        "_handoff_review/raw/fred/public_csv_DFII10/2026/08/20260831T104417Z_2bb53a0a0e1ea6a3.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "DFII10"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_DGS10/2026/08/20260831T104258Z_33562c04cada915b.csv",
+        "_handoff_review/raw/fred/public_csv_DGS10/2026/08/20260831T104343Z_33562c04cada915b.csv",
+        "_handoff_review/raw/fred/public_csv_DGS10/2026/08/20260831T104417Z_33562c04cada915b.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "DGS10"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_DGS2/2026/09/20260901T011745Z_319a00bc2a9eecae.csv",
+        "_handoff_review/raw/fred/public_csv_DGS2/2026/09/20260901T011802Z_319a00bc2a9eecae.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "DGS2"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_DGS30/2026/09/20260901T011749Z_4d890059818dbf04.csv",
+        "_handoff_review/raw/fred/public_csv_DGS30/2026/09/20260901T011805Z_4d890059818dbf04.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "DGS30"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_DGS5/2026/09/20260901T011747Z_42b91d2465b5d81c.csv",
+        "_handoff_review/raw/fred/public_csv_DGS5/2026/09/20260901T011803Z_42b91d2465b5d81c.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "DGS5"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_EFFR/2026/09/20260901T011743Z_08cae7b0ffeff97c.csv",
+        "_handoff_review/raw/fred/public_csv_EFFR/2026/09/20260901T011801Z_08cae7b0ffeff97c.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "EFFR"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/alfred_ICSA_output_type_4/2026/09/20260901T013341Z_0d72c12040c89355.json",
+        "_handoff_review/raw/fred/public_csv_ICSA/2026/09/20260901T005743Z_27961c50029a3abd.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "ICSA"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/alfred_INDPRO_output_type_4/2026/09/20260901T013343Z_a701197aa01f2612.json",
+        "_handoff_review/raw/fred/public_csv_INDPRO/2026/09/20260901T005743Z_12ba6bbee2756fae.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "INDPRO"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_PCEPI/2026/09/20260901T011752Z_6063ce8dc91766ca.csv",
+        "_handoff_review/raw/fred/public_csv_PCEPI/2026/09/20260901T011807Z_6063ce8dc91766ca.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "PCEPI"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/alfred_PCEPILFE_output_type_4/2026/09/20260901T013338Z_cc9a8bf37a0bd7c4.json",
+        "_handoff_review/raw/fred/public_csv_PCEPILFE/2026/09/20260901T005743Z_9b2969310f9c87d1.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "PCEPILFE"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_T10YIE/2026/09/20260901T011754Z_fc485b9bf354946e.csv",
+        "_handoff_review/raw/fred/public_csv_T10YIE/2026/09/20260901T011808Z_fc485b9bf354946e.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "T10YIE"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/public_csv_T5YIE/2026/09/20260901T011755Z_1f55dbc59de0b51b.csv",
+        "_handoff_review/raw/fred/public_csv_T5YIE/2026/09/20260901T011810Z_1f55dbc59de0b51b.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "T5YIE"
+    },
+    {
+      "duplicate_type": "LOGICAL_SERIES_RECAPTURE_OR_VINTAGE_OVERLAP",
+      "paths": [
+        "_handoff_review/raw/fred/alfred_UNRATE_output_type_4/2026/09/20260901T013339Z_ad5f6dbde6f038c3.json",
+        "_handoff_review/raw/fred/public_csv_UNRATE/2026/09/20260901T005743Z_d495243b4c661f37.csv"
+      ],
+      "provider": "fred",
+      "source_series_id": "UNRATE"
+    }
+  ],
+  "count": 41,
+  "machine": "PC-B",
+  "schema_version": "pc-b-duplicate-candidates-v1"
+}

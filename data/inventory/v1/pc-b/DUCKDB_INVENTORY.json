@@ -1,0 +1,8 @@
+{
+  "binary_upload": "FORBIDDEN",
+  "databases": [],
+  "db_count": 0,
+  "finding": "No in-scope DuckDB/SQLite database file exists under D:/cross-asset at scan time.",
+  "machine": "PC-B",
+  "schema_version": "pc-b-duckdb-inventory-v1"
+}
