@@ -5,9 +5,9 @@ Status: **REAL_SNAPSHOT_PERSISTED_PARTIAL**
 
 ## Runtime roots
 
-- DB: `D:\电商中台\_localB_140\artifacts\windows_uat_v2\monitoring-20260919T013300907545Z.duckdb`
-- Workbench: `D:\电商中台\_localB_140\artifacts\windows_uat_v2\workbench`
-- Snapshots: `D:\电商中台\_localB_140\artifacts\windows_uat_v2\dashboard_snapshots`
+- DB: `<local-b-worktree>\artifacts\windows_uat_v2\monitoring-20260919T013300907545Z.duckdb`
+- Workbench: `<local-b-worktree>\artifacts\windows_uat_v2\workbench`
+- Snapshots: `<local-b-worktree>\artifacts\windows_uat_v2\dashboard_snapshots`
 
 ## Provider ingestion
 

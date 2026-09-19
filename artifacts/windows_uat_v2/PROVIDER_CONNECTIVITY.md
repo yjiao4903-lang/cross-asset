@@ -5,7 +5,7 @@ Generated: `2026-09-19T01:28:46.085341+00:00`
 ## Environment
 
 - platform: `Windows-11-10.0.26200-SP0`
-- python: `D:\电商中台\_localB_140\.venv\Scripts\python.exe`
+- python: `<local-b-worktree>\.venv\Scripts\python.exe`
 - proxy variables are sanitized; credentials are never emitted.
 
 ## FRED

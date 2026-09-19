@@ -1,4 +1,4 @@
-﻿# Windows Soak / Fault Matrix V2 (#140)
+# Windows Soak / Fault Matrix V2 (#140)
 
 Generated: `2026-09-19T10:50:09.0464493+08:00`
 

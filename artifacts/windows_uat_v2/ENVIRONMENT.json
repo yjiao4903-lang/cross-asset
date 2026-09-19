@@ -8,37 +8,37 @@
     "version": "10.0.26200"
   },
   "python": {
-    "chosen_interpreter": "D:\\电商中台\\_localB_140\\.venv\\Scripts\\python.exe",
+    "chosen_interpreter": "<local-b-worktree>\\.venv\\Scripts\\python.exe",
     "version": "3.12.10",
     "venv_python_present": true,
-    "path_python": "C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python312\\python.EXE",
-    "py_launcher": "C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Launcher\\py.EXE"
+    "path_python": "<user-home>\\AppData\\Local\\Programs\\Python\\Python312\\python.EXE",
+    "py_launcher": "<user-home>\\AppData\\Local\\Programs\\Python\\Launcher\\py.EXE"
   },
   "node": {
-    "tools_node": "D:\\电商中台\\_localB_140\\tools\\node\\node.exe",
+    "tools_node": "<local-b-worktree>\\tools\\node\\node.exe",
     "tools_node_present": true,
     "tools_node_version": "v24.21.0",
     "path_node": null
   },
   "npm": {
-    "tools_npm_cmd": "D:\\电商中台\\_localB_140\\tools\\node\\npm.cmd",
+    "tools_npm_cmd": "<local-b-worktree>\\tools\\node\\npm.cmd",
     "tools_npm_present": true,
     "path_npm": null
   },
   "repo": {
-    "root": "D:\\电商中台\\_localB_140",
+    "root": "<local-b-worktree>",
     "git_head": "2b91713ecee74501c098ac4f6610fbe900f154b7",
     "venv": {
       "exists": true,
-      "path": "D:\\电商中台\\_localB_140\\.venv"
+      "path": "<local-b-worktree>\\.venv"
     },
     "node_modules": {
       "exists": true,
-      "path": "D:\\电商中台\\_localB_140\\frontend\\node_modules"
+      "path": "<local-b-worktree>\\frontend\\node_modules"
     },
     "dist": {
       "exists": true,
-      "path": "D:\\电商中台\\_localB_140\\frontend\\dist"
+      "path": "<local-b-worktree>\\frontend\\dist"
     }
   },
   "proxy_environment": {
@@ -61,15 +61,15 @@
     }
   },
   "launcher_runtime": {
-    "pid_file": "D:\\电商中台\\_localB_140\\launcher\\.runtime\\servers.pid",
+    "pid_file": "<local-b-worktree>\\launcher\\.runtime\\servers.pid",
     "pid_metadata": null,
     "logs_present": [
       "launcher.log"
     ]
   },
   "artifact_roots": {
-    "uat_root": "D:\\电商中台\\_localB_140\\artifacts\\windows_uat_v2",
-    "default_snapshot_root": "D:\\电商中台\\_localB_140\\artifacts\\dashboard_snapshots",
-    "workbench_runs_root": "D:\\电商中台\\_localB_140\\artifacts\\workbench_runs"
+    "uat_root": "<local-b-worktree>\\artifacts\\windows_uat_v2",
+    "default_snapshot_root": "<local-b-worktree>\\artifacts\\dashboard_snapshots",
+    "workbench_runs_root": "<local-b-worktree>\\artifacts\\workbench_runs"
   }
 }

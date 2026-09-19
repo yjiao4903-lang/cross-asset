@@ -1,4 +1,4 @@
-﻿# Process Ownership Matrix (#140)
+# Process Ownership Matrix (#140)
 
 Generated: `2026-09-19T10:50:09.0517908+08:00`
 
